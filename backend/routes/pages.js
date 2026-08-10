@@ -16,7 +16,7 @@ function getUser(req) {
   }
 }
 
-// ── Auth check middleware (redirect to /login if no valid JWT) ──
+// ── Auth check middleware (redirect to /login if no valid JWT, or /settings if profile incomplete) ──
 function requireAuth(req, res, next) {
   const user = getUser(req);
   if (!user) {
@@ -26,6 +26,15 @@ function requireAuth(req, res, next) {
     return res.redirect("/login");
   }
   req.pageUser = user;
+
+  // Enforce profile completion guard (e.g. newly registered via Google OAuth)
+  const isCompleted = user.isProfileCompleted === 1 || user.isProfileCompleted === true;
+  if (!isCompleted && !req.path.startsWith("/settings") && req.path !== "/logout") {
+    if (req.headers["x-requested-with"] === "XMLHttpRequest") {
+      return res.status(200).json({ ok: false, redirect: "/settings" });
+    }
+    return res.redirect("/settings");
+  }
   next();
 }
 

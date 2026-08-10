@@ -1,7 +1,7 @@
 <aside class="sidebar" id="app-sidebar">
   <!-- Brand Header -->
   <div class="sidebar-header">
-    <img src="/logo.png" alt="Benevolate" class="logo">
+    <img src="/favicon.png" alt="Benevolate" class="logo">
     <div class="brand" id="sidebar-brand">
       <div class="brand-name">Benevolate</div>
       <div class="brand-label">CI/CD Platform</div>
@@ -37,11 +37,20 @@
     </div>
   </div>
 
+<% const isProfileLocked = user && (user.isProfileCompleted === false || user.isProfileCompleted === 0); %>
+  <% if (isProfileLocked) { %>
+  <!-- Profile Setup Required Locked Notice -->
+  <div style="margin:12px;padding:10px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:10px;color:#ef4444;font-size:11px;font-weight:600;display:flex;align-items:center;gap:6px;">
+    <i data-lucide="lock" style="width:14px;height:14px;flex-shrink:0;"></i>
+    <span>Profile Locked — Complete Setup in Settings</span>
+  </div>
+  <% } %>
+
   <!-- Navigation -->
-  <nav class="sidebar-nav">
+  <nav class="sidebar-nav <%= isProfileLocked ? 'sidebar-locked-nav' : '' %>">
     <!-- Overview -->
     <span class="nav-section-label">Overview</span>
-    <a href="/" class="nav-item <%= activePage === 'dashboard' ? 'active' : '' %>" title="Dashboard">
+    <a href="/" class="nav-item <%= activePage === 'dashboard' ? 'active' : '' %> <%= isProfileLocked ? 'nav-item-locked' : '' %>" title="<%= isProfileLocked ? 'Complete Profile in Settings First' : 'Dashboard' %>">
       <i data-lucide="layout-dashboard" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Dashboard</span>
     </a>
@@ -129,6 +138,11 @@
 </aside>
 
 <style>
+  .sidebar-locked-nav .nav-item {
+    opacity: 0.45 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
+  }
   @keyframes popoverIn {
     from { opacity: 0; transform: translateY(-6px); }
     to   { opacity: 1; transform: translateY(0); }

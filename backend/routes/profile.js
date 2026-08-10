@@ -206,10 +206,17 @@ router.delete("/users/:username", auth.requireRole(...auth.ADMIN_ROLES), async (
   }
 
   try {
-    const [result] = await pool.query("DELETE FROM users WHERE username = ?", [target]);
-    if (!result.affectedRows) {
+    const deleted = await userStore.deleteUser(target);
+    if (!deleted) {
       return res.status(404).json({ ok: false, error: "User not found" });
     }
+    auditStore.logAction(
+      caller,
+      `Deleted user account "${target}"`,
+      "N/A",
+      "Success",
+      "User Management"
+    );
     res.json({ ok: true, deleted: target });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });

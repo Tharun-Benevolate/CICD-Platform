@@ -167,9 +167,12 @@
             <i data-lucide="alert-triangle" style="width:32px;height:32px;margin:0 auto 8px;display:block;"></i>
             Setup session expired (5m security limit).
           </div>
-          <div id="totp-timer-badge" style="font-size:11px;color:#64748b;margin-top:8px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px;">
-            <i data-lucide="clock" style="width:12px;height:12px;"></i>
-            <span id="totp-timer-text">Expires in 05:00</span>
+          <div id="totp-timer-badge" style="font-size:11px;color:#64748b;margin-top:8px;font-weight:700;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;">
+            <div style="display:flex;align-items:center;gap:4px;">
+              <i data-lucide="clock" style="width:12px;height:12px;"></i>
+              <span id="totp-timer-text">Expires in 05:00</span>
+            </div>
+            <span id="totp-auto-refresh-badge" style="font-size:10px;color:var(--color-primary);font-weight:600;">Auto-refreshes in 10s</span>
           </div>
         </div>
 
@@ -179,7 +182,7 @@
             <h3 style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin:0;">
               Step 1: Scan QR Code or Copy Secret Key Code
             </h3>
-            <button type="button" onclick="handleStart2FASetup()" style="padding:4px 10px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px;">
+            <button type="button" id="btn-refresh-totp" onclick="handleStart2FASetup()" style="padding:4px 10px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px;">
               <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Refresh QR Code &amp; Key
             </button>
           </div>

@@ -148,19 +148,18 @@ router.post("/auth/2fa/verify-login", async (req, res) => {
 
 // ── 2FA Setup Endpoints (Authenticated) ──────────────────────────────────
 
-// POST /api/auth/2fa/setup — Generate 2FA secret key & QR Code Data URL
+// POST /api/auth/2fa/setup — Generate fresh unique 2FA secret key & QR Code Data URL
 router.post("/auth/2fa/setup", auth.requireAuth, async (req, res) => {
   try {
     const username = req.user.username;
     let user = await userStore.getUser(username);
-    let secret = user?.totpSecret;
+    
+    // Always generate a fresh unique secret key for this setup/refresh session
+    const secret = totpService.generateSecret(20);
+    await userStore.setTotpSecret(username, secret);
 
-    if (!secret) {
-      secret = totpService.generateSecret(20);
-      await userStore.setTotpSecret(username, secret);
-    }
-
-    const otpauthUrl = totpService.getOTPAuthURL(username, secret);
+    const userLabel = user?.email ? `${user.email} (${username})` : username;
+    const otpauthUrl = totpService.getOTPAuthURL(userLabel, secret);
     const qrCodeUrl = await totpService.getQRCodeDataURL(otpauthUrl);
 
     res.json({
@@ -347,6 +346,33 @@ router.get("/admin/users/:username/details", auth.requireRole(...auth.ADMIN_ROLE
       },
       activityLogs: userLogs
     });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// DELETE /api/users/:username — Admin deletion of user account
+router.delete("/users/:username", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+  const target = req.params.username.toLowerCase().trim();
+  const caller = req.user.username;
+
+  if (target === caller) {
+    return res.status(400).json({ ok: false, error: "You cannot delete your own account" });
+  }
+
+  try {
+    const deleted = await userStore.deleteUser(target);
+    if (!deleted) {
+      return res.status(404).json({ ok: false, error: "User not found" });
+    }
+    auditStore.logAction(
+      caller,
+      `Deleted user account "${target}"`,
+      "N/A",
+      "Success",
+      "User Management"
+    );
+    res.json({ ok: true, deleted: target });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

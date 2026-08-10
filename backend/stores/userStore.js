@@ -175,6 +175,15 @@ async function enableTotp(username, enabled = true) {
   return result.affectedRows > 0;
 }
 
+async function deleteUser(username) {
+  const normalized = username.toLowerCase().trim();
+  const [result] = await pool.query(
+    "DELETE FROM users WHERE username = ?",
+    [normalized]
+  );
+  return result.affectedRows > 0;
+}
+
 module.exports = {
   ensureUsersTableExists,
   userCount,
@@ -187,6 +196,7 @@ module.exports = {
   updateUserProfile,
   updateGithubProfile,
   setTotpSecret,
-  enableTotp
+  enableTotp,
+  deleteUser
 };
 

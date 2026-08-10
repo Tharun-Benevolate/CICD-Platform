@@ -67,6 +67,11 @@
       }
 
       var data = await res.json();
+      if (data && data.redirect) {
+        window.location.href = data.redirect;
+        return;
+      }
+
       if (data && data.ok && data.html) {
         if (data.user) window.__USER__ = data.user;
 

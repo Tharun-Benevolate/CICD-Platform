@@ -201,12 +201,21 @@ async function handleProfileSubmit(e) {
   submitBtn.disabled = false;
 }
 
+var _totpTimer = null;
+var _totpTimeLeft = 300;
+var _totpSecret = '';
+var _totpRefreshInterval = null;
+var _totpRefreshSeconds = 10;
+
 // ── 2FA Setup & Verification ─────────────────────────────────────────────
-async function handleStart2FASetup() {
+async function handleStart2FASetup(isAutoRefresh) {
   var btn = document.getElementById('btn-start-2fa');
-  if (btn) btn.disabled = true;
+  var refreshBtn = document.getElementById('btn-refresh-totp');
+  if (btn && !isAutoRefresh) btn.disabled = true;
+  if (refreshBtn) refreshBtn.disabled = true;
+
   var msgEl = document.getElementById('totp-msg');
-  msgEl.style.display = 'none';
+  if (msgEl && !isAutoRefresh) msgEl.style.display = 'none';
 
   try {
     var res = await api.post('/api/auth/2fa/setup');
@@ -225,23 +234,60 @@ async function handleStart2FASetup() {
       var panel = document.getElementById('panel-2fa-setup');
       panel.style.display = 'grid';
 
-      // Auto-scroll scrollable content area smoothly so 2FA panel is immediately visible!
-      var contentArea = document.querySelector('.content-area');
-      if (contentArea && panel) {
-        setTimeout(function() {
-          panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }, 100);
+      if (!isAutoRefresh) {
+        var contentArea = document.querySelector('.content-area');
+        if (contentArea && panel) {
+          setTimeout(function() {
+            panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }, 100);
+        }
       }
 
-      // Start 5-minute countdown timer
+      // Start 5-minute session countdown timer
       startTotpCountdown(300);
+
+      // Start 10-second auto-refresh cycle
+      start10SecAutoRefresh();
     } else {
-      showMsg(msgEl, res.error || 'Failed to generate 2FA key', true);
+      if (msgEl) showMsg(msgEl, res.error || 'Failed to generate 2FA key', true);
     }
   } catch (err) {
-    showMsg(msgEl, err.message || 'Error generating 2FA', true);
+    if (msgEl) showMsg(msgEl, err.message || 'Error generating 2FA', true);
   }
+
   if (btn) btn.disabled = false;
+  if (refreshBtn) refreshBtn.disabled = false;
+}
+
+function start10SecAutoRefresh() {
+  if (_totpRefreshInterval) clearInterval(_totpRefreshInterval);
+  _totpRefreshSeconds = 10;
+
+  function updateRefreshBadge() {
+    var badge = document.getElementById('totp-auto-refresh-badge');
+    if (badge) {
+      badge.textContent = 'Auto-refreshes in ' + _totpRefreshSeconds + 's';
+    }
+  }
+
+  updateRefreshBadge();
+  _totpRefreshInterval = setInterval(function() {
+    _totpRefreshSeconds--;
+    if (_totpRefreshSeconds <= 0) {
+      clearInterval(_totpRefreshInterval);
+      // Auto-fetch fresh QR & secret
+      handleStart2FASetup(true);
+    } else {
+      updateRefreshBadge();
+    }
+  }, 1000);
+}
+
+function stop10SecAutoRefresh() {
+  if (_totpRefreshInterval) {
+    clearInterval(_totpRefreshInterval);
+    _totpRefreshInterval = null;
+  }
 }
 
 function startTotpCountdown(seconds) {
@@ -268,6 +314,7 @@ function startTotpCountdown(seconds) {
       document.getElementById('totp-code-input').disabled = true;
       document.getElementById('totp-verify-btn').disabled = true;
       clearInterval(_totpTimer);
+      stop10SecAutoRefresh();
     }
   }
 
@@ -321,6 +368,7 @@ async function handleVerify2FASetup(e) {
     var res = await api.post('/api/auth/2fa/verify-setup', { code: code });
     if (res.ok) {
       showMsg(msgEl, '2FA Authenticator activated successfully!', false);
+      stop10SecAutoRefresh();
       document.getElementById('totp-status-badge').textContent = '✔ ACTIVE';
       document.getElementById('totp-status-badge').style.background = 'rgba(16,185,129,0.12)';
       document.getElementById('totp-status-badge').style.color = '#10b981';
