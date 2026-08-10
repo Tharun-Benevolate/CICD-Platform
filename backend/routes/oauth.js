@@ -75,7 +75,7 @@ router.get("/oauth/github/callback", auth.requireAuth, async (req, res) => {
     const ghUser = await userRes.json();
 
     // Store encrypted credential
-    const username = state || req.user?.username;
+    const username = (req.user?.username || state || "").toLowerCase().trim();
     await credManager.storeCredential(username, {
       provider:  "github",
       label:     `GitHub (@${ghUser.login})`,
@@ -154,7 +154,7 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
       return res.redirect(`/settings/integrations?slack_error=${encodeURIComponent(tokenData.error)}`);
     }
 
-    const username   = state || req.user.username;
+    const username   = (req.user?.username || state || "").toLowerCase().trim();
     const botToken   = tokenData.access_token;
     const slackUserId = tokenData.authed_user?.id || tokenData.user_id || null;
     const channelId  = tokenData.incoming_webhook?.channel_id || slackUserId || null;
