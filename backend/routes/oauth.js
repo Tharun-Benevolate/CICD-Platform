@@ -19,7 +19,7 @@ const SLACK_CLIENT_ID     = process.env.SLACK_CLIENT_ID;
 const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
 const SLACK_REDIRECT_URI  = process.env.SLACK_REDIRECT_URI  || "http://localhost:3000/api/oauth/slack/callback";
 
-const CLIENT_URL = process.env.CLIENT_URL || "https://devops.benevolaite.com";
+const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
 
 // ── GitHub OAuth ──────────────────────────────────────────────────────────
 
@@ -43,11 +43,11 @@ router.get("/oauth/github/callback", auth.requireAuth, async (req, res) => {
   const { code, state, error } = req.query;
 
   if (error) {
-    return res.redirect(`${CLIENT_URL}/settings/integrations?oauth_error=${encodeURIComponent(error)}`);
+    return res.redirect(`/settings/integrations?oauth_error=${encodeURIComponent(error)}`);
   }
 
   if (!code) {
-    return res.redirect(`${CLIENT_URL}/settings/integrations?oauth_error=no_code`);
+    return res.redirect(`/settings/integrations?oauth_error=no_code`);
   }
 
   try {
@@ -65,7 +65,7 @@ router.get("/oauth/github/callback", auth.requireAuth, async (req, res) => {
     const tokenData = await tokenRes.json();
 
     if (tokenData.error || !tokenData.access_token) {
-      return res.redirect(`${CLIENT_URL}/settings/integrations?oauth_error=${encodeURIComponent(tokenData.error_description || "token_exchange_failed")}`);
+      return res.redirect(`/settings/integrations?oauth_error=${encodeURIComponent(tokenData.error_description || "token_exchange_failed")}`);
     }
 
     // Get GitHub identity
@@ -90,10 +90,10 @@ router.get("/oauth/github/callback", auth.requireAuth, async (req, res) => {
     }
 
     auditStore.logAction(username, "Connected GitHub account via OAuth", `@${ghUser.login}`, "Success");
-    res.redirect(`${CLIENT_URL}/settings/integrations?github_connected=1`);
+    res.redirect(`/settings/integrations?github_connected=1`);
   } catch (err) {
     console.error("[oauth/github/callback]", err.message);
-    res.redirect(`${CLIENT_URL}/settings/integrations?oauth_error=${encodeURIComponent(err.message)}`);
+    res.redirect(`/settings/integrations?oauth_error=${encodeURIComponent(err.message)}`);
   }
 });
 
@@ -178,6 +178,17 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
   } catch (err) {
     console.error("[oauth/slack/callback]", err.message);
     res.redirect(`/settings/integrations?slack_error=${encodeURIComponent(err.message)}`);
+  }
+});
+
+// DELETE /api/oauth/slack/disconnect — Disconnect Slack integration
+router.delete("/oauth/slack/disconnect", auth.requireAuth, async (req, res) => {
+  try {
+    await credManager.deleteCredentialByProvider(req.user.username, "slack");
+    auditStore.logAction(req.user.username, "Disconnected Slack OAuth", "", "Success");
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 

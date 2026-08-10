@@ -6,14 +6,41 @@ var _totpSecret = '';
 function initSettingsPage() {
   // Sync tab from URL
   var path = window.location.pathname;
+  var search = window.location.search;
   var currentTab = 'profile';
+
   if (path.includes('/settings/notifications')) currentTab = 'notifications';
-  if (path.includes('/settings/integrations')) currentTab = 'integrations';
+  if (path.includes('/settings/integrations') || search.includes('github_connected') || search.includes('slack_connected') || search.includes('oauth_error') || search.includes('slack_error')) {
+    currentTab = 'integrations';
+  }
   switchSettingsTab(currentTab, false);
 
   // Load active theme button highlight
   var currentTheme = localStorage.getItem('benevolate-theme') || 'auto';
   highlightThemeButton(currentTheme);
+
+  // Check URL Query parameters for OAuth callback banners
+  var alertEl = document.getElementById('oauth-alert-msg');
+  if (search.includes('github_connected=1')) {
+    showMsg(alertEl, '✔ GitHub account connected successfully!', false);
+  } else if (search.includes('slack_connected=1')) {
+    showMsg(alertEl, '✔ Slack workspace connected successfully!', false);
+  } else if (search.includes('oauth_error=')) {
+    var errMatch = search.match(/oauth_error=([^&]+)/);
+    var errMsg = errMatch ? decodeURIComponent(errMatch[1]) : 'GitHub OAuth authorization failed';
+    showMsg(alertEl, '✖ GitHub Error: ' + errMsg, true);
+  } else if (search.includes('slack_error=')) {
+    var errMatch = search.match(/slack_error=([^&]+)/);
+    var errMsg = errMatch ? decodeURIComponent(errMatch[1]) : 'Slack OAuth authorization failed';
+    showMsg(alertEl, '✖ Slack Error: ' + errMsg, true);
+  }
+
+  // Clean query string from browser URL bar without page reload
+  if (search && (search.includes('_connected=') || search.includes('_error='))) {
+    try {
+      history.replaceState(null, '', window.location.pathname);
+    } catch (e) {}
+  }
 
   // Load connections & notifications if needed
   checkOAuthConnections();
@@ -31,9 +58,12 @@ window.handleVerify2FA = handleVerify2FA;
 window.handleDisable2FA = handleDisable2FA;
 window.handleCopySecretCode = handleCopySecretCode;
 window.handleChangePasswordSubmit = handleChangePasswordSubmit;
-window.confirmDisconnectGithub = confirmDisconnectGithub;
+window.promptDisconnectGithub = promptDisconnectGithub;
 window.cancelDisconnectGithub = cancelDisconnectGithub;
-window.executeDisconnectGithub = executeDisconnectGithub;
+window.confirmDisconnectGithub = confirmDisconnectGithub;
+window.promptDisconnectSlack = promptDisconnectSlack;
+window.cancelDisconnectSlack = cancelDisconnectSlack;
+window.confirmDisconnectSlack = confirmDisconnectSlack;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initSettingsPage);
@@ -41,8 +71,94 @@ if (document.readyState === 'loading') {
   initSettingsPage();
 }
 
+// ── OAuth Status & Custom Inline Disconnect ────────────────────────────────
+async function checkOAuthConnections() {
+  try {
+    var res = await api.get('/api/my/credentials?t=' + Date.now());
+    if (res && res.ok && Array.isArray(res.credentials)) {
+      var gh = res.credentials.find(function(c) { return c.provider === 'github'; });
+      var sl = res.credentials.find(function(c) { return c.provider === 'slack'; });
 
-// ── Tab Switching & Breadcrumb Updates ─────────────────────────────────────
+      // GitHub UI State
+      var ghBadge = document.getElementById('gh-badge');
+      var ghConn = document.getElementById('gh-actions-connected');
+      var ghDisconn = document.getElementById('gh-actions-disconnected');
+      if (ghBadge) ghBadge.style.display = gh ? 'inline-block' : 'none';
+      if (ghConn) ghConn.style.display = gh ? 'flex' : 'none';
+      if (ghDisconn) ghDisconn.style.display = gh ? 'none' : 'block';
+
+      // Slack UI State
+      var slackBadge = document.getElementById('slack-badge');
+      var slackConn = document.getElementById('slack-actions-connected');
+      var slackDisconn = document.getElementById('slack-actions-disconnected');
+      if (slackBadge) slackBadge.style.display = sl ? 'inline-block' : 'none';
+      if (slackConn) slackConn.style.display = sl ? 'flex' : 'none';
+      if (slackDisconn) slackDisconn.style.display = sl ? 'none' : 'block';
+    }
+  } catch (e) {}
+}
+
+function promptDisconnectGithub() {
+  var confirmBanner = document.getElementById('gh-disconnect-confirm');
+  if (confirmBanner) confirmBanner.style.display = 'flex';
+}
+
+function cancelDisconnectGithub() {
+  var confirmBanner = document.getElementById('gh-disconnect-confirm');
+  if (confirmBanner) confirmBanner.style.display = 'none';
+}
+
+async function confirmDisconnectGithub() {
+  cancelDisconnectGithub();
+  var alertEl = document.getElementById('oauth-alert-msg');
+
+  try {
+    var res = await api.delete('/api/oauth/github/disconnect');
+    if (res && res.ok) {
+      showMsg(alertEl, '✔ GitHub account disconnected successfully.', false);
+      checkOAuthConnections();
+    } else {
+      showMsg(alertEl, (res && res.error) || 'Failed to disconnect GitHub account.', true);
+    }
+  } catch (err) {
+    showMsg(alertEl, err.message || 'Server error', true);
+  }
+}
+
+function promptDisconnectSlack() {
+  var confirmBanner = document.getElementById('slack-disconnect-confirm');
+  if (confirmBanner) confirmBanner.style.display = 'flex';
+}
+
+function cancelDisconnectSlack() {
+  var confirmBanner = document.getElementById('slack-disconnect-confirm');
+  if (confirmBanner) confirmBanner.style.display = 'none';
+}
+
+async function confirmDisconnectSlack() {
+  cancelDisconnectSlack();
+  var alertEl = document.getElementById('oauth-alert-msg');
+
+  try {
+    var res = await api.delete('/api/oauth/slack/disconnect');
+    if (res && res.ok) {
+      showMsg(alertEl, '✔ Slack workspace disconnected successfully.', false);
+      checkOAuthConnections();
+    } else {
+      showMsg(alertEl, (res && res.error) || 'Failed to disconnect Slack workspace.', true);
+    }
+  } catch (err) {
+    showMsg(alertEl, err.message || 'Server error', true);
+  }
+}
+
+// Helper: Show Message Box
+function showMsg(el, text, isError) {
+  if (!el) return;
+  el.className = 'msg-box ' + (isError ? 'error' : 'success');
+  el.textContent = text;
+  el.style.display = 'block';
+}
 function switchSettingsTab(tabName, updateUrl) {
   if (updateUrl !== false) {
     history.pushState(null, '', '/settings/' + tabName);
