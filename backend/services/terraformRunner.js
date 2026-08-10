@@ -44,11 +44,17 @@ const PROJECT_ROOT   = path.resolve(__dirname, "../..");
 const TERRAFORM_ROOT = path.join(PROJECT_ROOT, "terraform");
 
 function getStackDir(folderName) {
-  const inTf = path.join(TERRAFORM_ROOT, folderName);
-  if (fs.existsSync(inTf)) return inTf;
-  const inRoot = path.join(PROJECT_ROOT, folderName);
-  if (fs.existsSync(inRoot)) return inRoot;
-  return inTf;
+  const candidates = [
+    path.join(TERRAFORM_ROOT, folderName),
+    path.join(PROJECT_ROOT, "terraform", folderName),
+    path.join(PROJECT_ROOT, folderName),
+    path.resolve(process.cwd(), "terraform", folderName),
+    path.resolve(process.cwd(), folderName)
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return path.join(TERRAFORM_ROOT, folderName);
 }
 
 const INITIAL_DIR           = getStackDir("infra-initial");

@@ -9,5 +9,6 @@ node_modules
 *.tgz
 *.md
 README*
-terraform/
+**/.terraform/
+**/.terraform.lock.hcl
 .github/

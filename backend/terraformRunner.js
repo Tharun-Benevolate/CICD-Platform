@@ -42,10 +42,25 @@ function getTerraformBin() {
   return "terraform";
 }
 
-// ── Folder paths relative to this file ──────────────────────────────
-const INITIAL_DIR          = path.join(__dirname, "infra-initial");
-const DEPLOYMENT_DIR       = path.join(__dirname, "golf-infra-terraform");
-const SHARED_FOUNDATION_DIR = path.join(__dirname, "shared-foundation-terraform");
+const PROJECT_ROOT   = path.resolve(__dirname, "..");
+const TERRAFORM_ROOT = path.join(PROJECT_ROOT, "terraform");
+
+function getStackDir(folderName) {
+  const candidates = [
+    path.join(TERRAFORM_ROOT, folderName),
+    path.join(PROJECT_ROOT, folderName),
+    path.resolve(process.cwd(), "terraform", folderName),
+    path.resolve(process.cwd(), folderName)
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return path.join(TERRAFORM_ROOT, folderName);
+}
+
+const INITIAL_DIR           = getStackDir("infra-initial");
+const DEPLOYMENT_DIR        = getStackDir("golf-infra-terraform");
+const SHARED_FOUNDATION_DIR = getStackDir("shared-foundation-terraform");
 
 // Shared-foundation is applied ONCE for the whole platform, not per project —
 // but _writeBackend()'s S3 key isolation is keyed on projectId, so we give it
