@@ -42,10 +42,17 @@
 
   async function loadPage(url, pushHistory) {
     var contentArea = document.querySelector('.content-area');
+    var overlay = document.getElementById('page-loading-overlay');
+    var innerContainer = document.getElementById('page-content-inner') || contentArea;
+
     if (!contentArea) {
       window.location.href = url;
       return;
     }
+
+    // Show loading overlay during transition
+    if (overlay) overlay.classList.remove('hidden');
+    if (innerContainer) innerContainer.classList.remove('revealed');
 
     try {
       var res = await fetch(url, {
@@ -63,8 +70,8 @@
       if (data && data.ok && data.html) {
         if (data.user) window.__USER__ = data.user;
 
-        // 1. Swap HTML
-        contentArea.innerHTML = data.html;
+        // 1. Swap HTML into inner container
+        innerContainer.innerHTML = data.html;
 
         // 2. Load Page CSS if needed
         if (data.pageCSS) {
@@ -102,11 +109,17 @@
           });
         }
 
-        // 6. Refresh Lucide Icons
+        // 6. Refresh Lucide Icons & Scroll content area to top
         if (window.lucide) lucide.createIcons();
-
-        // 7. Scroll content area to top
         contentArea.scrollTop = 0;
+
+        // 7. Smoothly reveal content once loaded
+        if (typeof window.__revealPage === 'function') {
+          window.__revealPage();
+        } else {
+          if (overlay) overlay.classList.add('hidden');
+          if (innerContainer) innerContainer.classList.add('revealed');
+        }
       } else {
         window.location.href = url;
       }
