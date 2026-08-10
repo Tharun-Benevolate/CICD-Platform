@@ -1,0 +1,248 @@
+<aside class="sidebar" id="app-sidebar">
+  <!-- Brand Header -->
+  <div class="sidebar-header">
+    <img src="/logo.png" alt="Benevolate" class="logo">
+    <div class="brand" id="sidebar-brand">
+      <div class="brand-name">Benevolate</div>
+      <div class="brand-label">CI/CD Platform</div>
+    </div>
+  </div>
+
+  <!-- Enterprise Project Selector (custom dropdown, not native <select>) -->
+  <div class="project-switcher" id="project-switcher-container">
+    <div style="position:relative;width:100%;" id="project-selector-wrapper">
+      <!-- Trigger Button -->
+      <button onclick="toggleProjectDropdown()" id="project-trigger" style="width:100%;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);color:var(--color-text-primary);cursor:pointer;transition:all var(--transition-fast);font-family:var(--font-family);">
+        <div style="display:flex;align-items:center;gap:10px;overflow:hidden;">
+          <div id="project-avatar" style="width:28px;height:28px;border-radius:var(--radius-md);background:linear-gradient(135deg,var(--color-primary) 0%,#8b5cf6 100%);color:white;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;">P</div>
+          <div style="display:flex;flex-direction:column;text-align:left;overflow:hidden;">
+            <span id="project-name" style="font-size:13px;font-weight:600;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Select Project</span>
+            <span id="project-region" style="font-size:11px;color:var(--color-text-tertiary);">us-east-1</span>
+          </div>
+        </div>
+        <i data-lucide="chevron-down" id="project-chevron" style="width:16px;height:16px;color:var(--color-text-tertiary);flex-shrink:0;transition:transform var(--transition-fast);"></i>
+      </button>
+
+      <!-- Floating Popover Menu -->
+      <div id="project-dropdown" style="display:none;position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);box-shadow:var(--shadow-xl);z-index:1000;padding:8px;animation:popoverIn 0.15s cubic-bezier(0.16,1,0.3,1) both;">
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);padding:4px 8px 6px;text-transform:uppercase;letter-spacing:0.5px;" id="project-count-label">PROJECTS (0)</div>
+        <div id="project-list" style="max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:2px;"></div>
+        <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
+        <div style="height:1px;background:var(--color-border);margin:6px 0;"></div>
+        <a href="/new-project" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:var(--radius-md);color:var(--color-primary);font-size:12px;font-weight:600;text-decoration:none;">
+          <i data-lucide="plus" style="width:14px;height:14px;"></i> Create New Project
+        </a>
+        <% } %>
+      </div>
+    </div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="sidebar-nav">
+    <!-- Overview -->
+    <span class="nav-section-label">Overview</span>
+    <a href="/" class="nav-item <%= activePage === 'dashboard' ? 'active' : '' %>" title="Dashboard">
+      <i data-lucide="layout-dashboard" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Dashboard</span>
+    </a>
+    <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
+    <a href="/monitoring" class="nav-item <%= activePage === 'monitoring' ? 'active' : '' %>" title="Monitoring">
+      <i data-lucide="activity" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Monitoring</span>
+    </a>
+    <a href="/audit-logs" class="nav-item <%= activePage === 'audit-logs' ? 'active' : '' %>" title="Audit Logs">
+      <i data-lucide="file-text" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Audit Logs</span>
+    </a>
+    <% } %>
+    <a href="/pipelines" class="nav-item <%= activePage === 'pipelines' ? 'active' : '' %>" title="Pipelines">
+      <i data-lucide="git-branch" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Pipelines</span>
+    </a>
+
+    <!-- Source -->
+    <span class="nav-section-label">Source</span>
+    <a href="/repos" class="nav-item <%= activePage === 'repositories' ? 'active' : '' %>" title="Repositories">
+      <i data-lucide="git-fork" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Repositories</span>
+    </a>
+    <a href="/branches" class="nav-item <%= activePage === 'branches' ? 'active' : '' %>" title="Branches">
+      <i data-lucide="git-branch" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Branches</span>
+    </a>
+    <a href="/change-requests" class="nav-item <%= activePage === 'change-requests' ? 'active' : '' %>" title="Change Requests">
+      <i data-lucide="git-pull-request" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Change Requests</span>
+    </a>
+    <a href="/file-browser" class="nav-item <%= activePage === 'file-browser' ? 'active' : '' %>" title="File Browser">
+      <i data-lucide="folder-code" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">File Browser</span>
+    </a>
+
+    <!-- Deployment -->
+    <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
+    <span class="nav-section-label">Deployment</span>
+    <a href="/approvals" class="nav-item <%= activePage === 'approvals' ? 'active' : '' %>" title="Approvals">
+      <i data-lucide="check-circle" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Approvals</span>
+    </a>
+    <a href="/builds" class="nav-item <%= activePage === 'build-history' ? 'active' : '' %>" title="Build History">
+      <i data-lucide="briefcase" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Build History</span>
+    </a>
+    <a href="/scaling" class="nav-item <%= activePage === 'scaling' ? 'active' : '' %>" title="Auto-scaling">
+      <i data-lucide="trending-up" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Auto-scaling</span>
+    </a>
+    <a href="/beta" class="nav-item <%= activePage === 'beta-environment' ? 'active' : '' %>" title="Beta Environment">
+      <i data-lucide="flask-conical" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Beta Environment</span>
+    </a>
+    <a href="/release" class="nav-item <%= activePage === 'release' ? 'active' : '' %>" title="Release">
+      <i data-lucide="zap" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Release</span>
+    </a>
+    <% } %>
+
+
+    <!-- Project -->
+    <span class="nav-section-label">Project</span>
+    <a href="/team" class="nav-item <%= activePage === 'team-access' ? 'active' : '' %>" title="Team Access">
+      <i data-lucide="users" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Team Access</span>
+    </a>
+    <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
+    <a href="/setup" class="nav-item <%= activePage === 'setup-wizard' ? 'active' : '' %>" title="Setup Wizard">
+      <i data-lucide="settings" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Setup Wizard</span>
+    </a>
+    <% } %>
+  </nav>
+
+  <!-- Sidebar Footer -->
+  <div class="sidebar-footer">
+    <button class="nav-item" style="width:100%;border:none;background:none;" onclick="toggleSidebar()" title="Collapse sidebar" id="sidebar-collapse-btn">
+      <i data-lucide="chevrons-left" class="nav-icon" id="collapse-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Collapse</span>
+    </button>
+  </div>
+</aside>
+
+<style>
+  @keyframes popoverIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  #project-list button:hover {
+    background: var(--color-surface-hover) !important;
+  }
+  /* Collapsed sidebar: hide labels, project switcher, section labels */
+  .sidebar.collapsed .nav-label,
+  .sidebar.collapsed .brand,
+  .sidebar.collapsed .nav-section-label,
+  .sidebar.collapsed #project-switcher-container {
+    display: none !important;
+  }
+  .sidebar.collapsed {
+    width: 60px !important;
+    min-width: 60px !important;
+  }
+  .sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 10px 0 !important;
+  }
+  .sidebar.collapsed .sidebar-header {
+    justify-content: center;
+    padding: 16px 0 !important;
+  }
+  .sidebar.collapsed .sidebar-footer button {
+    justify-content: center !important;
+  }
+</style>
+
+<script>
+  var _projectsCache = [];
+  var _activeProjectId = null;
+
+  // Load projects into custom dropdown
+  (async function() {
+    try {
+      var res = await fetch('/api/projects', { credentials: 'include' });
+      var data = await res.json();
+      if (data.projects) {
+        _projectsCache = data.projects;
+        var active = data.projects.find(function(p) { return p.isActive; }) || data.projects[0];
+        if (active) {
+          _activeProjectId = active.id;
+          document.getElementById('project-avatar').textContent = active.name.charAt(0).toUpperCase();
+          document.getElementById('project-name').textContent = active.name;
+          document.getElementById('project-region').textContent = active.region || 'us-east-1';
+        }
+        document.getElementById('project-count-label').textContent = 'PROJECTS (' + data.projects.length + ')';
+        renderProjectList();
+      }
+    } catch(e) { console.error('Failed to load projects:', e); }
+  })();
+
+  function renderProjectList() {
+    var container = document.getElementById('project-list');
+    if (!container) return;
+    container.innerHTML = _projectsCache.map(function(p) {
+      var isSelected = p.id === _activeProjectId;
+      return '<button onclick="selectProject(\'' + p.id + '\')" style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:var(--radius-md);border:none;background:' + (isSelected ? 'var(--color-primary-light)' : 'transparent') + ';color:' + (isSelected ? 'var(--color-primary)' : 'var(--color-text-primary)') + ';cursor:pointer;text-align:left;transition:background var(--transition-fast);font-family:var(--font-family);width:100%;">' +
+        '<div style="display:flex;align-items:center;gap:10px;overflow:hidden;">' +
+          '<i data-lucide="folder" style="width:16px;height:16px;color:' + (isSelected ? 'var(--color-primary)' : 'var(--color-text-tertiary)') + ';"></i>' +
+          '<span style="font-size:13px;font-weight:' + (isSelected ? '600' : '500') + ';overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + p.name + '</span>' +
+        '</div>' +
+        (isSelected ? '<i data-lucide="check" style="width:16px;height:16px;color:var(--color-primary);"></i>' : '') +
+      '</button>';
+    }).join('');
+    if (window.lucide) lucide.createIcons();
+  }
+
+  function toggleProjectDropdown() {
+    var dd = document.getElementById('project-dropdown');
+    var isOpen = dd.style.display !== 'none';
+    dd.style.display = isOpen ? 'none' : 'block';
+    var chevron = document.getElementById('project-chevron');
+    if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+    var trigger = document.getElementById('project-trigger');
+    if (trigger) {
+      trigger.style.background = isOpen ? 'var(--color-surface)' : 'var(--color-surface-hover)';
+      trigger.style.boxShadow = isOpen ? 'none' : 'var(--shadow-sm)';
+    }
+  }
+
+  async function selectProject(id) {
+    await fetch('/api/projects/switch', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      credentials: 'include', body: JSON.stringify({ id: id })
+    });
+    window.location.reload();
+  }
+
+  // Close dropdown on outside click
+  document.addEventListener('mousedown', function(e) {
+    var wrapper = document.getElementById('project-selector-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      document.getElementById('project-dropdown').style.display = 'none';
+      var chevron = document.getElementById('project-chevron');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+      var trigger = document.getElementById('project-trigger');
+      if (trigger) { trigger.style.background = 'var(--color-surface)'; trigger.style.boxShadow = 'none'; }
+    }
+  });
+
+  function toggleSidebar() {
+    var sidebar = document.getElementById('app-sidebar');
+    sidebar.classList.toggle('collapsed');
+    // Swap icon
+    var icon = document.getElementById('collapse-icon');
+    if (sidebar.classList.contains('collapsed')) {
+      icon.setAttribute('data-lucide', 'chevrons-right');
+    } else {
+      icon.setAttribute('data-lucide', 'chevrons-left');
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+</script>

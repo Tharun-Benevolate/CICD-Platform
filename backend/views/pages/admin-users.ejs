@@ -1,0 +1,121 @@
+<div class="admin-users-container" style="max-width:1080px;margin:0 auto;padding-bottom:40px;">
+<% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
+  <div style="text-align:center;padding:80px 20px;">
+    <div style="width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <i data-lucide="shield-alert" style="width:28px;height:28px;"></i>
+    </div>
+    <h2 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px;">Access Restricted</h2>
+    <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">
+      You do not have permission to access this page. Please contact your organization administrator if you believe this is an error.
+    </p>
+  </div>
+<% } else { %>
+  <!-- Header Bar -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px;">
+    <div>
+      <h1 style="font-size:22px;font-weight:800;color:var(--color-text-primary);display:flex;align-items:center;gap:10px;margin:0;">
+        <i data-lucide="shield-check" style="width:22px;height:22px;color:#6366f1;"></i>
+        Admin User &amp; Moderation Console
+      </h1>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-top:4px;">
+        Global employee accounts moderation center, signup approvals, RBAC permissions, and security controls.
+      </p>
+    </div>
+    <button onclick="openCreateUserModal()" style="padding:10px 18px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:8px;border:none;background:#6366f1;color:white;border-radius:8px;cursor:pointer;font-family:inherit;">
+      <i data-lucide="user-plus" style="width:16px;height:16px;"></i> Create User Account
+    </button>
+  </div>
+
+  <!-- Filter Tabs Bar -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+    <button onclick="setAdminFilterTab('all')" id="admin-tab-all" class="admin-tab-btn"
+      style="padding:7px 16px;border-radius:999px;border:1.5px solid #6366f1;background:rgba(99,102,241,0.07);color:#6366f1;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
+      All Accounts <span id="count-all-users" style="font-size:11px;font-weight:800;background:#e0e7ff;color:#6366f1;padding:1px 7px;border-radius:999px;">0</span>
+    </button>
+    <button onclick="setAdminFilterTab('pending')" id="admin-tab-pending" class="admin-tab-btn"
+      style="padding:7px 16px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
+      Pending Moderation <span id="count-pending-users" style="font-size:11px;font-weight:700;background:var(--color-bg);color:var(--color-text-secondary);padding:1px 7px;border-radius:999px;">0</span>
+    </button>
+    <button onclick="setAdminFilterTab('blocked')" id="admin-tab-blocked" class="admin-tab-btn"
+      style="padding:7px 16px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
+      Suspended Accounts <span id="count-blocked-users" style="font-size:11px;font-weight:700;background:var(--color-bg);color:var(--color-text-secondary);padding:1px 7px;border-radius:999px;">0</span>
+    </button>
+  </div>
+
+  <!-- Users Card -->
+  <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;padding:24px;">
+    <h2 id="admin-section-title" style="font-size:15px;font-weight:700;margin:0 0 16px 0;color:var(--color-text-primary);">Platform User Accounts</h2>
+
+    <!-- Loading -->
+    <div id="admin-users-loading" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--color-text-tertiary);font-size:13px;">
+      <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;flex-shrink:0;"></i>
+      <span>Loading accounts...</span>
+    </div>
+
+    <!-- Empty -->
+    <div id="admin-users-empty" style="display:none;padding:40px;text-align:center;color:var(--color-text-tertiary);font-size:13px;">
+      No accounts match the selected filter.
+    </div>
+
+    <!-- User List -->
+    <div id="admin-users-list" style="display:none;flex-direction:column;gap:2px;"></div>
+  </div>
+
+  <!-- ── CREATE USER MODAL ── -->
+  <div id="modal-create-user" class="setup-modal-overlay" style="display:none;">
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;width:100%;max-width:520px;box-shadow:0 20px 60px rgba(0,0,0,0.4);overflow:hidden;">
+      <div style="padding:20px 24px 16px 24px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:16px;font-weight:700;color:var(--color-text-primary);">Create New User Account</span>
+        <button onclick="closeCreateUserModal()" style="background:none;border:none;color:var(--color-text-tertiary);cursor:pointer;padding:2px;line-height:0;">
+          <i data-lucide="x" style="width:18px;height:18px;"></i>
+        </button>
+      </div>
+      <form onsubmit="handleCreateUser(event)" style="padding:0 24px 24px 24px;display:flex;flex-direction:column;gap:14px;">
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--color-text-secondary);margin-bottom:6px;">Username <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="new-user-username" required placeholder="e.g. jdoe" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--color-text-secondary);margin-bottom:6px;">Password <span style="color:#ef4444;">*</span></label>
+          <input type="password" id="new-user-password" required placeholder="Enter password..." style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--color-text-secondary);margin-bottom:6px;">Email Address (Optional)</label>
+          <input type="email" id="new-user-email" placeholder="e.g. jdoe@company.com" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;box-sizing:border-box;" />
+        </div>
+        <div>
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--color-text-secondary);margin-bottom:6px;">Role / User Type</label>
+          <select id="new-user-role" style="width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;font-weight:600;">
+            <option value="developer">Developer</option>
+            <option value="devops">DevOps Engineer</option>
+            <option value="super_admin">Super Admin</option>
+            <option value="sales">Sales &amp; Business</option>
+          </select>
+        </div>
+        <div id="create-user-error" style="display:none;padding:10px;background:rgba(239,68,68,0.1);color:#ef4444;border-radius:8px;font-size:12px;font-weight:600;"></div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:4px;">
+          <button type="button" onclick="closeCreateUserModal()" style="padding:9px 16px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);font-size:13px;cursor:pointer;font-family:inherit;">Cancel</button>
+          <button type="submit" id="btn-submit-create-user" style="padding:9px 20px;border-radius:8px;border:none;background:#6366f1;color:white;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;">Create Account</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── INSPECT USER MODAL ── -->
+  <div id="modal-inspect-user" class="setup-modal-overlay" style="display:none;">
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;width:100%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.4);overflow:hidden;">
+      <div style="padding:20px 24px 16px 24px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i data-lucide="shield" style="width:18px;height:18px;color:#6366f1;"></i>
+          <span id="inspect-modal-title" style="font-size:16px;font-weight:700;color:var(--color-text-primary);">Profile &amp; RBAC Details</span>
+        </div>
+        <button onclick="closeInspectUserModal()" style="background:none;border:none;color:var(--color-text-tertiary);cursor:pointer;padding:2px;line-height:0;">
+          <i data-lucide="x" style="width:18px;height:18px;"></i>
+        </button>
+      </div>
+      <div id="inspect-modal-body" style="flex:1;padding:0 24px 24px 24px;overflow-y:auto;"></div>
+    </div>
+  </div>
+<% } %>
+</div>
+

@@ -1,0 +1,50 @@
+<div class="monitoring-container">
+<% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
+  <div style="text-align:center;padding:80px 20px;">
+    <div style="width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <i data-lucide="shield-alert" style="width:28px;height:28px;"></i>
+    </div>
+    <h2 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px;">Access Restricted</h2>
+    <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">
+      You do not have permission to access this page. Please contact your organization administrator if you believe this is an error.
+    </p>
+  </div>
+<% } else { %>
+  <!-- Header -->
+  <div class="monitoring-header">
+    <div>
+      <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin-bottom:4px;">
+        Live Infrastructure Monitoring
+      </h1>
+      <p style="font-size:13px;color:var(--color-text-secondary);">
+        Real-time health, CPU/Memory utilization, and service metrics.
+      </p>
+    </div>
+    <button onclick="fetchHealthMetrics()" id="refresh-monitoring-btn" style="padding:8px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;color:var(--color-text-primary);font-weight:600;">
+      <i data-lucide="refresh-cw" id="refresh-icon" style="width:14px;height:14px;"></i> Refresh
+    </button>
+  </div>
+
+  <!-- Metric Cards Grid -->
+  <div class="monitoring-grid">
+    <!-- API Server Status -->
+    <div class="monitoring-card">
+      <div class="monitoring-card-label">API SERVER STATUS</div>
+      <div class="monitoring-card-value" style="color:var(--color-success);">ONLINE (200 OK)</div>
+    </div>
+
+    <!-- Database Pool -->
+    <div class="monitoring-card">
+      <div class="monitoring-card-label">DATABASE POOL</div>
+      <div class="monitoring-card-value" id="mon-db-status" style="color:var(--color-text-primary);">Checking...</div>
+    </div>
+
+    <!-- AWS STS Identity -->
+    <div class="monitoring-card">
+      <div class="monitoring-card-label">AWS STS IDENTITY</div>
+      <div class="monitoring-card-value" id="mon-aws-status" style="color:var(--color-text-primary);">Checking...</div>
+    </div>
+  </div>
+<% } %>
+</div>
+

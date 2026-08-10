@@ -1,0 +1,13 @@
+node_modules
+.env
+.env.*
+.git
+.gitignore
+*.log
+*.zip
+*.tar
+*.tgz
+*.md
+README*
+terraform/
+.github/

@@ -1,0 +1,335 @@
+<div class="repos-container">
+  <!-- Header -->
+  <div class="repos-header">
+    <div>
+      <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin-bottom:2px;">Repositories</h1>
+      <p style="font-size:13px;color:var(--color-text-secondary);">
+        Connected Git repositories for project <strong id="repo-project-name-label" style="color:var(--color-text-primary);">(deploy-watch)</strong>
+      </p>
+    </div>
+    <div style="display:flex;gap:10px;">
+      <button
+        onclick="toggleTempCliSection()"
+        id="btn-toggle-temp-cli"
+        class="btn-temp-cli-header"
+      >
+        <i data-lucide="key" style="width:14px;height:14px;"></i> Temp CLI Credentials
+      </button>
+
+      <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
+        <button
+          onclick="openConnectModal()"
+          class="btn-connect-repo-header"
+        >
+          <i data-lucide="plus" style="width:16px;height:16px;"></i> Connect Repository
+        </button>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div id="repos-loading-spinner" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--color-text-tertiary);font-size:13px;">
+    <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;flex-shrink:0;"></i>
+    <span>Loading repositories…</span>
+  </div>
+
+  <!-- Repositories Grid -->
+  <div id="repos-grid" class="repos-grid" style="display:none;"></div>
+
+  <!-- Empty State -->
+  <div id="repos-empty-state" style="display:none;background:var(--color-surface);border:1px dashed var(--color-border);border-radius:var(--radius-xl);padding:48px;text-align:center;">
+    <i data-lucide="git-branch" style="width:38px;height:38px;color:var(--color-text-tertiary);margin-bottom:12px;"></i>
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--color-text-primary);">No Repositories Connected</h3>
+    <p style="font-size:14px;color:var(--color-text-secondary);max-width:420px;margin:0 auto 20px;">
+      Connect an AWS CodeCommit or GitHub repository to enable automated CI/CD pipeline triggers.
+    </p>
+    <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
+      <button onclick="openConnectModal()" class="btn-connect-repo-header">
+        Connect Your First Repository
+      </button>
+    <% } %>
+  </div>
+
+  <!-- ── TEMPORARY CLI CREDENTIALS SLIDE-DOWN SECTION ── -->
+  <div id="temp-cli-section" class="temp-cli-box" style="display:none;">
+    <!-- Section Header -->
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:16px 24px;border-bottom:1px solid var(--color-border);background:linear-gradient(135deg, rgba(99,102,241,0.06) 0%, rgba(139,92,246,0.04) 100%);">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i data-lucide="terminal" style="width:16px;height:16px;color:white;"></i>
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);">
+            Temporary CLI Credentials
+          </div>
+          <div id="temp-cli-subtitle" style="font-size:11px;color:var(--color-text-tertiary);">
+            Select a repository and generate short-lived credentials
+          </div>
+        </div>
+      </div>
+      <button onclick="toggleTempCliSection()" title="Close" style="width:30px;height:30px;border-radius:7px;border:1px solid var(--color-border);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--color-text-tertiary);">
+        <i data-lucide="x" style="width:14px;height:14px;"></i>
+      </button>
+    </div>
+
+    <!-- Section Body -->
+    <div style="padding:20px 24px;">
+      <!-- STEP 1: Select Repository & Duration -->
+      <div id="temp-step-select" style="display:flex;gap:24px;flex-wrap:wrap;">
+        <div style="flex:1 1 340px;">
+          <div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
+            Select Repository
+          </div>
+          <div id="temp-repo-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+        </div>
+
+        <div style="flex:1 1 280px;display:flex;flex-direction:column;gap:16px;">
+          <div>
+            <div style="font-size:12px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:10px;">
+              Session Duration
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="duration-btn" onclick="selectDuration(15)" id="dur-btn-15">15m</button>
+              <button type="button" class="duration-btn" onclick="selectDuration(30)" id="dur-btn-30">30m</button>
+              <button type="button" class="duration-btn active" onclick="selectDuration(60)" id="dur-btn-60">1h</button>
+              <button type="button" class="duration-btn" onclick="selectDuration(120)" id="dur-btn-120">2h</button>
+              <button type="button" class="duration-btn" onclick="selectDuration(240)" id="dur-btn-240">4h</button>
+            </div>
+          </div>
+
+          <div id="temp-provider-notice" style="display:none;padding:10px 14px;border-radius:10px;font-size:12px;line-height:1.5;background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);color:var(--color-text-secondary);"></div>
+
+          <button onclick="handleGenerateTempCreds()" id="btn-generate-temp-creds" disabled class="btn-generate-creds-full" style="opacity:0.5;cursor:not-allowed;">
+            <i data-lucide="key" style="width:15px;height:15px;"></i> Generate Credentials
+          </button>
+        </div>
+      </div>
+
+      <!-- STEP 2: Generating -->
+      <div id="temp-step-generating" style="display:none;align-items:center;gap:14px;padding:12px 0;">
+        <div style="width:42px;height:42px;border-radius:12px;flex-shrink:0;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;">
+          <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:white;"></i>
+        </div>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--color-text-primary);">Generating credentials…</div>
+          <div id="temp-gen-subtext" style="font-size:12px;color:var(--color-text-tertiary);margin-top:2px;">Preparing clone credentials</div>
+        </div>
+      </div>
+
+      <!-- STEP 3: Credential Display -->
+      <div id="temp-step-done" style="display:none;gap:20px;flex-wrap:wrap;">
+        <div style="flex:1 1 280px;display:flex;flex-direction:column;gap:12px;">
+          <div id="temp-expiry-badge" style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;font-size:12px;font-weight:600;color:#10b981;align-self:flex-start;">
+            <i data-lucide="clock" style="width:12px;height:12px;"></i> Expires in: <span id="temp-time-left">60m 00s</span>
+          </div>
+
+          <div>
+            <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:4px;">Git Username</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--color-bg);border-radius:8px;border:1px solid var(--color-border);">
+              <code id="temp-username-code" style="font-size:12px;color:var(--color-text-primary);word-break:break-all;"></code>
+              <button onclick="copyText('temp-username-code')" class="btn-icon" title="Copy Username">
+                <i data-lucide="copy" style="width:12px;height:12px;"></i>
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:4px;">Git Password / Token</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 12px;background:var(--color-bg);border-radius:8px;border:1px solid var(--color-border);">
+              <code id="temp-password-code" style="font-size:11px;color:var(--color-text-primary);word-break:break-all;flex:1;"></code>
+              <button onclick="copyText('temp-password-code')" class="btn-icon" title="Copy Password">
+                <i data-lucide="copy" style="width:12px;height:12px;"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div style="flex:1 1 320px;display:flex;flex-direction:column;gap:12px;">
+          <div>
+            <div style="font-size:11px;color:var(--color-text-tertiary);margin-bottom:6px;">One-Click Clone Command</div>
+            <div style="position:relative;border-radius:10px;overflow:hidden;">
+              <pre id="temp-clone-pre" style="margin:0;padding:12px 44px 12px 14px;background:#0f172a;color:#e2e8f0;font-size:11px;line-height:1.6;white-space:pre-wrap;word-break:break-all;font-family:monospace;border:1px solid #1e293b;border-radius:10px;"></pre>
+              <button onclick="copyText('temp-clone-pre')" style="position:absolute;top:8px;right:8px;border:none;background:rgba(255,255,255,0.1);border-radius:6px;cursor:pointer;padding:4px 7px;color:#94a3b8;">
+                <i data-lucide="copy" style="width:12px;height:12px;"></i>
+              </button>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:auto;">
+            <button onclick="handleRevokeTempCreds()" id="btn-revoke-temp" class="btn-danger" style="flex:1;padding:10px 0;font-size:13px;display:flex;align-items:center;justify-content:center;gap:6px;">
+              <i data-lucide="shield" style="width:13px;height:13px;"></i> Revoke &amp; Invalidate Token
+            </button>
+            <button onclick="resetTempCliView()" class="btn-secondary" style="padding:10px 16px;font-size:13px;">
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DISCONNECT REPOSITORY MODAL ── -->
+  <div id="modal-disconnect-repo" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:460px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(245,158,11,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i data-lucide="link-2-off" style="width:20px;height:20px;color:var(--color-warning);"></i>
+        </div>
+        <div>
+          <h3 style="font-size:17px;font-weight:700;color:var(--color-text-primary);margin:0;">Disconnect Repository?</h3>
+          <p style="font-size:12px;color:var(--color-text-tertiary);margin:0;">Project: <span id="dis-proj-name">Current Project</span></p>
+        </div>
+      </div>
+      <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:16px;">
+        This will remove <strong id="dis-repo-name">repo</strong> from this project. The repository at <strong id="dis-provider-name">provider</strong> stays intact.
+      </p>
+      <div id="dis-error-msg" style="display:none;" class="msg-box error"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button onclick="closeDisconnectModal()" class="btn-secondary">Cancel</button>
+        <button onclick="confirmDisconnectRepo()" id="btn-dis-submit" style="padding:8px 18px;background:var(--color-warning);color:#000;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:700;display:flex;align-items:center;gap:6px;">
+          <i data-lucide="link-2-off" style="width:14px;height:14px;"></i> Disconnect
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DELETE & DISCONNECT REPOSITORY MODAL ── -->
+  <div id="modal-delete-repo" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:480px;">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+        <div style="width:40px;height:40px;border-radius:10px;background:rgba(239,68,68,0.15);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <i data-lucide="alert-triangle" style="width:20px;height:20px;color:var(--color-danger);"></i>
+        </div>
+        <div>
+          <h3 style="font-size:17px;font-weight:700;color:var(--color-danger);margin:0;">Delete &amp; Disconnect Repository?</h3>
+          <p style="font-size:12px;color:var(--color-text-tertiary);margin:0;">Permanent remote deletion at provider</p>
+        </div>
+      </div>
+      <div style="padding:14px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;font-size:13px;line-height:1.5;margin-bottom:16px;">
+        <strong style="color:var(--color-danger);display:block;margin-bottom:4px;">⚠️ PERMANENT REMOTE DELETION:</strong>
+        This will permanently delete <strong id="del-repo-name">repo</strong> from <strong id="del-provider-name">provider</strong> and remove it from this project.
+      </div>
+      <div id="del-error-msg" style="display:none;" class="msg-box error"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button onclick="closeDeleteModal()" class="btn-secondary">Cancel</button>
+        <button onclick="confirmDeleteRepo()" id="btn-del-submit" class="btn-danger" style="padding:8px 18px;font-size:13px;display:flex;align-items:center;gap:6px;">
+          <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Delete &amp; Disconnect
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CONNECT REPOSITORY MODAL ── -->
+  <div id="modal-connect-repo" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:540px;">
+      <button onclick="closeConnectModal()" style="position:absolute;top:20px;right:20px;background:none;border:none;color:var(--color-text-tertiary);cursor:pointer;padding:4px;">
+        <i data-lucide="x" style="width:20px;height:20px;"></i>
+      </button>
+
+      <h2 style="font-size:20px;font-weight:800;color:var(--color-text-primary);margin-bottom:4px;">
+        Connect Repository
+      </h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:20px;">
+        Connect an existing repository or create a new one for project <strong id="conn-modal-proj-name" style="color:var(--color-text-primary);">deploy-watch</strong>
+      </p>
+
+      <!-- Segmented Bar -->
+      <div style="display:flex;background:var(--color-bg);padding:4px;border-radius:14px;border:1px solid var(--color-border);margin-bottom:20px;">
+        <button type="button" id="tab-btn-conn-existing" onclick="switchConnTab('existing')" style="flex:1;padding:10px 16px;border-radius:10px;border:none;background:#6366f1;color:white;font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <i data-lucide="link" style="width:15px;height:15px;"></i> Connect Existing
+        </button>
+        <button type="button" id="tab-btn-conn-create" onclick="switchConnTab('create')" style="flex:1;padding:10px 16px;border-radius:10px;border:none;background:transparent;color:var(--color-text-secondary);font-weight:700;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+          <i data-lucide="plus" style="width:15px;height:15px;"></i> Create New
+        </button>
+      </div>
+
+      <!-- REPOSITORY PROVIDER Label & Single-Select Dropdown Trigger -->
+      <div style="margin-bottom:18px;position:relative;">
+        <label style="display:block;font-size:11px;font-weight:800;letter-spacing:0.6px;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:6px;">
+          REPOSITORY PROVIDER
+        </label>
+        <div onclick="toggleProviderDropdown()" class="modal-provider-trigger">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span id="provider-icon-wrapper">
+              <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#FF9900" d="M6.763 10.036c0 .296.032.535.088.71.064.176.144.368.256.576.04.064.056.128.056.184 0 .08-.048.16-.152.24l-.504.336a.383.383 0 0 1-.208.072c-.08 0-.16-.04-.24-.112a2.47 2.47 0 0 1-.288-.376 6.18 6.18 0 0 1-.248-.472c-.624.736-1.408 1.104-2.352 1.104-.672 0-1.208-.192-1.6-.576-.392-.384-.592-.896-.592-1.536 0-.68.24-1.232.728-1.648.488-.416 1.136-.624 1.96-.624.272 0 .552.024.848.064.296.04.6.104.92.176v-.584c0-.608-.128-1.032-.376-1.28-.256-.248-.688-.368-1.304-.368-.28 0-.568.032-.864.104-.296.072-.584.168-.864.296a2.298 2.298 0 0 1-.28.104.488.488 0 0 1-.128.024c-.112 0-.168-.08-.168-.248v-.392c0-.128.016-.224.056-.28a.597.597 0 0 1 .224-.168c.28-.144.616-.264 1.008-.36A4.84 4.84 0 0 1 4.8 6.6c.952 0 1.648.216 2.096.648.44.432.664 1.088.664 1.968v2.82zm-3.24 1.212c.264 0 .536-.048.824-.144.288-.096.544-.272.76-.512.128-.152.224-.32.272-.512.048-.192.08-.424.08-.696v-.336a6.709 6.709 0 0 0-.736-.136 6.02 6.02 0 0 0-.752-.048c-.536 0-.928.104-1.192.32-.264.216-.392.52-.392.92 0 .376.096.656.296.848.192.2.464.296.84.296zm6.44.864c-.144 0-.24-.024-.304-.08-.064-.048-.12-.16-.168-.312L7.58 7.616a1.42 1.42 0 0 1-.072-.32c0-.128.064-.2.192-.2h.784c.152 0 .256.024.312.08.064.048.112.16.16.312l1.48 5.836 1.376-5.836c.04-.16.088-.264.152-.312a.56.56 0 0 1 .32-.08h.64c.152 0 .256.024.32.08.064.048.12.16.152.312l1.392 5.904 1.528-5.904c.048-.16.104-.264.16-.312a.52.52 0 0 1 .312-.08h.744c.128 0 .2.064.2.2 0 .04-.008.08-.016.128a1.137 1.137 0 0 1-.056.2l-2.128 6.104c-.048.16-.104.264-.168.312a.51.51 0 0 1-.304.08h-.688c-.152 0-.256-.024-.32-.08-.064-.056-.12-.16-.152-.32L12.96 7.964l-1.368 5.836c-.04.16-.088.264-.152.32-.064.056-.176.08-.32.08h-.688zm11.336.24c-.416 0-.832-.048-1.232-.144-.4-.096-.712-.2-.92-.32-.128-.072-.216-.152-.248-.224a.56.56 0 0 1-.048-.224v-.408c0-.168.064-.248.184-.248.048 0 .096.008.144.024.048.016.12.048.2.08.272.12.568.216.888.28.328.064.648.096.976.096.52 0 .92-.088 1.2-.264a.86.86 0 0 0 .424-.76.777.777 0 0 0-.212-.556c-.144-.152-.416-.288-.808-.416l-1.16-.36c-.584-.184-1.016-.456-1.288-.816a1.953 1.953 0 0 1-.408-1.184c0-.344.072-.648.216-.912.144-.264.336-.496.576-.688.24-.192.512-.336.832-.432.32-.096.656-.144 1.008-.144.176 0 .36.008.536.032.184.024.352.056.512.096.152.04.296.088.432.136.136.048.24.096.312.144a.649.649 0 0 1 .216.208.506.506 0 0 1 .064.256v.376c0 .168-.064.256-.184.256a.83.83 0 0 1-.3-.096 3.807 3.807 0 0 0-1.596-.328c-.472 0-.84.072-1.096.224-.256.152-.384.384-.384.704 0 .216.08.4.232.552.152.152.44.304.856.44l1.136.36c.576.184.992.44 1.24.768.248.328.368.704.368 1.12 0 .352-.072.672-.208.952-.144.28-.336.52-.592.72-.256.2-.56.344-.912.448-.368.112-.76.168-1.184.168z"/><path fill="#FF9900" d="M20.16 17.196c-2.464 1.8-6.032 2.752-9.112 2.752-4.312 0-8.2-1.6-11.136-4.248-.232-.208-.024-.496.256-.336 3.168 1.848 7.088 2.952 11.128 2.952 2.728 0 5.728-.568 8.488-1.744.416-.176.768.272.376.624z"/><path fill="#FF9900" d="M21.12 16.096c-.312-.4-2.072-.192-2.864-.096-.24.032-.28-.184-.064-.344 1.4-.984 3.704-.704 3.968-.368.264.336-.072 2.64-1.384 3.744-.2.168-.392.08-.304-.144.296-.736.952-2.392.648-2.792z"/></svg>
+            </span>
+            <span id="provider-selected-text" style="font-weight:700;font-size:14px;color:var(--color-text-primary);">
+              AWS CodeCommit
+            </span>
+          </div>
+          <i data-lucide="chevron-down" style="width:14px;height:14px;color:var(--color-text-tertiary);"></i>
+        </div>
+
+        <div id="modal-provider-dropdown" class="modal-provider-dropdown" style="display:none;">
+          <div onclick="selectConnProvider('codecommit')" class="modal-provider-option">
+            <svg width="16" height="16" viewBox="0 0 24 24"><path fill="#FF9900" d="M6.763 10.036c0 .296.032.535.088.71.064.176.144.368.256.576.04.064.056.128.056.184 0 .08-.048.16-.152.24l-.504.336a.383.383 0 0 1-.208.072c-.08 0-.16-.04-.24-.112a2.47 2.47 0 0 1-.288-.376 6.18 6.18 0 0 1-.248-.472c-.624.736-1.408 1.104-2.352 1.104-.672 0-1.208-.192-1.6-.576-.392-.384-.592-.896-.592-1.536 0-.68.24-1.232.728-1.648.488-.416 1.136-.624 1.96-.624.272 0 .552.024.848.064.296.04.6.104.92.176v-.584c0-.608-.128-1.032-.376-1.28-.256-.248-.688-.368-1.304-.368-.28 0-.568.032-.864.104-.296.072-.584.168-.864.296a2.298 2.298 0 0 1-.28.104.488.488 0 0 1-.128.024c-.112 0-.168-.08-.168-.248v-.392c0-.128.016-.224.056-.28a.597.597 0 0 1 .224-.168c.28-.144.616-.264 1.008-.36A4.84 4.84 0 0 1 4.8 6.6c.952 0 1.648.216 2.096.648.44.432.664 1.088.664 1.968v2.82zm-3.24 1.212c.264 0 .536-.048.824-.144.288-.096.544-.272.76-.512.128-.152.224-.32.272-.512.048-.192.08-.424.08-.696v-.336a6.709 6.709 0 0 0-.736-.136 6.02 6.02 0 0 0-.752-.048c-.536 0-.928.104-1.192.32-.264.216-.392.52-.392.92 0 .376.096.656.296.848.192.2.464.296.84.296zm6.44.864c-.144 0-.24-.024-.304-.08-.064-.048-.12-.16-.168-.312L7.58 7.616a1.42 1.42 0 0 1-.072-.32c0-.128.064-.2.192-.2h.784c.152 0 .256.024.312.08.064.048.112.16.16.312l1.48 5.836 1.376-5.836c.04-.16.088-.264.152-.312a.56.56 0 0 1 .32-.08h.64c.152 0 .256.024.32.08.064.048.12.16.152.312l1.392 5.904 1.528-5.904c.048-.16.104-.264.16-.312a.52.52 0 0 1 .312-.08h.744c.128 0 .2.064.2.2 0 .04-.008.08-.016.128a1.137 1.137 0 0 1-.056.2l-2.128 6.104c-.048.16-.104.264-.168.312a.51.51 0 0 1-.304.08h-.688c-.152 0-.256-.024-.32-.08-.064-.056-.12-.16-.152-.32L12.96 7.964l-1.368 5.836c-.04.16-.088.264-.152.32-.064.056-.176.08-.32.08h-.688zm11.336.24c-.416 0-.832-.048-1.232-.144-.4-.096-.712-.2-.92-.32-.128-.072-.216-.152-.248-.224a.56.56 0 0 1-.048-.224v-.408c0-.168.064-.248.184-.248.048 0 .096.008.144.024.048.016.12.048.2.08.272.12.568.216.888.28.328.064.648.096.976.096.52 0 .92-.088 1.2-.264a.86.86 0 0 0 .424-.76.777.777 0 0 0-.212-.556c-.144-.152-.416-.288-.808-.416l-1.16-.36c-.584-.184-1.016-.456-1.288-.816a1.953 1.953 0 0 1-.408-1.184c0-.344.072-.648.216-.912.144-.264.336-.496.576-.688.24-.192.512-.336.832-.432.32-.096.656-.144 1.008-.144.176 0 .36.008.536.032.184.024.352.056.512.096.152.04.296.088.432.136.136.048.24.096.312.144a.649.649 0 0 1 .216.208.506.506 0 0 1 .064.256v.376c0 .168-.064.256-.184.256a.83.83 0 0 1-.3-.096 3.807 3.807 0 0 0-1.596-.328c-.472 0-.84.072-1.096.224-.256.152-.384.384-.384.704 0 .216.08.4.232.552.152.152.44.304.856.44l1.136.36c.576.184.992.44 1.24.768.248.328.368.704.368 1.12 0 .352-.072.672-.208.952-.144.28-.336.52-.592.72-.256.2-.56.344-.912.448-.368.112-.76.168-1.184.168z"/><path fill="#FF9900" d="M20.16 17.196c-2.464 1.8-6.032 2.752-9.112 2.752-4.312 0-8.2-1.6-11.136-4.248-.232-.208-.024-.496.256-.336 3.168 1.848 7.088 2.952 11.128 2.952 2.728 0 5.728-.568 8.488-1.744.416-.176.768.272.376.624z"/><path fill="#FF9900" d="M21.12 16.096c-.312-.4-2.072-.192-2.864-.096-.24.032-.28-.184-.064-.344 1.4-.984 3.704-.704 3.968-.368.264.336-.072 2.64-1.384 3.744-.2.168-.392.08-.304-.144.296-.736.952-2.392.648-2.792z"/></svg>
+            <span style="font-weight:600;font-size:13px;color:var(--color-text-primary);">AWS CodeCommit</span>
+          </div>
+          <div onclick="selectConnProvider('github')" class="modal-provider-option">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+            <span style="font-weight:600;font-size:13px;color:var(--color-text-primary);">GitHub</span>
+          </div>
+        </div>
+      </div>
+
+      <div id="conn-oauth-warning" style="display:none;padding:12px;background:rgba(245,158,11,0.1);border:1px solid var(--color-warning);border-radius:10px;margin-bottom:16px;font-size:12px;color:var(--color-text-primary);">
+        GitHub OAuth connection required. Please authorize your GitHub account in <a href="/settings/integrations" style="color:#6366f1;font-weight:700;">Settings &gt; Integrations</a>.
+      </div>
+
+      <div id="conn-modal-msg" style="display:none;" class="msg-box error"></div>
+
+      <!-- Tab Content: Connect Existing -->
+      <div id="conn-tab-existing">
+        <div style="border:1.5px dashed var(--color-border);border-radius:16px;padding:20px;background:var(--color-bg);margin-bottom:20px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-size:11px;font-weight:800;letter-spacing:0.6px;color:var(--color-text-tertiary);text-transform:uppercase;">
+              AVAILABLE REPOSITORIES
+            </span>
+            <button type="button" onclick="fetchAvailableRepos()" style="background:none;border:none;color:#6366f1;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;">
+              <i data-lucide="refresh-cw" id="btn-refresh-avail-icon" style="width:13px;height:13px;"></i> Refresh
+            </button>
+          </div>
+
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+            Select Repository
+          </label>
+          <select id="conn-select-repo" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);font-size:13px;outline:none;"></select>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
+          <button type="button" onclick="closeConnectModal()" class="btn-secondary" style="padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;">
+            Cancel
+          </button>
+          <button onclick="handleConnectExistingSubmit()" id="btn-submit-existing" style="padding:10px 22px;border-radius:10px;border:none;background:#6366f1;color:white;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+            Connect Repository
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab Content: Create New -->
+      <div id="conn-tab-create" style="display:none;">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+            Repository Name
+          </label>
+          <input type="text" id="conn-new-name" placeholder="e.g. uat-benevolate-service" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;" />
+        </div>
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+            Description (Optional)
+          </label>
+          <input type="text" id="conn-new-desc" placeholder="Production deployment repository" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;" />
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:12px;margin-top:20px;">
+          <button type="button" onclick="closeConnectModal()" class="btn-secondary" style="padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;">
+            Cancel
+          </button>
+          <button onclick="handleCreateNewSubmit()" id="btn-submit-create" style="padding:10px 22px;border-radius:10px;border:none;background:#6366f1;color:white;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 4px 14px rgba(99,102,241,0.35);">
+            Create &amp; Connect Repository
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,20 @@
+.beta-container {
+  padding-bottom: 40px;
+}
+
+.beta-subtab-btn {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.beta-subtab-btn.active {
+  background: #6366f1;
+  color: white;
+}

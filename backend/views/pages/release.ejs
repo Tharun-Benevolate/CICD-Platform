@@ -1,0 +1,107 @@
+<div class="release-container" style="max-width:1080px;margin:0 auto;padding-bottom:60px;">
+  <% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
+    <div style="padding:60px;text-align:center;color:var(--color-text-tertiary);">
+      <i data-lucide="shield-check" style="width:48px;height:48px;margin-bottom:12px;opacity:0.5;"></i>
+      <h3 style="font-size:18px;color:var(--color-text-primary);margin-bottom:8px;font-weight:700;">Access Restricted</h3>
+      <p style="font-size:13px;color:var(--color-text-secondary);">DevOps or Administrator privileges are required to manage release branches.</p>
+    </div>
+  <% } else { %>
+    <div id="content">
+      <div style="padding:40px;text-align:center;color:var(--color-text-tertiary);">Loading...</div>
+    </div>
+  <% } %>
+</div>
+<style>
+  .release-layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  .release-branch-panel {
+    width: 280px;
+    flex-shrink: 0;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .release-steps-col {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  .release-branch-row {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background 0.15s;
+    color: var(--color-text-primary);
+  }
+  .release-branch-row:hover {
+    background: var(--color-bg);
+  }
+  .release-branch-row.selected {
+    background: rgba(99, 102, 241, 0.1);
+    border-left: 3px solid #6366f1;
+    padding-left: 13px;
+  }
+  .release-step-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .release-step-disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+  .release-step-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .release-step-num {
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
+    background: var(--color-bg);
+    border: 2px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--color-text-secondary);
+    flex-shrink: 0;
+  }
+  .release-step-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: 2px;
+  }
+  .release-step-sub {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+  }
+  .release-step-body {
+    padding: 20px;
+    color: var(--color-text-primary);
+  }
+  .release-build-log {
+    background: #090d16;
+    color: #38bdf8;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: Menlo, Monaco, Consolas, monospace;
+    font-size: 11px;
+    overflow-x: auto;
+    margin-top: 10px;
+  }
+</style>

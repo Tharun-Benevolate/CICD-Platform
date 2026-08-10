@@ -1,0 +1,66 @@
+<div class="audit-logs-container">
+<% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
+  <div style="text-align:center;padding:80px 20px;">
+    <div style="width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+      <i data-lucide="shield-alert" style="width:28px;height:28px;"></i>
+    </div>
+    <h2 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px;">Access Restricted</h2>
+    <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">
+      You do not have permission to access this page. Please contact your organization administrator if you believe this is an error.
+    </p>
+  </div>
+<% } else { %>
+  <!-- Header Bar -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+    <div>
+      <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin-bottom:2px;">
+        Audit Logs
+      </h1>
+      <p style="font-size:13px;color:var(--color-text-secondary);">
+        Security audit trail for infrastructure actions, logins, and approvals.
+      </p>
+    </div>
+    <button onclick="fetchAuditLogs()" style="padding:8px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;color:var(--color-text-primary);">
+      <i data-lucide="refresh-cw" id="btn-refresh-audit-icon" style="width:14px;height:14px;"></i> Refresh
+    </button>
+  </div>
+
+  <!-- Filter Bar -->
+  <div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button onclick="setAuditCategory('All')" id="audit-cat-All" class="audit-cat-btn" style="padding:6px 14px;border-radius:999px;border:1px solid #6366f1;background:#6366f1;color:white;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all 0.14s ease;">All</button>
+      <button onclick="setAuditCategory('Login')" id="audit-cat-Login" class="audit-cat-btn" style="padding:6px 14px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.14s ease;">Login</button>
+      <button onclick="setAuditCategory('Approvals')" id="audit-cat-Approvals" class="audit-cat-btn" style="padding:6px 14px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.14s ease;">Approvals</button>
+      <button onclick="setAuditCategory('Pipeline Executions')" id="audit-cat-Pipeline Executions" class="audit-cat-btn" style="padding:6px 14px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.14s ease;">Pipeline Executions</button>
+      <button onclick="setAuditCategory('Terraform')" id="audit-cat-Terraform" class="audit-cat-btn" style="padding:6px 14px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.14s ease;">Terraform</button>
+      <button onclick="setAuditCategory('User Management')" id="audit-cat-User Management" class="audit-cat-btn" style="padding:6px 14px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.14s ease;">User Management</button>
+      <button onclick="setAuditCategory('Other')" id="audit-cat-Other" class="audit-cat-btn" style="padding:6px 14px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-size:13px;cursor:pointer;font-family:inherit;transition:all 0.14s ease;">Other</button>
+    </div>
+
+    <div style="position:relative;min-width:220px;margin-left:auto;">
+      <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--color-text-tertiary);"></i>
+      <input
+        type="text" id="audit-search-input" placeholder="Search logs..." oninput="filterAuditLogs()"
+        style="width:100%;padding:7px 12px 7px 32px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;"
+      />
+    </div>
+  </div>
+
+  <!-- Audit Log Table Container -->
+  <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;">
+    <!-- Loading State -->
+    <div id="audit-loading" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--color-text-tertiary);font-size:13px;">
+      <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;flex-shrink:0;"></i>
+      <span>Loading audit trail...</span>
+    </div>
+
+    <!-- Empty State -->
+    <div id="audit-empty" style="display:none;padding:30px;text-align:center;color:var(--color-text-tertiary);font-size:13px;">
+      No audit log records match the search criteria.
+    </div>
+
+    <!-- Logs List -->
+    <div id="audit-logs-list" style="display:none;flex-direction:column;"></div>
+  </div>
+<% } %>
+</div>

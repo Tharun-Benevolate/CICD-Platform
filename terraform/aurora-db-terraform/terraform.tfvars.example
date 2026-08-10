@@ -1,0 +1,21 @@
+# Copy this file to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored — never commit real credentials.
+#
+# For master_password, prefer setting it via an environment variable
+# instead of writing it in this file at all:
+#   export TF_VAR_master_password='your-strong-password-here'
+
+aws_region          = "us-east-1"
+cluster_identifier  = "cicd-admin-db"
+database_name       = "cicd_admin"
+master_username     = "admin"
+instance_class      = "db.t4g.medium"
+
+# Run `curl ifconfig.me` on the machine that will run `node server.js`
+# and put its IP here as "<ip>/32". Add more entries for teammates or
+# CI runners that also need direct access.
+allowed_cidr_blocks = [
+  "203.0.113.10/32"
+]
+
+publicly_accessible = true

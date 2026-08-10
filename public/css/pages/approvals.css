@@ -1,0 +1,19 @@
+.approvals-container {
+  padding-bottom: 60px;
+}
+
+.metrics-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.approval-gate-card {
+  padding: 24px;
+  border-radius: 14px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+}

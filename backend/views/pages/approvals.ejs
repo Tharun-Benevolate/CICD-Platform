@@ -1,0 +1,93 @@
+<div class="approvals-container" style="max-width:1080px;margin:0 auto;padding-bottom:60px;">
+  <% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
+    <div style="padding:60px;text-align:center;color:var(--color-text-tertiary);">
+      <i data-lucide="shield-alert" style="width:48px;height:48px;margin-bottom:12px;opacity:0.5;color:var(--color-danger);"></i>
+      <h3 style="font-size:18px;color:var(--color-text-primary);margin-bottom:8px;font-weight:700;">Access Restricted</h3>
+      <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">You do not have permission to access this page. Please contact your organization administrator if you believe this is an error.</p>
+    </div>
+  <% } else { %>
+    <!-- Header Banner -->
+    <div class="page-header">
+      <div>
+        <div class="page-header-meta">
+          <span class="page-service-badge green">
+            <i data-lucide="shield-check" style="width:12px;height:12px;"></i> CODEPIPELINE DEPLOYMENT GATES
+          </span>
+          <span class="page-header-context">
+            <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+            <span id="approvals-pipeline-name" style="font-weight:600;color:var(--color-text-secondary);"></span>
+          </span>
+        </div>
+        <h1 class="page-title">Production Deployment Approvals</h1>
+        <p class="page-subtitle">Review and approve manual gate requests before AWS CodePipeline promotes code to UAT or Production.</p>
+      </div>
+
+      <div class="page-header-actions">
+        <button onclick="fetchApprovals()" id="btn-refresh-approvals" class="btn-secondary">
+          <i data-lucide="refresh-cw" id="btn-refresh-app-icon" style="width:14px;height:14px;"></i> Refresh Gate Status
+        </button>
+      </div>
+    </div>
+
+    <!-- Alert Banner -->
+    <div id="approvals-banner" style="display:none;padding:12px 18px;border-radius:10px;margin-bottom:20px;font-size:13px;font-weight:600;"></div>
+
+    <!-- Metrics Summary Bar -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));gap:16px;margin-bottom:28px;">
+      <div class="metrics-card">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-text-tertiary);">
+          Pending Gate Requests
+        </div>
+        <div id="metric-pending-count" style="font-size:22px;font-weight:800;color:#10b981;margin-top:4px;">
+          0 Gates
+        </div>
+      </div>
+
+      <div class="metrics-card">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-text-tertiary);">
+          UAT Gate Status
+        </div>
+        <div id="metric-uat-status" style="font-size:15px;font-weight:700;color:var(--color-text-secondary);margin-top:6px;">
+          Clear
+        </div>
+      </div>
+
+      <div class="metrics-card">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-text-tertiary);">
+          Production Gate Status
+        </div>
+        <div id="metric-prod-status" style="font-size:15px;font-weight:700;color:var(--color-text-secondary);margin-top:6px;">
+          Clear
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Pending Approvals List -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:24px;box-shadow:0 4px 20px rgba(0,0,0,0.04);">
+      <h2 style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+        <i data-lucide="clock" style="width:18px;height:18px;color:#6366f1;"></i>
+        Live Deployment Approval Queue <span id="approvals-queue-count" style="font-weight:600;font-size:14px;color:var(--color-text-tertiary);">(0)</span>
+      </h2>
+
+      <!-- Loading State -->
+      <div id="approvals-loading" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--color-text-tertiary);font-size:13px;">
+        <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;flex-shrink:0;"></i>
+        <span>Querying AWS CodePipeline for active manual gate tokens...</span>
+      </div>
+
+      <!-- Empty State -->
+      <div id="approvals-empty" style="display:none;background:var(--color-bg);border:1px dashed var(--color-border);border-radius:14px;padding:48px;text-align:center;">
+        <i data-lucide="shield-check" style="width:42px;height:42px;color:#10b981;margin-bottom:12px;"></i>
+        <h3 style="font-size:16px;font-weight:800;color:var(--color-text-primary);margin-bottom:6px;">
+          No Pending Approvals
+        </h3>
+        <p style="font-size:13px;color:var(--color-text-secondary);max-width:420px;margin:0 auto;">
+          All AWS CodePipeline deployment gates are clear. Any new production promotion requests will automatically appear here.
+        </p>
+      </div>
+
+      <!-- Approvals List Container -->
+      <div id="approvals-list-container" style="display:none;flex-direction:column;gap:20px;"></div>
+    </div>
+  <% } %>
+</div>

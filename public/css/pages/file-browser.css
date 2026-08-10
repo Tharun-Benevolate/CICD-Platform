@@ -1,0 +1,103 @@
+.file-browser-container {
+  padding-bottom: 30px;
+}
+
+.fb-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--color-surface);
+  padding: 7px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--color-border);
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fb-dropdown-btn:hover {
+  border-color: #6366f1;
+}
+
+.fb-dropdown-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.fb-dropdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.fb-dropdown-item:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.tree-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.tree-item-row:hover {
+  background: rgba(99, 102, 241, 0.06);
+}
+
+.integrate-card {
+  cursor: pointer;
+  background: var(--color-bg);
+  border: 2px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.integrate-card:hover {
+  border-color: #6366f1;
+  transform: translateY(-1px);
+}
+
+.setup-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.setup-modal-box {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 24px;
+  max-width: 540px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  position: relative;
+  animation: popoverIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}

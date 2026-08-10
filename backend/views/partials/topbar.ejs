@@ -1,0 +1,134 @@
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="breadcrumbs" id="breadcrumbs-container">
+      <% if (activePage === 'repositories') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Source</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Repositories</span>
+      <% } else if (activePage === 'branches') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Source</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Branches</span>
+      <% } else if (activePage === 'change-requests') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Source</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Change Requests</span>
+      <% } else if (activePage === 'file-browser') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Source</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">File Browser</span>
+      <% } else if (activePage === 'approvals') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Deployment</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Approvals</span>
+      <% } else if (activePage === 'build-history') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Deployment</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Build History</span>
+      <% } else if (activePage === 'scaling') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Deployment</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Auto-scaling</span>
+      <% } else if (activePage === 'beta-environment') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Deployment</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Beta Environment</span>
+      <% } else if (activePage === 'release') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Deployment</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Release</span>
+      <% } else if (activePage === 'monitoring') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Overview</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Monitoring</span>
+      <% } else if (activePage === 'audit-logs') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Overview</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Audit Logs</span>
+      <% } else if (activePage === 'pipelines') { %>
+        <span style="color:var(--color-text-secondary);font-size:13px;">Overview</span>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">Pipelines</span>
+      <% } else if (activePage === 'new-project') { %>
+        <a href="/dashboard" style="color:#6366f1;font-size:13px;text-decoration:none;font-weight:500;">Dashboard</a>
+        <span style="color:var(--color-text-tertiary);margin:0 6px;">&gt;</span>
+        <span style="color:var(--color-text-primary);font-weight:600;font-size:13px;">New Project</span>
+      <% } else { %>
+        <span class="breadcrumb-item" style="color:var(--color-text-primary);font-weight:600;font-size:13px;">
+          <%= activePage === 'dashboard' ? 'Dashboard' :
+              activePage === 'setup-wizard' ? 'Setup Wizard' :
+              activePage === 'team-access' ? 'Team Access' :
+              activePage === 'settings' ? 'Settings' :
+              activePage === 'admin-users' ? 'Admin Users' :
+              activePage %>
+        </span>
+      <% } %>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <!-- Region badge -->
+    <span class="region-badge">us-east-1</span>
+
+    <!-- Theme toggle -->
+    <button onclick="toggleTheme()" id="btn-theme-toggle" title="Toggle theme" class="topbar-icon-btn">
+      <i data-lucide="moon" style="width:18px;height:18px;"></i>
+    </button>
+
+    <!-- Notification bell -->
+    <button class="topbar-icon-btn" title="Notifications">
+      <i data-lucide="bell" style="width:18px;height:18px;"></i>
+    </button>
+
+    <!-- Account menu -->
+    <div style="position:relative;" id="account-menu-wrapper">
+      <button onclick="toggleAccountMenu()" class="account-trigger">
+        <div class="avatar"><%= user.username.charAt(0).toUpperCase() %></div>
+        <span><%= user.username %></span>
+        <i data-lucide="chevron-down" style="width:12px;height:12px;color:var(--color-text-tertiary);"></i>
+      </button>
+
+      <div id="account-dropdown" class="account-dropdown" style="display:none;">
+        <div class="account-dropdown-header">
+          Signed in as <strong style="color:var(--color-text-primary);"><%= user.username %></strong>
+          <br>
+          Role: <strong style="color:var(--color-primary);"><%= user.jobTitle || user.userType %></strong>
+        </div>
+        <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
+        <a href="/admin/users" class="account-dropdown-item">
+          <i data-lucide="users" style="width:14px;height:14px;color:var(--color-primary);"></i> Admin User &amp; Moderation
+        </a>
+        <% } %>
+        <a href="/settings" class="account-dropdown-item">
+          <i data-lucide="settings" style="width:14px;height:14px;"></i> My Settings
+        </a>
+        <button onclick="handleLogout()" class="account-dropdown-item account-dropdown-logout">
+          <i data-lucide="log-out" style="width:14px;height:14px;"></i> Logout
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleAccountMenu() {
+    var dd = document.getElementById('account-dropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  }
+  document.addEventListener('mousedown', function(e) {
+    var wrapper = document.getElementById('account-menu-wrapper');
+    if (wrapper && !wrapper.contains(e.target)) {
+      document.getElementById('account-dropdown').style.display = 'none';
+    }
+  });
+  async function handleLogout() {
+    // Prevent double-click / rapid re-invocation
+    var btn = document.querySelector('.account-dropdown-logout');
+    if (btn) { btn.disabled = true; btn.textContent = 'Logging out…'; }
+    try {
+      await fetch('/api/logout', { method: 'POST', credentials: 'include' });
+    } catch (_) {}
+    // Use replace() so the login page can't navigate back to a protected page
+    window.location.replace('/login');
+  }
+</script>

@@ -1,0 +1,43 @@
+.audit-logs-container {
+  padding-bottom: 40px;
+}
+
+.audit-cat-btn {
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.14s ease;
+}
+
+.audit-cat-btn:hover {
+  border-color: #6366f1;
+  color: var(--color-text-primary);
+}
+
+.audit-cat-btn.active {
+  background: #6366f1;
+  color: white;
+  border-color: #6366f1;
+  font-weight: 600;
+}
+
+.audit-log-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--color-border);
+  transition: background 0.14s ease;
+}
+
+.audit-log-row:last-child {
+  border-bottom: none;
+}
+
+.audit-log-row:hover {
+  background: rgba(99, 102, 241, 0.04);
+}

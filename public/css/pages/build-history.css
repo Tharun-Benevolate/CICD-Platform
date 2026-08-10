@@ -1,0 +1,43 @@
+.builds-container {
+  padding-bottom: 60px;
+}
+
+.metrics-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+}
+
+.build-card-row {
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  transition: border-color 0.15s ease;
+}
+
+.build-card-row:hover {
+  border-color: #6366f1;
+}
+
+.setup-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}

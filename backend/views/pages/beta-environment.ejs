@@ -1,0 +1,11 @@
+<div class="beta-container" style="max-width:840px;margin:0 auto;padding-bottom:40px;">
+  <% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
+    <div style="padding:40px;text-align:center;color:var(--color-text-tertiary);">
+      Access Restricted
+    </div>
+  <% } else { %>
+    <div id="content">
+      <div style="padding:40px;text-align:center;color:var(--color-text-tertiary);">Loading...</div>
+    </div>
+  <% } %>
+</div>

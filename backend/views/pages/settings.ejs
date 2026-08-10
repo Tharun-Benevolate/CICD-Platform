@@ -1,0 +1,416 @@
+<div class="settings-container">
+
+  <!-- Onboarding Banner (if locked) -->
+  <div id="onboarding-banner" style="<%= user && user.isProfileCompleted ? 'display:none;' : '' %>background:linear-gradient(135deg, rgba(99,102,241,0.15), rgba(139,92,246,0.15));border:1px solid rgba(99,102,241,0.3);border-radius:16px;padding:20px;margin-bottom:24px;display:<%= user && user.isProfileCompleted ? 'none' : 'flex' %>;align-items:flex-start;gap:16px;">
+    <div style="width:42px;height:42px;border-radius:12px;background:var(--color-primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+      <i data-lucide="sparkles" style="width:22px;height:22px;color:white;"></i>
+    </div>
+    <div style="flex:1;">
+      <h2 style="font-size:16px;font-weight:700;margin:0;color:var(--color-text-primary);">
+        Complete Your Account Profile &amp; Security Setup
+      </h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-top:4px;line-height:1.5;">
+        Welcome to Benevolate! Please review your profile, confirm your email and username, set your password, and set up 2FA Authenticator to unlock all sections of the platform.
+      </p>
+    </div>
+  </div>
+
+  <h1 id="settings-header-title" style="font-size:22px;font-weight:700;margin-bottom:18px;color:var(--color-text-primary);">
+    <%= user && user.isProfileCompleted ? 'User & System Settings' : 'Profile Setup' %>
+  </h1>
+
+  <!-- Tab Strip (if unlocked) -->
+  <div id="settings-tab-strip" style="<%= user && user.isProfileCompleted ? 'display:flex;' : 'display:none;' %>gap:8px;border-bottom:1px solid var(--color-border);margin-bottom:24px;">
+    <button class="settings-tab-btn active" id="tab-btn-profile" onclick="switchSettingsTab('profile')">
+      <i data-lucide="user" style="width:16px;height:16px;"></i> Profile &amp; Security
+    </button>
+    <button class="settings-tab-btn" id="tab-btn-notifications" onclick="switchSettingsTab('notifications')">
+      <i data-lucide="bell" style="width:16px;height:16px;"></i> Notifications
+    </button>
+    <button class="settings-tab-btn" id="tab-btn-integrations" onclick="switchSettingsTab('integrations')">
+      <i data-lucide="sliders" style="width:16px;height:16px;"></i> Integrations &amp; Theme
+    </button>
+  </div>
+
+  <!-- ── Tab 1: Profile & Security ── -->
+  <div id="tab-content-profile" style="display:flex;flex-direction:column;gap:20px;">
+    
+    <!-- Account Information & Profile Form -->
+    <div class="settings-card">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;">
+        <i data-lucide="user" style="width:18px;height:18px;color:var(--color-primary);"></i> Account Profile Information
+      </h2>
+
+      <form id="profile-form" onsubmit="handleProfileSubmit(event)" style="max-width:460px;">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+            Email Address <span id="email-readonly-label" style="<%= user && user.email ? '' : 'display:none;' %>">(Auto-filled &amp; Read-only)</span>
+          </label>
+          <input
+            type="email"
+            id="profile-email"
+            value="<%= user && user.email ? user.email : '' %>"
+            <%= user && user.email ? 'disabled' : '' %>
+            placeholder="yourname@benevolate.com"
+            style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--color-border);background:<%= user && user.email ? 'rgba(255,255,255,0.03)' : 'var(--color-bg)' %>;color:<%= user && user.email ? 'var(--color-text-tertiary)' : 'var(--color-text-primary)' %>;font-size:13px;cursor:<%= user && user.email ? 'not-allowed' : 'text' %>;"
+          />
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+            Username
+          </label>
+          <input
+            type="text"
+            id="profile-username"
+            value="<%= user && user.username ? user.username : '' %>"
+            required
+            style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;"
+          />
+        </div>
+
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+            Role / Specialization
+          </label>
+          <input
+            type="text"
+            id="profile-jobtitle"
+            value="<%= user && user.jobTitle ? user.jobTitle : '' %>"
+            placeholder="e.g. Frontend Developer, DevOps Engineer, Full Stack Lead"
+            style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;"
+          />
+          <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">
+            Enter your team role or technical category (e.g. Frontend, Backend, QA, DevOps).
+          </div>
+        </div>
+
+        <!-- Password Setup Fields (If Locked) -->
+        <div id="locked-pwd-fields" style="<%= user && user.isProfileCompleted ? 'display:none;' : '' %>">
+          <div style="margin-bottom:10px;">
+            <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+              Set Password
+            </label>
+            <input
+              type="password"
+              id="setup-password"
+              placeholder="••••••••"
+              oninput="updateSetupPwdStrength()"
+              style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;"
+            />
+          </div>
+
+          <!-- Setup Password Strength Checklist -->
+          <div id="setup-pwd-checklist" class="pwd-strength-grid" style="display:none;">
+            <span id="setup-chk-length" class="pwd-item">✖ Min 7 chars</span>
+            <span id="setup-chk-upper" class="pwd-item">✖ Uppercase (A-Z)</span>
+            <span id="setup-chk-lower" class="pwd-item">✖ Lowercase (a-z)</span>
+            <span id="setup-chk-number" class="pwd-item">✖ Number (0-9)</span>
+            <span id="setup-chk-special" class="pwd-item" style="grid-column:span 2;">✖ Special char (!@#$%^&amp;*)</span>
+          </div>
+
+          <div style="margin-bottom:20px;">
+            <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+              Confirm Password
+            </label>
+            <input
+              type="password"
+              id="setup-confirm-password"
+              placeholder="••••••••"
+              style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;"
+            />
+          </div>
+        </div>
+
+        <div id="profile-msg" style="display:none;" class="msg-box"></div>
+
+        <button type="submit" id="profile-submit-btn" class="btn-primary">
+          <span id="profile-submit-text"><%= user && user.isProfileCompleted ? 'Save Profile Changes' : 'Save & Unlock Profile' %></span>
+        </button>
+      </form>
+    </div>
+
+    <!-- 2FA Authenticator App Widget -->
+    <div class="settings-card" id="card-2fa-container">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h2 style="font-size:16px;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+            <i data-lucide="shield-check" id="totp-icon" style="width:18px;height:18px;color:<%= user && user.totpEnabled ? '#10b981' : 'var(--color-primary)' %>;"></i>
+            Two-Factor Authenticator (2FA)
+            <span id="totp-status-badge" style="font-size:11px;padding:2px 8px;border-radius:6px;font-weight:700;background:<%= user && user.totpEnabled ? 'rgba(16,185,129,0.12)' : 'rgba(245,158,11,0.12)' %>;color:<%= user && user.totpEnabled ? '#10b981' : '#f59e0b' %>;text-transform:uppercase;">
+              <%= user && user.totpEnabled ? '✔ Active' : 'Not Configured' %>
+            </span>
+          </h2>
+          <p style="font-size:13px;color:var(--color-text-secondary);margin-top:4px;max-width:520px;">
+            Protect your account with Google Authenticator, Microsoft Authenticator, or Authy. You will be prompted for a 6-digit code upon every sign in.
+          </p>
+        </div>
+
+        <button
+          id="btn-start-2fa"
+          onclick="handleStart2FASetup()"
+          style="<%= user && user.totpEnabled ? 'display:none;' : '' %>"
+          class="btn-primary"
+        >
+          <i data-lucide="qr-code" style="width:16px;height:16px;"></i> Setup Authenticator App
+        </button>
+      </div>
+
+      <!-- Interactive 2FA Setup Panel -->
+      <div id="panel-2fa-setup" style="display:none;margin-top:20px;padding-top:20px;border-top:1px solid var(--color-border);grid-template-columns:240px 1fr;gap:24px;align-items:center;">
+        <!-- QR Code & 5-Minute Timer -->
+        <div style="background:#ffffff;padding:12px;border-radius:12px;border:1px solid var(--color-border);text-align:center;">
+          <div id="totp-qr-container">
+            <img id="totp-qr-img" src="" alt="2FA QR Code" style="width:200px;height:200px;display:block;margin:0 auto;" />
+          </div>
+          <div id="totp-expired-container" style="display:none;padding:40px 10px;color:#ef4444;font-size:12px;font-weight:600;">
+            <i data-lucide="alert-triangle" style="width:32px;height:32px;margin:0 auto 8px;display:block;"></i>
+            Setup session expired (5m security limit).
+          </div>
+          <div id="totp-timer-badge" style="font-size:11px;color:#64748b;margin-top:8px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:4px;">
+            <i data-lucide="clock" style="width:12px;height:12px;"></i>
+            <span id="totp-timer-text">Expires in 05:00</span>
+          </div>
+        </div>
+
+        <!-- Instructions & Verification Form -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <h3 style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin:0;">
+              Step 1: Scan QR Code or Copy Secret Key Code
+            </h3>
+            <button type="button" onclick="handleStart2FASetup()" style="padding:4px 10px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:11px;font-weight:600;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px;">
+              <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Refresh QR Code &amp; Key
+            </button>
+          </div>
+
+          <p style="font-size:12px;color:var(--color-text-secondary);margin-bottom:12px;line-height:1.4;">
+            Scan the QR code with your phone's Authenticator app, or manually copy and store the secret key code below:
+          </p>
+
+          <!-- Secret Key Code -->
+          <div id="totp-key-row" style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:10px;margin-bottom:18px;">
+            <i data-lucide="key-round" style="width:16px;height:16px;color:var(--color-primary);"></i>
+            <code id="totp-secret-code" style="font-size:14px;font-weight:700;letter-spacing:0.1em;color:var(--color-primary);font-family:monospace;"></code>
+            <button type="button" onclick="handleCopySecretCode()" style="margin-left:auto;padding:5px 10px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--color-text-primary);display:flex;align-items:center;gap:4px;">
+              <i data-lucide="copy" id="copy-icon" style="width:12px;height:12px;"></i>
+              <span id="copy-btn-text">Copy Code</span>
+            </button>
+          </div>
+
+          <h3 style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px;">
+            Step 2: Enter 6-Digit Verification Code
+          </h3>
+
+          <form onsubmit="handleVerify2FASetup(event)" style="display:flex;gap:10px;align-items:center;">
+            <input
+              type="text"
+              id="totp-code-input"
+              maxLength="6"
+              placeholder="000000"
+              oninput="this.value = this.value.replace(/[^0-9]/g, '')"
+              style="width:140px;padding:9px 12px;border-radius:9px;border:1.5px solid var(--color-primary);background:var(--color-bg);color:var(--color-text-primary);font-size:16px;font-weight:700;letter-spacing:0.2em;text-align:center;"
+            />
+            <button type="submit" id="totp-verify-btn" class="btn-primary">
+              Activate 2FA
+            </button>
+          </form>
+
+          <div id="totp-msg" style="display:none;margin-top:12px;" class="msg-box"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Password (if unlocked) -->
+    <div class="settings-card" id="change-password-card" style="<%= user && user.isProfileCompleted ? '' : 'display:none;' %>">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--color-text-primary);">Change Password</h2>
+      <form onsubmit="handleChangePassword(event)" style="max-width:380px;">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px;color:var(--color-text-secondary);">Current Password</label>
+          <input
+            type="password"
+            id="change-old-pwd"
+            required
+            style="width:100%;padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);"
+          />
+        </div>
+
+        <div style="margin-bottom:10px;">
+          <label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px;color:var(--color-text-secondary);">New Password</label>
+          <input
+            type="password"
+            id="change-new-pwd"
+            required
+            oninput="updateChangePwdStrength()"
+            style="width:100%;padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);"
+          />
+        </div>
+
+        <!-- Change Password Strength Checklist -->
+        <div id="change-pwd-checklist" class="pwd-strength-grid" style="display:none;">
+          <span id="change-chk-length" class="pwd-item">✖ Min 7 chars</span>
+          <span id="change-chk-upper" class="pwd-item">✖ Uppercase (A-Z)</span>
+          <span id="change-chk-lower" class="pwd-item">✖ Lowercase (a-z)</span>
+          <span id="change-chk-number" class="pwd-item">✖ Number (0-9)</span>
+          <span id="change-chk-special" class="pwd-item" style="grid-column:span 2;">✖ Special char (!@#$%^&amp;*)</span>
+        </div>
+
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:12px;font-weight:500;margin-bottom:4px;color:var(--color-text-secondary);">Confirm New Password</label>
+          <input
+            type="password"
+            id="change-confirm-pwd"
+            required
+            style="width:100%;padding:8px 12px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);"
+          />
+        </div>
+
+        <div id="change-pwd-msg" style="display:none;" class="msg-box"></div>
+
+        <button type="submit" id="change-pwd-btn" class="btn-primary">Update Password</button>
+      </form>
+    </div>
+
+  </div>
+
+  <!-- ── Tab 2: Notifications ── -->
+  <div id="tab-content-notifications" style="display:none;">
+    <div class="settings-card">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--color-text-primary);">Notification Channels</h2>
+      <div style="display:flex;flex-direction:column;gap:14px;max-width:400px;margin-bottom:20px;">
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:var(--color-text-primary);">
+          <input type="checkbox" id="notif-inapp" checked />
+          In-app Notifications
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:var(--color-text-primary);">
+          <input type="checkbox" id="notif-email" />
+          Email Alerts
+        </label>
+        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;color:var(--color-text-primary);">
+          <input type="checkbox" id="notif-slack" />
+          Slack Notifications
+        </label>
+      </div>
+
+      <div id="notif-msg" style="display:none;" class="msg-box success">Notification preferences saved.</div>
+
+      <button onclick="handleSaveNotifications()" id="notif-save-btn" class="btn-primary">Save Notification Preferences</button>
+    </div>
+  </div>
+
+  <!-- ── Tab 3: Integrations & Theme ── -->
+  <div id="tab-content-integrations" style="display:none;flex-direction:column;gap:20px;">
+    <!-- Theme Preference -->
+    <div class="settings-card">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--color-text-primary);">Theme Customization</h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;">Choose your preferred color theme or set to auto (switches based on daylight/system time).</p>
+      <div style="display:flex;gap:12px;">
+        <button class="theme-select-btn" id="theme-btn-light" onclick="selectThemeMode('light')" style="padding:10px 20px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-weight:600;font-size:13px;cursor:pointer;text-transform:capitalize;">
+          light
+        </button>
+        <button class="theme-select-btn" id="theme-btn-dark" onclick="selectThemeMode('dark')" style="padding:10px 20px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-weight:600;font-size:13px;cursor:pointer;text-transform:capitalize;">
+          dark
+        </button>
+        <button class="theme-select-btn" id="theme-btn-auto" onclick="selectThemeMode('auto')" style="padding:10px 20px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-weight:600;font-size:13px;cursor:pointer;text-transform:capitalize;">
+          auto
+        </button>
+      </div>
+    </div>
+
+    <!-- Third-Party OAuth Integrations -->
+    <div class="settings-card">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--color-text-primary);">Third-Party OAuth Integrations</h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:20px;">
+        Authorize your official GitHub and Slack accounts for automated repository management and private channel alerts.
+      </p>
+
+      <div id="oauth-alert-msg" style="display:none;" class="msg-box"></div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <!-- GitHub Integration Row -->
+        <div style="display:flex;flex-direction:column;gap:12px;padding:20px;border:1.5px solid var(--color-border);border-radius:16px;background:var(--color-bg);">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <div style="display:flex;align-items:center;gap:14px;">
+              <div style="width:44px;height:44px;border-radius:12px;background:var(--color-surface);border:1px solid var(--color-border);display:flex;align-items:center;justify-content:center;">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                </svg>
+              </div>
+              <div>
+                <div style="font-weight:700;font-size:15px;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;">
+                  GitHub Integration
+                  <span id="gh-badge" style="display:none;font-size:11px;background:rgba(16,185,129,0.12);color:#10b981;padding:2px 8px;border-radius:6px;font-weight:700;">
+                    ✔ Connected
+                  </span>
+                </div>
+                <div style="font-size:13px;color:var(--color-text-secondary);margin-top:4px;">
+                  Authorize your GitHub account to manage organization repositories, branches, and code commits.
+                </div>
+              </div>
+            </div>
+
+            <div id="gh-actions-connected" style="display:none;gap:10px;">
+              <a href="/api/oauth/github" class="btn-secondary">
+                Reconnect <i data-lucide="external-link" style="width:14px;height:14px;"></i>
+              </a>
+              <button onclick="promptDisconnectGithub()" class="btn-danger">
+                Disconnect
+              </button>
+            </div>
+
+            <div id="gh-actions-disconnected" style="display:block;">
+              <a href="/api/oauth/github" style="padding:10px 20px;background:#24292e;border:none;border-radius:10px;color:white;text-decoration:none;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:8px;box-shadow:var(--shadow-sm);">
+                Connect GitHub Account <i data-lucide="external-link" style="width:14px;height:14px;"></i>
+              </a>
+            </div>
+          </div>
+
+          <!-- Custom Inline Confirmation Banner (no browser-native confirm modal) -->
+          <div id="gh-disconnect-confirm" style="display:none;padding:12px 16px;background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.25);border-radius:10px;align-items:center;justify-content:space-between;gap:12px;">
+            <div style="font-size:13px;color:var(--color-danger);font-weight:600;">
+              Are you sure you want to disconnect your GitHub integration?
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button onclick="confirmDisconnectGithub()" class="btn-danger" style="padding:6px 14px;font-size:12px;">
+                Yes, Disconnect
+              </button>
+              <button onclick="cancelDisconnectGithub()" class="btn-secondary" style="padding:6px 14px;font-size:12px;">
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Slack OAuth Integration Row -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:20px;border:1.5px solid var(--color-border);border-radius:16px;background:var(--color-bg);">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:44px;height:44px;border-radius:12px;background:var(--color-surface);border:1px solid var(--color-border);display:flex;align-items:center;justify-content:center;">
+              <svg width="24" height="24" viewBox="0 0 24 24">
+                <path fill="#E01E5A" d="M6 15a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5zm0-1.5a2.5 2.5 0 0 0 2.5-2.5V6a2.5 2.5 0 1 0-5 0v5A2.5 2.5 0 0 0 6 13.5z"/>
+                <path fill="#36C5F0" d="M9 6a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zm1.5 0a2.5 2.5 0 0 0 2.5 2.5h5a2.5 2.5 0 1 0 0-5h-5A2.5 2.5 0 0 0 10.5 6z"/>
+                <path fill="#2EB67D" d="M18 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5zm0 1.5a2.5 2.5 0 0 0-2.5 2.5v5a2.5 2.5 0 1 0 5 0v-5a2.5 2.5 0 0 0-2.5-2.5z"/>
+                <path fill="#ECB22E" d="M15 18a2.5 2.5 0 1 0 5 0 2.5 2.5 0 0 0 5 0zm-1.5 0a2.5 2.5 0 0 0-2.5-2.5h-5a2.5 2.5 0 1 0 0 5h5a2.5 2.5 0 0 0 2.5-2.5z"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:15px;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;">
+                Slack Workspace OAuth
+                <span id="slack-badge" style="display:none;font-size:11px;background:rgba(16,185,129,0.12);color:#10b981;padding:2px 8px;border-radius:6px;font-weight:700;">
+                  ✔ Connected
+                </span>
+              </div>
+              <div style="font-size:13px;color:var(--color-text-secondary);margin-top:4px;">
+                Automated private channel provisioning (🔒 #proj-name), auto-invitations, and direct DM alerts.
+              </div>
+            </div>
+          </div>
+
+          <a href="/api/oauth/slack" id="slack-connect-link" style="padding:10px 20px;background:#4A154B;border:1px solid var(--color-border);border-radius:10px;color:white;text-decoration:none;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:8px;box-shadow:var(--shadow-sm);">
+            <span id="slack-connect-text">Connect Slack Account</span> <i data-lucide="external-link" style="width:14px;height:14px;"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>

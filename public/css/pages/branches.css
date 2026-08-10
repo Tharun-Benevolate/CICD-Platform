@@ -1,0 +1,144 @@
+.branches-container {
+  padding-bottom: 40px;
+}
+
+.branches-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.repo-selector-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: var(--color-surface);
+  border: 1.5px solid var(--color-border);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  min-width: 240px;
+  transition: border-color var(--transition-fast);
+}
+
+.repo-selector-btn:hover {
+  border-color: #6366f1;
+}
+
+.repo-dropdown-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 280px;
+  z-index: 200;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  padding: 6px 0;
+  overflow: hidden;
+}
+
+.repo-dropdown-item-branch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background var(--transition-fast);
+}
+
+.repo-dropdown-item-branch:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.btn-cli-header {
+  padding: 8px 14px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text-primary);
+  transition: all 0.18s ease;
+}
+
+.btn-cli-header:hover {
+  border-color: #6366f1;
+  color: #6366f1;
+}
+
+.btn-create-branch-header {
+  padding: 8px 16px;
+  background: #6366f1;
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.18s ease;
+}
+
+.btn-create-branch-header:disabled {
+  background: var(--color-border);
+  color: var(--color-text-tertiary);
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.btn-create-branch-header:not(:disabled):hover {
+  background: #4f46e5;
+}
+
+.cli-panel-box {
+  background: #0d1117;
+  border: 1px solid #30363d;
+  border-radius: var(--radius-xl);
+  padding: 20px;
+  margin-bottom: 24px;
+  color: #e6edf3;
+  animation: slideDown 0.25s ease;
+}
+
+.setup-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.setup-modal-box {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 28px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.4);
+  position: relative;
+  animation: popoverIn 0.15s cubic-bezier(0.16, 1, 0.3, 1) both;
+}

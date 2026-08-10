@@ -1,0 +1,247 @@
+<div class="new-project-container" style="max-width:780px;margin:0 auto;padding-bottom:60px;">
+  <% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
+    <div style="padding:40px;text-align:center;color:var(--color-text-tertiary);">
+      <i data-lucide="shield-alert" style="width:48px;height:48px;margin-bottom:12px;color:var(--color-warning);"></i>
+      <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">Access Restricted</h2>
+      <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">You do not have permission to access this page. Please contact your organization administrator if you believe this is an error.</p>
+    </div>
+  <% } else { %>
+    <!-- Wizard Header Step Indicators -->
+    <div style="display:flex;align-items:center;justify-content:center;gap:32px;margin-bottom:36px;flex-wrap:wrap;">
+      <!-- Step 1 -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div id="step-indicator-1" class="wizard-step-circle active">1</div>
+        <span id="step-label-1" class="wizard-step-title active">Project Details</span>
+      </div>
+      <div style="width:40px;height:1px;background:var(--color-border);"></div>
+
+      <!-- Step 2 -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div id="step-indicator-2" class="wizard-step-circle">2</div>
+        <span id="step-label-2" class="wizard-step-title">Repository</span>
+      </div>
+      <div style="width:40px;height:1px;background:var(--color-border);"></div>
+
+      <!-- Step 3 -->
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div id="step-indicator-3" class="wizard-step-circle">3</div>
+        <span id="step-label-3" class="wizard-step-title">Review &amp; Create</span>
+      </div>
+    </div>
+
+    <!-- STEP 1: PROJECT DETAILS -->
+    <div id="new-project-step-1" class="wizard-step-card">
+      <h2 style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin-bottom:4px;">Project Details</h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:28px;">Enter your project identity and choose the target AWS region for deployment</p>
+
+      <form onsubmit="goToStep2(event)" style="display:flex;flex-direction:column;gap:20px;">
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Project Name <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="project-name-input" placeholder="Enter project name..." required style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:14px;outline:none;" />
+        </div>
+
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:8px;">Target AWS Region</label>
+          <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(160px, 1fr));gap:10px;">
+            <button type="button" onclick="selectRegion('us-east-1')" id="region-us-east-1" class="region-btn active">
+              <div style="font-size:13px;font-weight:700;">us-east-1</div>
+              <div style="font-size:11px;opacity:0.8;margin-top:2px;">US East (N. Virginia)</div>
+            </button>
+            <button type="button" onclick="selectRegion('us-west-2')" id="region-us-west-2" class="region-btn">
+              <div style="font-size:13px;font-weight:700;">us-west-2</div>
+              <div style="font-size:11px;opacity:0.8;margin-top:2px;">US West (Oregon)</div>
+            </button>
+            <button type="button" onclick="selectRegion('eu-west-1')" id="region-eu-west-1" class="region-btn">
+              <div style="font-size:13px;font-weight:700;">eu-west-1</div>
+              <div style="font-size:11px;opacity:0.8;margin-top:2px;">EU (Ireland)</div>
+            </button>
+            <button type="button" onclick="selectRegion('ap-southeast-1')" id="region-ap-southeast-1" class="region-btn">
+              <div style="font-size:13px;font-weight:700;">ap-southeast-1</div>
+              <div style="font-size:11px;opacity:0.8;margin-top:2px;">Asia Pacific (Singapore)</div>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <label style="display:block;font-size:13px;font-weight:600;margin-bottom:6px;">Description (Optional)</label>
+          <input type="text" id="project-desc-input" placeholder="Enter project description..." style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:14px;outline:none;" />
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;padding-top:12px;border-top:1px solid var(--color-border);">
+          <button type="submit" class="btn-solid-purple" style="padding:12px 32px;border-radius:10px;font-weight:700;font-size:14px;">Next</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- STEP 2: REPOSITORY SETUP -->
+    <div id="new-project-step-2" class="wizard-step-card" style="display:none;">
+      <h2 style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin-bottom:4px;">Repository Setup</h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:24px;">Connect an existing repo or create a new one for this project</p>
+
+      <!-- Tab Switcher -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;background:var(--color-bg);padding:4px;border-radius:14px;border:1px solid var(--color-border);margin-bottom:24px;">
+        <button type="button" onclick="setRepoTab('connect')" id="repo-tab-connect" class="repo-subtab-btn active">
+          <i data-lucide="link" style="width:16px;height:16px;"></i> Connect Existing
+        </button>
+        <button type="button" onclick="setRepoTab('create')" id="repo-tab-create" class="repo-subtab-btn">
+          <i data-lucide="plus" style="width:16px;height:16px;"></i> Create New
+        </button>
+      </div>
+
+      <!-- REPOSITORY PROVIDER DROPDOWN -->
+      <div style="margin-bottom:20px;position:relative;">
+        <label style="display:block;font-size:11px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:var(--color-text-tertiary);margin-bottom:8px;">
+          REPOSITORY PROVIDER
+        </label>
+
+        <button type="button" onclick="toggleProviderDropdown()" id="provider-dropdown-trigger" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid #4f46e5;background:var(--color-surface);color:var(--color-text-primary);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+          <span id="provider-selected-label">AWS CodeCommit</span>
+          <i data-lucide="chevron-down" id="provider-chevron" style="width:14px;height:14px;color:var(--color-text-tertiary);transition:transform 0.15s ease;"></i>
+        </button>
+
+        <div id="provider-dropdown-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.08);z-index:100;padding:6px;flex-direction:column;gap:2px;">
+          <button type="button" onclick="selectProvider('codecommit')" id="opt-provider-codecommit" class="dropdown-item active">AWS CodeCommit</button>
+          <button type="button" onclick="selectProvider('github')" id="opt-provider-github" class="dropdown-item">GitHub</button>
+        </div>
+      </div>
+
+      <!-- OWNER / WORKSPACE DROPDOWN (Shown when GitHub is selected) -->
+      <div id="owner-workspace-container" style="display:none;margin-bottom:20px;position:relative;">
+        <label style="display:block;font-size:11px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:var(--color-text-tertiary);margin-bottom:8px;">
+          OWNER / WORKSPACE
+        </label>
+
+        <button type="button" onclick="toggleOrgDropdown()" id="org-dropdown-trigger" style="width:100%;padding:12px 16px;border-radius:12px;border:1.5px solid #4f46e5;background:var(--color-surface);color:var(--color-text-primary);font-size:14px;font-weight:600;display:flex;align-items:center;justify-content:space-between;cursor:pointer;">
+          <span id="org-selected-label" style="display:flex;align-items:center;gap:8px;">
+            <i data-lucide="user" style="width:16px;height:16px;color:#4f46e5;"></i> Personal Account (Default)
+          </span>
+          <i data-lucide="chevron-down" id="org-chevron" style="width:14px;height:14px;color:var(--color-text-tertiary);transition:transform 0.15s ease;"></i>
+        </button>
+
+        <div id="org-dropdown-menu" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.08);z-index:100;padding:6px;flex-direction:column;gap:2px;">
+          <button type="button" onclick="selectOrg('')" id="opt-org-personal" class="dropdown-item active" style="display:flex;align-items:center;gap:8px;">
+            <i data-lucide="user" style="width:15px;height:15px;"></i> Personal Account (Default)
+          </button>
+          <div id="org-list-items"></div>
+        </div>
+      </div>
+
+      <!-- TAB 1: CONNECT EXISTING REPOSITORY -->
+      <div id="repo-content-connect">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <span style="font-size:11px;font-weight:800;letter-spacing:0.8px;text-transform:uppercase;color:var(--color-text-tertiary);">
+            AVAILABLE REPOSITORIES
+          </span>
+
+          <button type="button" onclick="fetchExistingRepos(true)" id="btn-refresh-repos" style="padding:4px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;">
+            <span id="btn-refresh-repos-icon-wrapper" style="display:inline-flex;align-items:center;justify-content:center;">
+              <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i>
+            </span> Refresh
+          </button>
+        </div>
+
+        <!-- Dotted Container for Repositories State Feedbacks -->
+        <div style="border:1.5px dashed var(--color-border);border-radius:14px;padding:24px;text-align:center;background:var(--color-bg);margin-bottom:20px;">
+          <!-- Fetching Loading State -->
+          <div id="repos-state-fetching" style="display:flex;align-items:center;justify-content:center;gap:10px;color:#4f46e5;font-size:14px;font-weight:600;padding:12px;">
+            <i data-lucide="refresh-cw" id="repos-fetching-icon" class="animate-spin" style="width:16px;height:16px;"></i>
+            <span id="repos-fetching-text">Fetching CodeCommit repositories in us-east-1...</span>
+          </div>
+
+          <!-- OAuth Required Feedback State -->
+          <div id="repos-state-oauth" style="display:none;padding:12px;">
+            <i data-lucide="code-2" style="width:36px;height:36px;color:#4f46e5;margin:0 auto 10px auto;display:block;"></i>
+            <h4 style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin:0 0 6px 0;">
+              Connect GitHub via OAuth
+            </h4>
+            <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.4;margin:0 0 16px 0;" id="oauth-feedback-text">
+              Please connect your GitHub account via OAuth to list and select your repositories.
+            </p>
+            <a href="/settings/integrations" class="btn-solid-purple" style="padding:10px 20px;border-radius:10px;font-size:13px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:6px;">
+              Connect GitHub in Settings &rarr;
+            </a>
+          </div>
+
+          <!-- Repos Available Selector State -->
+          <div id="repos-state-available" style="display:none;text-align:left;">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;">Select Repository</label>
+            <select id="select-existing-repo" style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);font-size:14px;outline:none;font-weight:600;"></select>
+          </div>
+
+          <!-- No Repositories Empty Feedback State -->
+          <div id="repos-state-empty" style="display:none;">
+            <div style="font-size:28px;margin-bottom:8px;">📬</div>
+            <div id="empty-feedback-text" style="font-size:14px;color:var(--color-text-secondary);margin-bottom:16px;font-weight:500;">
+              No repositories found in codecommit.
+            </div>
+            <button type="button" onclick="setRepoTab('create')" style="padding:8px 16px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);font-size:13px;font-weight:600;cursor:pointer;">
+              Create a new repository instead
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: CREATE NEW REPOSITORY -->
+      <div id="repo-content-create" style="display:none;">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;">New Repository Name <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="new-repo-name-input" placeholder="Enter repository name..." style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:14px;outline:none;" />
+        </div>
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;">Description (Optional)</label>
+          <input type="text" id="new-repo-desc-input" placeholder="Enter repository description..." style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:14px;outline:none;" />
+        </div>
+        <button type="button" onclick="handleCreateNewRepo(event)" id="btn-create-repo-submit" class="btn-solid-purple" style="width:100%;padding:10px;border-radius:10px;font-weight:700;font-size:14px;">
+          Create &amp; Provision Repo
+        </button>
+      </div>
+
+      <div id="step-2-msg" style="display:none;padding:10px 14px;border-radius:10px;font-size:13px;margin-bottom:20px;"></div>
+
+      <div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--color-border);padding-top:20px;">
+        <button type="button" onclick="goToStep(1)" class="btn-secondary" style="padding:10px 20px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-weight:600;font-size:14px;cursor:pointer;">
+          Back
+        </button>
+        <button type="button" onclick="handleStep2Next()" class="btn-solid-purple" style="padding:10px 24px;border-radius:10px;font-weight:700;font-size:14px;box-shadow:var(--shadow-md);">
+          Next
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 3: REVIEW & CREATE -->
+    <div id="new-project-step-3" class="wizard-step-card" style="display:none;">
+      <h2 style="font-size:22px;font-weight:800;color:var(--color-text-primary);margin-bottom:4px;">Review &amp; Initialize Project</h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:24px;">Confirm project details before initializing AWS infrastructure</p>
+
+      <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:14px;padding:20px;display:flex;flex-direction:column;gap:14px;margin-bottom:24px;">
+        <div style="display:flex;justify-content:space-between;font-size:14px;">
+          <span style="color:var(--color-text-tertiary);">Project Name:</span>
+          <span id="review-name" style="font-weight:700;color:var(--color-text-primary);"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;">
+          <span style="color:var(--color-text-tertiary);">Target AWS Region:</span>
+          <span id="review-region" style="font-weight:700;color:var(--color-text-primary);"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;">
+          <span style="color:var(--color-text-tertiary);">Git Provider:</span>
+          <span id="review-provider" style="font-weight:700;text-transform:uppercase;color:var(--color-text-primary);"></span>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:14px;">
+          <span style="color:var(--color-text-tertiary);">Repository:</span>
+          <span id="review-repo" style="font-weight:700;font-family:monospace;color:var(--color-text-primary);"></span>
+        </div>
+      </div>
+
+      <div id="new-project-error" style="display:none;padding:10px 14px;background:rgba(239,68,68,0.1);color:#ef4444;border-radius:10px;font-size:13px;margin-bottom:20px;"></div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--color-border);padding-top:20px;">
+        <button type="button" onclick="goToStep(2)" id="btn-back-step-3" class="btn-secondary" style="padding:10px 20px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-weight:600;font-size:14px;cursor:pointer;">
+          Back
+        </button>
+        <button type="button" onclick="handleFinalSubmit()" id="btn-create-project" class="btn-solid-purple" style="padding:12px 32px;border-radius:14px;font-weight:700;font-size:14px;display:flex;align-items:center;gap:8px;">
+          Create Project
+        </button>
+      </div>
+    </div>
+  <% } %>
+</div>

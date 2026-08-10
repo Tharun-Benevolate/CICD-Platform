@@ -1,0 +1,7 @@
+# Local state holds the plaintext IAM access key secret — never commit it.
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+*.tfvars
+!terraform.tfvars.example

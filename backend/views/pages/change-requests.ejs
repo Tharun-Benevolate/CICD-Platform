@@ -1,0 +1,276 @@
+<div class="cr-container">
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <div class="page-header-meta">
+        <span class="page-service-badge purple">
+          <i data-lucide="git-merge" style="width:12px;height:12px;"></i> GIT DIFF & MERGE ENGINE
+        </span>
+      </div>
+      <h1 class="page-title">Branch Diff &amp; Merge</h1>
+      <p class="page-subtitle">Compare branches commit-by-commit, review file diffs, detect conflicts, and merge with a single click.</p>
+    </div>
+    <div class="page-header-actions">
+      <button onclick="openLegacyCrModal()" class="btn-secondary">
+        <i data-lucide="list" style="width:14px;height:14px;"></i> Change Requests
+      </button>
+    </div>
+  </div>
+
+  <!-- Branch Selector Bar -->
+  <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+    <!-- Repo Selector -->
+    <div style="position:relative;" id="diff-repo-wrapper">
+      <button onclick="toggleDiffRepoDropdown()" class="btn-secondary" style="min-width:200px;justify-content:space-between;">
+        <span style="display:flex;align-items:center;gap:7px;">
+          <i data-lucide="folder" style="width:14px;height:14px;color:#6366f1;"></i>
+          <span id="diff-repo-text">Select Repository</span>
+        </span>
+        <i data-lucide="chevron-down" id="diff-repo-arrow" style="width:13px;height:13px;transition:transform 0.15s;"></i>
+      </button>
+      <div id="diff-repo-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:240px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;box-shadow:var(--shadow-xl);z-index:200;overflow:hidden;"></div>
+    </div>
+
+    <i data-lucide="arrow-right" style="width:16px;height:16px;color:var(--color-text-tertiary);flex-shrink:0;"></i>
+
+    <!-- Base Branch -->
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Base Branch</label>
+      <div style="position:relative;" id="diff-base-branch-wrapper">
+        <button type="button" onclick="toggleCustomDropdown('diff-base-branch')" class="btn-secondary" style="min-width:140px;justify-content:space-between;padding:8px 12px;font-size:13px;font-weight:600;">
+          <span style="display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            <i data-lucide="git-branch" style="width:13px;height:13px;color:#6366f1;flex-shrink:0;"></i>
+            <span id="diff-base-branch-text">-- Select --</span>
+          </span>
+          <i data-lucide="chevron-down" id="diff-base-branch-arrow" style="width:13px;height:13px;transition:transform 0.15s;flex-shrink:0;"></i>
+        </button>
+        <div id="diff-base-branch-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:210px;max-height:260px;overflow-y:auto;background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;box-shadow:var(--shadow-xl);z-index:250;padding:6px;"></div>
+      </div>
+    </div>
+
+    <!-- Base Commit (Optional) -->
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Base Commit (Opt)</label>
+      <div style="position:relative;" id="diff-base-commit-wrapper">
+        <button type="button" onclick="toggleCustomDropdown('diff-base-commit')" class="btn-secondary" style="min-width:140px;max-width:180px;justify-content:space-between;padding:8px 12px;font-size:13px;font-weight:600;">
+          <span style="display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            <i data-lucide="git-commit" style="width:13px;height:13px;color:#6366f1;flex-shrink:0;"></i>
+            <span id="diff-base-commit-text">Latest (HEAD)</span>
+          </span>
+          <i data-lucide="chevron-down" id="diff-base-commit-arrow" style="width:13px;height:13px;transition:transform 0.15s;flex-shrink:0;"></i>
+        </button>
+        <div id="diff-base-commit-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:240px;max-height:260px;overflow-y:auto;background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;box-shadow:var(--shadow-xl);z-index:250;padding:6px;"></div>
+      </div>
+    </div>
+
+    <i data-lucide="git-compare" style="width:18px;height:18px;color:#6366f1;flex-shrink:0;margin:0 2px;"></i>
+
+    <!-- Compare (Head) Branch -->
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Compare Branch</label>
+      <div style="position:relative;" id="diff-head-branch-wrapper">
+        <button type="button" onclick="toggleCustomDropdown('diff-head-branch')" class="btn-secondary" style="min-width:140px;justify-content:space-between;padding:8px 12px;font-size:13px;font-weight:600;">
+          <span style="display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            <i data-lucide="git-branch" style="width:13px;height:13px;color:#6366f1;flex-shrink:0;"></i>
+            <span id="diff-head-branch-text">-- Select --</span>
+          </span>
+          <i data-lucide="chevron-down" id="diff-head-branch-arrow" style="width:13px;height:13px;transition:transform 0.15s;flex-shrink:0;"></i>
+        </button>
+        <div id="diff-head-branch-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:210px;max-height:260px;overflow-y:auto;background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;box-shadow:var(--shadow-xl);z-index:250;padding:6px;"></div>
+      </div>
+    </div>
+
+    <!-- Compare Commit (Optional) -->
+    <div style="display:flex;flex-direction:column;gap:4px;">
+      <label style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.06em;">Compare Commit (Opt)</label>
+      <div style="position:relative;" id="diff-head-commit-wrapper">
+        <button type="button" onclick="toggleCustomDropdown('diff-head-commit')" class="btn-secondary" style="min-width:140px;max-width:180px;justify-content:space-between;padding:8px 12px;font-size:13px;font-weight:600;">
+          <span style="display:flex;align-items:center;gap:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            <i data-lucide="git-commit" style="width:13px;height:13px;color:#6366f1;flex-shrink:0;"></i>
+            <span id="diff-head-commit-text">Latest (HEAD)</span>
+          </span>
+          <i data-lucide="chevron-down" id="diff-head-commit-arrow" style="width:13px;height:13px;transition:transform 0.15s;flex-shrink:0;"></i>
+        </button>
+        <div id="diff-head-commit-menu" style="display:none;position:absolute;top:calc(100% + 6px);left:0;min-width:240px;max-height:260px;overflow-y:auto;background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;box-shadow:var(--shadow-xl);z-index:250;padding:6px;"></div>
+      </div>
+    </div>
+
+
+
+    <button onclick="runDiff()" id="btn-run-diff" class="btn-primary" style="margin-left:auto;" disabled>
+      <i data-lucide="search" style="width:14px;height:14px;"></i> Compare
+    </button>
+  </div>
+
+  <!-- Status Bar (shown after compare) -->
+  <div id="diff-status-bar" style="display:none;background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;padding:14px 20px;margin-bottom:20px;align-items:center;gap:20px;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <i data-lucide="git-commit" style="width:16px;height:16px;color:#6366f1;"></i>
+      <span style="font-size:13px;font-weight:700;color:var(--color-text-primary);" id="diff-stat-commits">0 commits</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <i data-lucide="file-diff" style="width:16px;height:16px;color:#6366f1;"></i>
+      <span style="font-size:13px;font-weight:700;color:var(--color-text-primary);" id="diff-stat-files">0 files changed</span>
+    </div>
+    <span style="font-size:13px;color:#10b981;font-weight:700;" id="diff-stat-add">+0</span>
+    <span style="font-size:13px;color:#ef4444;font-weight:700;" id="diff-stat-del">-0</span>
+    <div id="diff-conflict-badge" style="display:none;padding:4px 12px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:20px;font-size:12px;font-weight:700;color:#ef4444;align-items:center;gap:6px;">
+      <i data-lucide="alert-triangle" style="width:13px;height:13px;"></i> Merge Conflicts Detected
+    </div>
+    <div id="diff-clean-badge" style="display:none;padding:4px 12px;background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.3);border-radius:20px;font-size:12px;font-weight:700;color:#10b981;align-items:center;gap:6px;">
+      <i data-lucide="check-circle" style="width:13px;height:13px;"></i> No Conflicts
+    </div>
+    <button onclick="openMergeModal()" id="btn-open-merge" class="btn-primary" style="margin-left:auto;display:none;">
+      <i data-lucide="git-merge" style="width:14px;height:14px;"></i> Merge into Base
+    </button>
+  </div>
+
+  <!-- Main Loading -->
+  <div id="diff-loading" style="display:none;padding:60px;text-align:center;color:var(--color-text-tertiary);">
+    <i data-lucide="loader-2" class="animate-spin" style="width:28px;height:28px;color:#6366f1;margin-bottom:12px;"></i>
+    <p style="font-size:14px;font-weight:500;">Comparing branches &amp; commits…</p>
+  </div>
+
+  <!-- Empty / Initial State -->
+  <div id="diff-empty" style="padding:80px 40px;text-align:center;background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;">
+    <i data-lucide="git-compare" style="width:48px;height:48px;color:var(--color-text-tertiary);margin-bottom:16px;opacity:0.5;"></i>
+    <h3 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">Select Branches or Commits to Compare</h3>
+    <p style="font-size:13px;color:var(--color-text-secondary);max-width:460px;margin:0 auto;">
+      Pick a repository, choose a <strong>base branch/commit</strong> and a <strong>compare branch/commit</strong>, then hit <em>Compare</em> to review file diffs side-by-side.
+    </p>
+  </div>
+
+  <!-- Results Grid: Commits (left) + File Diffs (right) -->
+  <div id="diff-results" style="display:none;gap:20px;grid-template-columns:320px 1fr;">
+    <!-- Left: Commit Timeline -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:2px;max-height:680px;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+        <h3 style="font-size:12px;font-weight:800;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.08em;margin:0;">
+          <i data-lucide="git-commit" style="width:13px;height:13px;display:inline;vertical-align:middle;margin-right:4px;"></i>
+          Commits <span id="diff-commits-badge" style="opacity:0.6;font-weight:600;"></span>
+        </h3>
+        <button id="btn-filter-all-commits" onclick="clearSelectedCommitFilter()" style="font-size:11px;color:#6366f1;background:none;border:none;cursor:pointer;font-weight:700;display:none;">View All</button>
+      </div>
+      <div id="diff-commits-list" style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px;"></div>
+    </div>
+
+    <!-- Right: File Changes Diff Viewer -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;max-height:680px;">
+      <div style="padding:12px 18px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;gap:10px;background:var(--color-surface);">
+        <i data-lucide="file-diff" style="width:16px;height:16px;color:#6366f1;"></i>
+        <h3 style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin:0;">Changed Files</h3>
+        <span id="diff-files-badge" style="font-size:11px;color:var(--color-text-tertiary);font-weight:600;"></span>
+        
+        <!-- View Mode Switcher -->
+        <div style="margin-left:auto;display:flex;align-items:center;background:var(--color-bg);border:1px solid var(--color-border);border-radius:8px;padding:2px;">
+          <button id="btn-view-side" onclick="setDiffViewMode('side')" class="diff-view-btn active" style="padding:4px 10px;font-size:11px;font-weight:700;border:none;border-radius:6px;cursor:pointer;background:#6366f1;color:white;display:flex;align-items:center;gap:4px;">
+            <i data-lucide="columns" style="width:12px;height:12px;"></i> Split View
+          </button>
+          <button id="btn-view-unified" onclick="setDiffViewMode('unified')" class="diff-view-btn" style="padding:4px 10px;font-size:11px;font-weight:700;border:none;border-radius:6px;cursor:pointer;background:transparent;color:var(--color-text-secondary);display:flex;align-items:center;gap:4px;">
+            <i data-lucide="file-text" style="width:12px;height:12px;"></i> Unified
+          </button>
+        </div>
+      </div>
+      <div id="diff-files-list" style="flex:1;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+
+  <!-- ── MERGE CONFIRMATION MODAL ── -->
+  <div id="modal-merge" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:480px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:#6366f1;letter-spacing:0.5px;margin-bottom:4px;">GIT MERGE</div>
+          <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">Confirm Merge</h2>
+        </div>
+        <button onclick="closeMergeModal()" style="background:none;border:none;color:var(--color-text-tertiary);cursor:pointer;padding:4px;">
+          <i data-lucide="x" style="width:20px;height:20px;"></i>
+        </button>
+      </div>
+
+      <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:10px;padding:14px;margin-bottom:16px;font-size:13px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="padding:3px 8px;background:rgba(16,185,129,0.1);color:#10b981;border-radius:6px;font-size:11px;font-weight:700;">BASE</span>
+          <code id="merge-base-label" style="font-weight:700;color:var(--color-text-primary);"></code>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="padding:3px 8px;background:rgba(99,102,241,0.1);color:#6366f1;border-radius:6px;font-size:11px;font-weight:700;">HEAD</span>
+          <code id="merge-head-label" style="font-weight:700;color:var(--color-text-primary);"></code>
+        </div>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="font-size:12px;font-weight:600;color:var(--color-text-secondary);display:block;margin-bottom:6px;">Merge Commit Message</label>
+        <input type="text" id="merge-commit-msg" placeholder="Merge branch 'feature' into main"
+          style="width:100%;padding:9px 12px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);font-size:13px;color:var(--color-text-primary);outline:none;box-sizing:border-box;" />
+      </div>
+
+      <div id="merge-error" style="display:none;" class="msg-box error"></div>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+        <button onclick="closeMergeModal()" class="btn-secondary">Cancel</button>
+        <button onclick="executeMerge()" id="btn-confirm-merge" class="btn-primary">
+          <i data-lucide="git-merge" style="width:14px;height:14px;"></i> Confirm Merge
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LEGACY CHANGE REQUESTS PANEL (slide-in drawer) ── -->
+  <div id="panel-legacy-cr" style="display:none;position:fixed;right:0;top:0;bottom:0;width:480px;background:var(--color-surface);border-left:1px solid var(--color-border);box-shadow:var(--shadow-xl);z-index:500;flex-direction:column;overflow:hidden;">
+    <div style="padding:18px 20px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-size:11px;font-weight:700;color:#6366f1;letter-spacing:0.5px;">CHANGE REQUESTS</div>
+        <h2 style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin:4px 0 0;">Team Communication Thread</h2>
+      </div>
+      <button onclick="closeLegacyCrModal()" style="background:none;border:none;cursor:pointer;color:var(--color-text-tertiary);">
+        <i data-lucide="x" style="width:20px;height:20px;"></i>
+      </button>
+    </div>
+    <div style="flex:1;overflow-y:auto;padding:16px;">
+      <div id="legacy-cr-loading" style="text-align:center;padding:40px;color:var(--color-text-tertiary);">
+        <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;"></i>
+        <p style="font-size:13px;margin-top:10px;">Loading change requests…</p>
+      </div>
+      <div id="legacy-cr-list" style="display:flex;flex-direction:column;gap:10px;"></div>
+    </div>
+    <div style="padding:14px 16px;border-top:1px solid var(--color-border);">
+      <button onclick="openCreateCrModal()" class="btn-primary" style="width:100%;">
+        <i data-lucide="plus" style="width:14px;height:14px;"></i> New Change Request
+      </button>
+    </div>
+  </div>
+  <!-- Backdrop for drawer -->
+  <div id="panel-legacy-backdrop" onclick="closeLegacyCrModal()" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:499;"></div>
+
+  <!-- ── NEW CHANGE REQUEST MODAL ── -->
+  <div id="modal-create-cr" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:520px;">
+      <button onclick="closeCreateCrModal()" style="position:absolute;top:20px;right:20px;background:none;border:none;color:var(--color-text-tertiary);cursor:pointer;padding:4px;">
+        <i data-lucide="x" style="width:20px;height:20px;"></i>
+      </button>
+      <div style="margin-bottom:16px;">
+        <div style="font-size:11px;font-weight:700;color:#6366f1;letter-spacing:0.5px;margin-bottom:4px;">NEW CHANGE REQUEST</div>
+        <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">Team Communication & Review</h2>
+      </div>
+      <form onsubmit="handleCreateCrSubmit(event)">
+        <div style="margin-bottom:12px;">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;color:var(--color-text-secondary);">Title</label>
+          <input type="text" id="cr-title-input" required placeholder="e.g. Merge feature/auth into main"
+            style="width:100%;padding:9px 12px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);font-size:13px;color:var(--color-text-primary);outline:none;box-sizing:border-box;" />
+        </div>
+        <div style="margin-bottom:16px;">
+          <label style="font-size:12px;font-weight:600;display:block;margin-bottom:6px;color:var(--color-text-secondary);">Message / Details</label>
+          <textarea id="cr-desc-textarea" rows="3" placeholder="Describe the changes or request details..."
+            style="width:100%;padding:9px 12px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);font-size:13px;color:var(--color-text-primary);resize:vertical;outline:none;"></textarea>
+        </div>
+        <div id="cr-create-error" style="display:none;" class="msg-box error"></div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;">
+          <button type="button" onclick="closeCreateCrModal()" class="btn-secondary">Cancel</button>
+          <button type="submit" id="btn-submit-create-cr" class="btn-primary">Submit Request</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>

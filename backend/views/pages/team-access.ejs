@@ -1,0 +1,131 @@
+<div class="team-container" style="max-width:1100px;margin:0 auto;padding-bottom:40px;">
+
+  <!-- Header Bar -->
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;margin-bottom:20px;">
+    <div>
+      <h1 style="font-size:22px;font-weight:800;color:var(--color-text-primary);display:flex;align-items:center;gap:10px;margin:0;">
+        <i data-lucide="user-check" style="width:22px;height:22px;color:#6366f1;"></i>
+        Project Team Access
+        <span id="team-project-badge" style="font-size:13px;background:transparent;color:#6366f1;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px;"></span>
+      </h1>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-top:4px;">
+        Organize project members, create sub-team groups, manage project access, and view member activity history.
+      </p>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <button onclick="openGroupMembersModal()" style="padding:8px 16px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);border-radius:8px;cursor:pointer;font-family:inherit;">
+        <i data-lucide="layout-grid" style="width:14px;height:14px;"></i> Group Members
+      </button>
+      <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
+        <button onclick="openAccessModal()" style="padding:9px 18px;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:6px;border:none;background:#6366f1;color:white;border-radius:8px;cursor:pointer;font-family:inherit;">
+          <i data-lucide="user-plus" style="width:14px;height:14px;"></i> Manage Project Access
+        </button>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Group Filter Tabs -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;">
+    <button onclick="setTeamGroupTab('all')" id="group-tab-all" class="team-group-tab" style="padding:7px 16px;border-radius:999px;border:1.5px solid #6366f1;background:rgba(99,102,241,0.07);color:#6366f1;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
+      All Members <span id="team-all-count" style="font-size:11px;font-weight:800;">(0)</span>
+    </button>
+    <button onclick="setTeamGroupTab('devops')" id="group-tab-devops" class="team-group-tab" style="padding:7px 16px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
+      <i data-lucide="layers" style="width:13px;height:13px;"></i> DevOps &amp; Infra Group <span id="team-devops-count" style="font-size:11px;">0</span>
+    </button>
+    <button onclick="setTeamGroupTab('frontend')" id="group-tab-frontend" class="team-group-tab" style="padding:7px 16px;border-radius:999px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-secondary);font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:6px;">
+      <i data-lucide="layers" style="width:13px;height:13px;"></i> Frontend Engineering Squad <span id="team-frontend-count" style="font-size:11px;">0</span>
+    </button>
+  </div>
+
+  <!-- Loading -->
+  <div id="team-loading" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:60px;color:var(--color-text-tertiary);font-size:13px;">
+    <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;flex-shrink:0;"></i>
+    <span>Loading team members...</span>
+  </div>
+
+  <!-- Two Column Layout -->
+  <div id="team-main-layout" style="display:none;gap:20px;">
+    <!-- Left: Project Members List -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;padding:20px;flex:2;">
+      <h3 id="team-members-title" style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 16px 0;">Project Members (0)</h3>
+      <div id="team-members-list" style="display:flex;flex-direction:column;gap:2px;"></div>
+      <div id="team-empty" style="display:none;padding:24px;text-align:center;color:var(--color-text-tertiary);font-size:13px;">
+        No members assigned to this project or squad.
+      </div>
+    </div>
+
+    <!-- Right: Team Activity -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;padding:20px;flex:1;min-width:260px;">
+      <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 16px 0;display:flex;align-items:center;gap:8px;">
+        <i data-lucide="activity" style="width:16px;height:16px;color:#6366f1;"></i> Team Activity
+      </h3>
+      <div id="team-activity-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="team-activity-empty" style="color:var(--color-text-tertiary);font-size:12px;text-align:center;line-height:1.6;padding:12px 0;">
+        No recent activity recorded for members of this team.
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MANAGE PROJECT ACCESS MODAL ── -->
+  <div id="modal-manage-access" class="setup-modal-overlay" style="display:none;">
+    <div style="background:white;border-radius:16px;width:100%;max-width:480px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.18);overflow:hidden;">
+      <!-- Modal Header -->
+      <div style="padding:20px 24px 16px 24px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i data-lucide="user-check" style="width:18px;height:18px;color:#6366f1;"></i>
+          <span style="font-size:16px;font-weight:700;color:#111827;">Manage Project Access</span>
+        </div>
+        <button onclick="closeAccessModal()" style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:2px;line-height:0;">
+          <i data-lucide="x" style="width:18px;height:18px;"></i>
+        </button>
+      </div>
+
+      <!-- Search + Role Filter -->
+      <div style="padding:0 24px 12px 24px;display:flex;gap:10px;">
+        <div style="position:relative;flex:1;">
+          <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:#9ca3af;"></i>
+          <input type="text" id="access-search-input" placeholder="Search signed up employees..." oninput="renderAccessModalList()"
+            style="width:100%;padding:8px 10px 8px 32px;border-radius:8px;border:1px solid #e5e7eb;background:white;color:#111827;font-size:13px;outline:none;box-sizing:border-box;" />
+        </div>
+        <select id="access-role-filter" onchange="renderAccessModalList()"
+          style="padding:8px 10px;border-radius:8px;border:1px solid #e5e7eb;background:white;color:#374151;font-size:13px;outline:none;">
+          <option value="">All Roles</option>
+          <option value="devops">DevOps Engineer</option>
+          <option value="developer">Developer</option>
+          <option value="sales">Sales</option>
+        </select>
+      </div>
+
+      <!-- Employee List -->
+      <div id="access-modal-list" style="flex:1;padding:0 24px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;max-height:340px;padding-bottom:8px;"></div>
+
+      <div id="access-save-banner" style="display:none;padding:8px 24px;font-size:12px;font-weight:600;"></div>
+
+      <!-- Footer -->
+      <div style="padding:16px 24px;border-top:1px solid #f3f4f6;display:flex;justify-content:flex-end;">
+        <button onclick="handleSaveProjectAccess()" id="btn-save-access"
+          style="padding:10px 24px;font-size:14px;font-weight:700;border:none;background:#6366f1;color:white;border-radius:10px;cursor:pointer;font-family:inherit;">
+          Save Project Access
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── MEMBER DETAILS MODAL ── -->
+  <div id="modal-member-details" class="setup-modal-overlay" style="display:none;">
+    <div style="background:white;border-radius:16px;width:100%;max-width:440px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.18);overflow:hidden;">
+      <div style="padding:20px 24px 16px 24px;display:flex;justify-content:space-between;align-items:center;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <i data-lucide="user" style="width:18px;height:18px;color:#6366f1;"></i>
+          <span id="detail-modal-title" style="font-size:16px;font-weight:700;color:#111827;">Member Details</span>
+        </div>
+        <button onclick="closeMemberDetailsModal()" style="background:none;border:none;color:#9ca3af;cursor:pointer;padding:2px;line-height:0;">
+          <i data-lucide="x" style="width:18px;height:18px;"></i>
+        </button>
+      </div>
+      <div id="member-details-body" style="flex:1;padding:0 24px 24px 24px;overflow-y:auto;"></div>
+    </div>
+  </div>
+
+</div>

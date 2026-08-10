@@ -1,0 +1,55 @@
+node_modules/
+.env
+.env*
+.env.*
+*.env
+server/.env
+.DS_Store
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+*.zip
+*.tar
+*.tgz
+
+# Terraform
+.terraform/
+.terraform.*
+*.auto.tfvars
+backend_override.tf
+*.tfstate*
+*.tfstate
+*.tfstate.backup
+plan.out
+terraform.tfvars
+cicd-admin-deploy-key.pem
+lightsail.env*
+
+# Local scratch / exported bundles
+tmp/
+temp/
+
+# Serverless/AWS
+.serverless/
+.aws-sam/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Coverage/Build
+coverage/
+dist/
+build/
+
+# SQL Dumps & Seed Files
+aws_mysql_schema.sql
+aws_seed_db.sql
+*.sql
+# Unused frontend & agent folders
+frontend/
+.agents/
+.agent/

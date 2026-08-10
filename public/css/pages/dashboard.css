@@ -1,0 +1,49 @@
+.dash-action-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  text-decoration: none;
+  color: var(--color-text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+.dash-action-card:hover {
+  border-color: var(--color-primary);
+  background: var(--color-primary-light);
+}
+
+.health-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--color-bg);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+.health-row .label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+.health-badge {
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+}
+.health-badge.ok {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+.health-badge.error {
+  background: var(--color-danger-light);
+  color: var(--color-danger);
+}

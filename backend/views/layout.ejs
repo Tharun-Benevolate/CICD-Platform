@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Benevolate — CI/CD Platform</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/layout.css">
+  <% if (locals.pageCSS) { %>
+  <link rel="stylesheet" href="/css/pages/<%= pageCSS %>.css">
+  <% } %>
+  <link rel="prefetch" href="/js/pages/beta-environment.js">
+  <link rel="prefetch" href="/js/pages/release.js">
+  <link rel="prefetch" href="/js/pages/repositories.js">
+  <link rel="prefetch" href="/js/pages/admin-users.js">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/js/theme.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <%- include('partials/sidebar', { user: user, activePage: page }) %>
+    <div class="main-area">
+      <%- include('partials/topbar', { user: user, activePage: page }) %>
+      <div class="content-area custom-scrollbar">
+        <%- include('pages/' + page) %>
+      </div>
+    </div>
+  </div>
+
+  <script>window.__USER__ = <%- JSON.stringify(user || null) %>;</script>
+  <script src="/js/api.js"></script>
+
+  <script src="/js/timeutil.js"></script>
+  <script src="/js/auth.js"></script>
+  <script src="/js/router.js"></script>
+  <% if (locals.pageJS) { %>
+  <script src="/js/pages/<%= pageJS %>.js"></script>
+  <% } %>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide) lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Benevolate — Sign In</title>
+  <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/variables.css">
+  <link rel="stylesheet" href="/css/global.css">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+</head>
+<body>
+  <div class="login-overlay-v2">
+
+    <!-- STAGE 1: Brand Splash -->
+    <div class="splash-stage" id="splash-stage">
+      <div class="splash-bg"></div>
+      <div class="splash-content">
+        <div class="splash-logo">
+          <img src="/logo.png" width="72" height="72" alt="Benevolate"
+               style="object-fit:contain;filter:drop-shadow(0 0 24px rgba(99,102,241,0.6));">
+        </div>
+        <div class="splash-wordmark">Benevolate</div>
+        <h1 class="splash-tagline">Ship faster.<br>Stay in control.</h1>
+        <p class="splash-sub">
+          The all-in-one developer platform for CI/CD, code review, and
+          infrastructure — built for teams who move fast without breaking things.
+        </p>
+        <button class="splash-cta" onclick="showAuthStage()">
+          Continue <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+        </button>
+        <div class="splash-footnote">Employee portal &nbsp;·&nbsp; Secure access &nbsp;·&nbsp; © 2026 Benevolate</div>
+      </div>
+    </div>
+
+    <!-- STAGE 2: Auth Form -->
+    <div class="auth-stage" id="auth-stage">
+      <div class="auth-panel">
+        <button class="auth-back" onclick="handleAuthBack()" title="Back">
+          <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+        </button>
+
+        <!-- Normal Login Form -->
+        <div id="login-form-section">
+          <div class="auth-logo">
+            <img src="/logo.png" width="48" height="48" alt="Benevolate" style="object-fit:contain;margin-bottom:12px;">
+          </div>
+          <h2 style="font-size:22px;font-weight:700;color:#fff;text-align:center;margin-bottom:4px;">
+            Welcome back
+          </h2>
+          <p style="font-size:13px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:20px;">
+            Sign in to your account to continue
+          </p>
+
+          <!-- Google SSO -->
+          <div style="display:flex;justify-content:center;margin-bottom:20px;">
+            <div id="g_id_signin_btn" style="min-height:44px;"></div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;color:rgba(255,255,255,0.4);font-size:12px;">
+            <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
+            <span>or sign in with credentials</span>
+            <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
+          </div>
+
+          <form id="login-form" onsubmit="handleLoginSubmit(event)">
+            <div style="margin-bottom:16px;">
+              <label style="display:block;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);margin-bottom:6px;">
+                Username
+              </label>
+              <div style="position:relative;">
+                <i data-lucide="user" style="width:16px;height:16px;position:absolute;left:12px;top:12px;color:rgba(255,255,255,0.4);"></i>
+                <input type="text" id="login-username" placeholder="Enter username..." autocomplete="username"
+                  style="width:100%;padding:10px 12px 10px 38px;font-size:14px;border:1px solid rgba(255,255,255,0.15);border-radius:10px;background:rgba(0,0,0,0.2);color:#fff;outline:none;font-family:var(--font-family);">
+              </div>
+            </div>
+
+            <div style="margin-bottom:20px;">
+              <label style="display:block;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);margin-bottom:6px;">
+                Password
+              </label>
+              <div style="position:relative;">
+                <i data-lucide="lock" style="width:16px;height:16px;position:absolute;left:12px;top:12px;color:rgba(255,255,255,0.4);"></i>
+                <input type="password" id="login-password" placeholder="Enter password..." autocomplete="current-password"
+                  style="width:100%;padding:10px 12px 10px 38px;font-size:14px;border:1px solid rgba(255,255,255,0.15);border-radius:10px;background:rgba(0,0,0,0.2);color:#fff;outline:none;font-family:var(--font-family);">
+              </div>
+            </div>
+
+            <div id="login-error" style="display:none;padding:10px 12px;margin-bottom:16px;font-size:13px;color:#f87171;background:rgba(239,68,68,0.15);border-radius:8px;border:1px solid rgba(239,68,68,0.3);text-align:center;"></div>
+
+            <button type="submit" id="login-submit-btn"
+              style="width:100%;padding:12px;font-size:15px;font-weight:700;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;cursor:pointer;box-shadow:0 4px 20px rgba(99,102,241,0.4);font-family:var(--font-family);">
+              Sign In
+            </button>
+          </form>
+        </div>
+
+        <!-- 2FA Challenge -->
+        <div id="twofa-section" style="display:none;">
+          <div style="background:rgba(99,102,241,0.2);padding:14px;border-radius:16px;width:fit-content;margin:0 auto 16px;">
+            <i data-lucide="shield-check" style="width:36px;height:36px;color:#818cf8;"></i>
+          </div>
+          <h2 style="font-size:20px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px;">
+            Two-Factor Authentication
+          </h2>
+          <p style="font-size:13px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:24px;line-height:1.5;">
+            Enter the 6-digit verification code generated by your Authenticator app on your phone.
+          </p>
+
+          <form id="twofa-form" onsubmit="handle2FASubmit(event)">
+            <div style="margin-bottom:20px;">
+              <label style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.8);margin-bottom:8px;text-align:center;">
+                6-Digit Authenticator Code
+              </label>
+              <div style="position:relative;">
+                <i data-lucide="key-round" style="width:18px;height:18px;position:absolute;left:14px;top:13px;color:rgba(255,255,255,0.4);"></i>
+                <input type="text" id="totp-code" maxlength="6" placeholder="000 000" autofocus
+                  oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+                  style="width:100%;padding:12px 12px 12px 42px;font-size:20px;font-weight:700;letter-spacing:0.3em;text-align:center;border:1.5px solid rgba(99,102,241,0.4);border-radius:10px;background:rgba(0,0,0,0.3);color:#60a5fa;outline:none;font-family:var(--font-family);">
+              </div>
+            </div>
+
+            <div id="twofa-error" style="display:none;padding:10px 12px;margin-bottom:16px;font-size:13px;color:#f87171;background:rgba(239,68,68,0.15);border-radius:8px;border:1px solid rgba(239,68,68,0.3);text-align:center;"></div>
+
+            <button type="submit" id="twofa-submit-btn"
+              style="width:100%;padding:12px;font-size:15px;font-weight:700;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;cursor:not-allowed;font-family:var(--font-family);">
+              Verify Authenticator Code
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/auth.js"></script>
+  <script>
+    var pending2FA = null;
+    var GOOGLE_CLIENT_ID = '1018746602979-blog5afpgc9iv4ke0gllpam30v5fs8b7.apps.googleusercontent.com';
+
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.lucide) lucide.createIcons();
+
+      // Watch TOTP input to enable/disable verify button
+      var totpInput = document.getElementById('totp-code');
+      if (totpInput) {
+        totpInput.addEventListener('input', function() {
+          var btn = document.getElementById('twofa-submit-btn');
+          if (this.value.length === 6) {
+            btn.style.background = 'linear-gradient(135deg, #6366f1, #8b5cf6)';
+            btn.style.cursor = 'pointer';
+            btn.style.boxShadow = '0 4px 20px rgba(99,102,241,0.4)';
+          } else {
+            btn.style.background = 'rgba(255,255,255,0.1)';
+            btn.style.cursor = 'not-allowed';
+            btn.style.boxShadow = 'none';
+          }
+        });
+      }
+    });
+
+    function showAuthStage() {
+      document.getElementById('splash-stage').classList.add('hidden');
+      document.getElementById('auth-stage').classList.add('visible');
+      initGoogleSSO();
+    }
+
+    function handleAuthBack() {
+      if (pending2FA) {
+        pending2FA = null;
+        document.getElementById('totp-code').value = '';
+        document.getElementById('twofa-error').style.display = 'none';
+        document.getElementById('twofa-section').style.display = 'none';
+        document.getElementById('login-form-section').style.display = 'block';
+        initGoogleSSO();
+      } else {
+        document.getElementById('auth-stage').classList.remove('visible');
+        document.getElementById('splash-stage').classList.remove('hidden');
+      }
+    }
+
+    function showError(elId, msg) {
+      var el = document.getElementById(elId);
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      var username = document.getElementById('login-username').value;
+      var password = document.getElementById('login-password').value;
+      if (!username || !password) return showError('login-error', 'Username and password required');
+
+      var btn = document.getElementById('login-submit-btn');
+      btn.textContent = 'Signing in...';
+      btn.disabled = true;
+      document.getElementById('login-error').style.display = 'none';
+
+      var res = await auth.login(username, password);
+      if (res.ok) {
+        if (res.require2FA) {
+          pending2FA = { tempToken: res.tempToken, username: res.username };
+          document.getElementById('login-form-section').style.display = 'none';
+          document.getElementById('twofa-section').style.display = 'block';
+          if (window.lucide) lucide.createIcons();
+        } else {
+          window.location.href = res.isProfileCompleted === false ? '/settings' : '/';
+        }
+      } else {
+        showError('login-error', res.error || 'Login failed');
+      }
+      btn.textContent = 'Sign In';
+      btn.disabled = false;
+    }
+
+    async function handle2FASubmit(e) {
+      e.preventDefault();
+      var code = document.getElementById('totp-code').value;
+      if (!code || code.length !== 6) return showError('twofa-error', 'Please enter a valid 6-digit code');
+
+      var btn = document.getElementById('twofa-submit-btn');
+      btn.textContent = 'Verifying...';
+      btn.disabled = true;
+      document.getElementById('twofa-error').style.display = 'none';
+
+      var res = await auth.verify2FA(pending2FA.tempToken, code);
+      if (res.ok) {
+        window.location.href = res.isProfileCompleted === false ? '/settings' : '/';
+      } else {
+        showError('twofa-error', res.error || 'Verification failed');
+      }
+      btn.textContent = 'Verify Authenticator Code';
+      btn.disabled = false;
+    }
+
+    function initGoogleSSO() {
+      if (!window.google || !window.google.accounts || !GOOGLE_CLIENT_ID) return;
+      try {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: async function(response) {
+            if (response && response.credential) {
+              var res = await auth.loginWithGoogle(response.credential);
+              if (res.ok) {
+                if (res.require2FA) {
+                  pending2FA = { tempToken: res.tempToken, username: res.username };
+                  document.getElementById('login-form-section').style.display = 'none';
+                  document.getElementById('twofa-section').style.display = 'block';
+                  if (window.lucide) lucide.createIcons();
+                } else {
+                  window.location.href = res.isProfileCompleted === false ? '/settings' : '/';
+                }
+              }
+            }
+          }
+        });
+        var btnContainer = document.getElementById('g_id_signin_btn');
+        if (btnContainer) {
+          btnContainer.innerHTML = '';
+          window.google.accounts.id.renderButton(btnContainer, {
+            type: 'standard', shape: 'rectangular', theme: 'outline',
+            text: 'signin_with', size: 'large', logo_alignment: 'left', width: 348
+          });
+        }
+      } catch(err) {
+        console.error('Google SSO init failed:', err);
+      }
+    }
+  </script>
+</body>
+</html>

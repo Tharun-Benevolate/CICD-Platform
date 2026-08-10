@@ -1,0 +1,20 @@
+.pipelines-container {
+  padding-bottom: 60px;
+}
+
+.stage-card-row {
+  padding: 18px 20px;
+  border-radius: 12px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  transition: border-color 0.15s ease;
+}
+
+.stage-card-row:hover {
+  border-color: #6366f1;
+}

@@ -1,0 +1,214 @@
+<% if (user.userType === 'developer' || user.userType === 'sales') { %>
+<div style="padding-bottom:24px;display:flex;flex-direction:column;">
+  <!-- Developer Welcome Banner -->
+  <div style="background:linear-gradient(135deg,rgba(99,102,241,0.09) 0%,rgba(139,92,246,0.04) 100%);border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-xl);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(99,102,241,0.15);color:#6366f1;border-radius:12px;font-size:11px;font-weight:700;margin-bottom:8px;letter-spacing:0.5px;">
+        <span>DEVELOPER WORKSPACE</span>
+      </div>
+      <h1 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:4px;">
+        Welcome back, <%= user.username %> 👋
+      </h1>
+      <p style="font-size:13px;color:var(--color-text-secondary);">
+        Overview of your assigned repositories, project build pipelines, code commits, and source files.
+      </p>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <a href="/file-browser" class="btn-primary" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:var(--radius-md);font-weight:600;font-size:13px;text-decoration:none;">
+        <i data-lucide="folder-code" style="width:15px;height:15px;"></i> Browse Code Files
+      </a>
+      <a href="/branches" class="btn-secondary" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:var(--radius-md);font-weight:600;font-size:13px;text-decoration:none;">
+        <i data-lucide="git-branch" style="width:15px;height:15px;"></i> View Branches
+      </a>
+    </div>
+  </div>
+
+  <!-- Metric Cards Grid (Developer) -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px;">
+    <!-- Assigned Projects Card -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;">ASSIGNED PROJECTS</span>
+        <i data-lucide="boxes" style="width:16px;height:16px;color:#6366f1;"></i>
+      </div>
+      <div id="dev-projects-count" style="font-size:17px;font-weight:700;color:var(--color-text-primary);">Loading…</div>
+    </div>
+
+    <!-- Active Repo Card -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;">CONNECTED REPO</span>
+        <i data-lucide="folder" style="width:16px;height:16px;color:#6366f1;"></i>
+      </div>
+      <div id="dev-repo-name" style="font-size:14px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Loading…</div>
+    </div>
+
+    <!-- Pipeline Status Card -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;">PIPELINE STATUS</span>
+        <i data-lucide="activity" style="width:16px;height:16px;color:#10b981;"></i>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div id="dev-pipeline-dot" style="width:9px;height:9px;border-radius:50%;background:#94a3b8;"></div>
+        <span id="dev-pipeline-status" style="font-size:15px;font-weight:700;color:var(--color-text-primary);">Idle / Ready</span>
+      </div>
+    </div>
+
+    <!-- Git Branch Card -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;">DEFAULT BRANCH</span>
+        <i data-lucide="git-branch" style="width:16px;height:16px;color:#6366f1;"></i>
+      </div>
+      <div id="dev-branch-name" style="font-size:15px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">main</div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid: Pipeline Tracker + Recent Commits -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;flex:1;">
+    <!-- Left: Project Pipeline -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h2 style="font-size:15px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;margin:0;">
+          <i data-lucide="activity" style="width:16px;height:16px;color:#6366f1;"></i> Project Build &amp; Deployment Pipeline
+        </h2>
+        <a href="/pipelines" style="font-size:12px;color:#6366f1;text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
+          View Pipelines <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
+        </a>
+      </div>
+      <div id="dev-pipeline-content" style="flex:1;">
+        <div style="text-align:center;padding:30px;color:var(--color-text-tertiary);font-size:12px;">Loading pipeline status…</div>
+      </div>
+    </div>
+
+    <!-- Right: Recent Code Commits -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h2 style="font-size:15px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;margin:0;">
+          <i data-lucide="git-commit" style="width:16px;height:16px;color:#6366f1;"></i> Recent Project Commits
+        </h2>
+        <a href="/file-browser" style="font-size:12px;color:#6366f1;text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
+          File Browser <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
+        </a>
+      </div>
+      <div id="dev-commits-list" style="flex:1;display:flex;flex-direction:column;gap:8px;">
+        <div style="text-align:center;padding:30px;color:var(--color-text-tertiary);font-size:12px;">Loading recent commits…</div>
+      </div>
+    </div>
+  </div>
+</div>
+<% } else { %>
+<div style="padding-bottom:24px;display:flex;flex-direction:column;">
+  <!-- Admin Header Banner -->
+  <div style="background:linear-gradient(135deg,var(--color-surface) 0%,var(--color-bg) 100%);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+    <div>
+      <h1 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:2px;">
+        Welcome back, <span id="dash-username"><%= user.username %></span> 👋
+      </h1>
+      <p style="font-size:13px;color:var(--color-text-secondary);">
+        Overview of your active infrastructure, deployments, and source repositories.
+      </p>
+    </div>
+    <a href="/new-project" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:var(--color-primary);color:white;border-radius:var(--radius-md);font-weight:600;font-size:13px;text-decoration:none;">
+      <i data-lucide="plus" style="width:16px;height:16px;"></i> New Project
+    </a>
+  </div>
+
+  <!-- System Health Grid: DATABASE | AWS REGION | UPTIME | TOTAL PROJECTS -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px;">
+    <!-- DB Status -->
+    <div id="card-db" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;overflow:hidden;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:600;color:var(--color-text-tertiary);">DATABASE</span>
+        <i data-lucide="database" style="width:16px;height:16px;color:var(--color-primary);"></i>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+        <div id="db-dot" style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:var(--color-text-tertiary);"></div>
+        <div style="display:flex;flex-direction:column;min-width:0;overflow:hidden;">
+          <span id="db-status" style="font-size:15px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Checking...</span>
+          <span id="db-host" style="font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;"></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- AWS Region -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:600;color:var(--color-text-tertiary);">AWS REGION</span>
+        <i data-lucide="server" style="width:16px;height:16px;color:var(--color-primary);"></i>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div id="aws-dot" style="width:9px;height:9px;border-radius:50%;background:var(--color-text-tertiary);"></div>
+        <span id="aws-status" style="font-size:15px;font-weight:700;color:var(--color-text-primary);">Checking...</span>
+      </div>
+    </div>
+
+    <!-- Uptime -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:600;color:var(--color-text-tertiary);">UPTIME</span>
+        <i data-lucide="clock" style="width:16px;height:16px;color:var(--color-primary);"></i>
+      </div>
+      <div id="uptime-value" style="font-size:15px;font-weight:700;color:var(--color-text-primary);">0 min</div>
+    </div>
+
+    <!-- Total Projects -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:12px;font-weight:600;color:var(--color-text-tertiary);">TOTAL PROJECTS</span>
+        <i data-lucide="cpu" style="width:16px;height:16px;color:var(--color-primary);"></i>
+      </div>
+      <div id="projects-count" style="font-size:15px;font-weight:700;color:var(--color-text-primary);">0 Active</div>
+    </div>
+  </div>
+
+  <!-- Deployment Endpoint Status -->
+  <div id="deploy-endpoint" style="display:none;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:12px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div style="width:9px;height:9px;border-radius:50%;background:#94a3b8;"></div>
+      <div>
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;">DEPLOYMENT ENDPOINT STATUS</div>
+        <div id="deploy-endpoint-text" style="font-size:13px;font-weight:600;color:var(--color-text-secondary);font-family:monospace;margin-top:2px;"></div>
+      </div>
+    </div>
+    <span style="padding:6px 14px;background:var(--color-bg);border:1px solid var(--color-border);color:var(--color-text-tertiary);border-radius:8px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:not-allowed;">
+      <i data-lucide="globe" style="width:14px;height:14px;"></i> Not Deployed
+    </span>
+  </div>
+
+  <!-- Main Content Grid: Pipeline + Audit -->
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;flex:1;">
+    <!-- Active Pipeline -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h2 style="font-size:15px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;">
+          <i data-lucide="activity" style="width:16px;height:16px;color:var(--color-primary);"></i> Active Pipeline
+        </h2>
+        <a href="/pipelines" style="font-size:12px;color:var(--color-primary);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
+          View Pipeline <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
+        </a>
+      </div>
+      <div id="pipeline-content">
+        <div style="text-align:center;padding:20px;color:var(--color-text-tertiary);font-size:12px;">Loading pipeline status...</div>
+      </div>
+    </div>
+
+    <!-- Recent Activity -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <h2 style="font-size:15px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;">
+          <i data-lucide="shield" style="width:16px;height:16px;color:var(--color-primary);"></i> Recent Activity
+        </h2>
+        <a href="/audit-logs" style="font-size:12px;color:var(--color-primary);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
+          All Logs <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
+        </a>
+      </div>
+      <div id="recent-activity">
+        <div style="text-align:center;padding:20px;color:var(--color-text-tertiary);font-size:12px;">Loading recent activity...</div>
+      </div>
+    </div>
+  </div>
+</div>
+<% } %>
+

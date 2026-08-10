@@ -1,0 +1,355 @@
+<div class="file-browser-container">
+  <!-- ── Top Controls Bar ── -->
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+    <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+      <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin:0;">
+        File Browser &amp; Editor
+      </h1>
+
+      <!-- Custom Repository Selector Dropdown -->
+      <div style="position:relative;" id="fb-repo-wrapper">
+        <button onclick="toggleFbRepoDropdown()" id="btn-fb-repo" class="fb-dropdown-btn">
+          <i data-lucide="database" style="width:15px;height:15px;color:#6366f1;"></i>
+          <span id="fb-repo-text" style="font-weight:700;font-size:13px;color:var(--color-text-primary);">
+            Select Repository
+          </span>
+          <i data-lucide="chevron-down" id="fb-repo-arrow" style="width:14px;height:14px;color:var(--color-text-tertiary);transition:transform 0.15s ease;"></i>
+        </button>
+
+        <div id="fb-repo-dropdown-menu" class="fb-dropdown-popover" style="display:none;width:320px;">
+          <div style="padding:8px 12px;border-bottom:1px solid var(--color-border);font-size:11px;font-weight:800;color:var(--color-text-tertiary);text-transform:uppercase;letter-spacing:0.5px;">
+            Connected Repositories <span id="fb-repo-count"></span>
+          </div>
+          <div id="fb-repo-list-container" style="max-height:240px;overflow-y:auto;"></div>
+        </div>
+      </div>
+
+      <!-- Custom Branch Selector Dropdown -->
+      <div style="position:relative;" id="fb-branch-wrapper">
+        <button onclick="toggleFbBranchDropdown()" id="btn-fb-branch" class="fb-dropdown-btn">
+          <i data-lucide="git-branch" style="width:15px;height:15px;color:#6366f1;"></i>
+          <span id="fb-branch-text" style="font-weight:600;font-size:13px;color:var(--color-text-primary);">
+            main
+          </span>
+          <i data-lucide="chevron-down" id="fb-branch-arrow" style="width:14px;height:14px;color:var(--color-text-tertiary);transition:transform 0.15s ease;"></i>
+        </button>
+
+        <div id="fb-branch-dropdown-menu" class="fb-dropdown-popover" style="display:none;width:240px;">
+          <div style="padding:8px 10px;border-bottom:1px solid var(--color-border);">
+            <div style="display:flex;align-items:center;gap:6px;background:var(--color-bg);padding:4px 8px;border-radius:6px;border:1px solid var(--color-border);">
+              <i data-lucide="search" style="width:13px;height:13px;color:var(--color-text-tertiary);"></i>
+              <input
+                type="text" id="fb-branch-search" placeholder="Find branch..." oninput="filterFbBranches()"
+                style="background:none;border:none;outline:none;font-size:12px;color:var(--color-text-primary);width:100%;"
+              />
+            </div>
+          </div>
+          <div id="fb-branch-list-container" style="max-height:200px;overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Action Buttons: Integrate + Save & Commit -->
+    <div style="display:flex;align-items:center;gap:10px;">
+      <button onclick="openIntegrateModal()" title="Integrate code from GitHub or local ZIP" class="btn-secondary">
+        <i data-lucide="layers" style="width:15px;height:15px;color:#6366f1;"></i> Integrate
+      </button>
+
+      <button onclick="openSaveCommitModal()" id="btn-save-commit" class="btn-primary" style="display:none;">
+        <i data-lucide="save" style="width:15px;height:15px;"></i> Save &amp; Commit Changes
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Main Bounded File Browser Grid ── -->
+  <div style="display:grid;grid-template-columns:290px 1fr;gap:20px;height:calc(100vh - 195px);min-height:580px;max-height:760px;">
+    
+    <!-- LEFT FILES COLUMN -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:16px;display:flex;flex-direction:column;height:100%;overflow:hidden;">
+      <!-- Header & New Actions -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <span style="font-size:11px;font-weight:800;letter-spacing:0.6px;color:var(--color-text-tertiary);text-transform:uppercase;">
+          FILES
+        </span>
+        <div style="display:flex;gap:6px;">
+          <button type="button" onclick="openNewFileModal()" title="Create New File" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:11px;font-weight:700;cursor:pointer;">
+            <i data-lucide="file-plus" style="width:13px;height:13px;color:#6366f1;"></i> + File
+          </button>
+          <button type="button" onclick="openNewFolderModal()" title="Create New Folder" style="display:inline-flex;align-items:center;gap:4px;padding:4px 8px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:11px;font-weight:700;cursor:pointer;">
+            <i data-lucide="folder-plus" style="width:13px;height:13px;color:#6366f1;"></i> + Folder
+          </button>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div id="fb-tree-loading" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:40px 0;color:var(--color-text-tertiary);">
+        <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;flex-shrink:0;"></i>
+        <span style="font-size:13px;">Loading repository tree...</span>
+      </div>
+
+      <!-- Tree Listing -->
+      <div id="fb-tree-container" style="display:none;flex:1;overflow-y:auto;flex-direction:column;gap:2px;padding-right:4px;"></div>
+    </div>
+
+    <!-- RIGHT EDITOR / BREADCRUMB CONTAINER -->
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;height:100%;">
+      <!-- Breadcrumb Header -->
+      <div style="padding:12px 18px;border-bottom:1px solid var(--color-border);background:var(--color-bg);display:flex;justify-content:space-between;align-items:center;">
+        <div id="fb-breadcrumb-container" style="display:flex;align-items:center;gap:6px;font-size:13px;flex-wrap:wrap;">
+          <span onclick="loadTree('')" style="cursor:pointer;font-weight:700;color:#6366f1;display:inline-flex;align-items:center;gap:4px;">
+            <i data-lucide="folder" style="width:15px;height:15px;"></i> <span id="fb-breadcrumb-repo">root</span>
+          </span>
+        </div>
+        <span id="fb-editor-lang" style="font-size:11px;font-weight:800;color:var(--color-text-tertiary);text-transform:uppercase;"></span>
+      </div>
+
+      <!-- Editor Workspace -->
+      <div style="flex:1;position:relative;overflow:hidden;background:var(--color-surface);">
+        <!-- Empty / No File Selected State -->
+        <div id="fb-editor-empty" style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;color:var(--color-text-tertiary);">
+          <i data-lucide="file-text" style="width:48px;height:48px;margin-bottom:12px;opacity:0.5;"></i>
+          <h3 style="font-size:16px;font-weight:700;margin-bottom:4px;color:var(--color-text-primary);">No File Selected</h3>
+          <p style="font-size:13px;text-align:center;max-width:360px;">
+            Select a file from the left tree or click a directory in the breadcrumb to browse source code.
+          </p>
+        </div>
+
+        <!-- Editor Loading -->
+        <div id="fb-editor-loading" style="display:none;align-items:center;justify-content:center;gap:10px;height:100%;padding:60px;color:var(--color-text-tertiary);">
+          <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;flex-shrink:0;"></i>
+          <span style="font-size:13px;font-weight:500;">Fetching file content...</span>
+        </div>
+
+        <!-- Textarea Code Editor Workspace -->
+        <div id="fb-editor-workspace" style="display:none;height:100%;width:100%;">
+          <textarea
+            id="fb-editor-textarea" spellcheck="false"
+            oninput="onEditorInput()"
+            style="width:100%;height:100%;padding:16px;border:none;background:var(--color-surface);color:var(--color-text-primary);font-family:Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;font-size:13px;line-height:1.5;outline:none;resize:none;"
+          ></textarea>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── CODE INTEGRATION WIZARD MODAL ── -->
+  <div id="modal-integrate" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:540px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div>
+          <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin:0;">
+            Code Integration Wizard
+          </h2>
+          <p style="font-size:12px;color:var(--color-text-tertiary);margin-top:2px;">
+            Pull code from connected GitHub repos or upload local ZIP archives into this repository.
+          </p>
+        </div>
+        <button onclick="closeIntegrateModal()" style="background:none;border:none;color:var(--color-text-tertiary);cursor:pointer;padding:4px;">
+          <i data-lucide="x" style="width:20px;height:20px;"></i>
+        </button>
+      </div>
+
+      <!-- STAGE 1: Choose Method -->
+      <div id="integrate-stage-choose">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:20px;">
+          <div onclick="startGithubPullFlow()" class="integrate-card" style="padding:16px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface);cursor:pointer;transition:all 0.15s ease;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;border-radius:10px;background:rgba(168,85,247,0.15);display:flex;align-items:center;justify-content:center;color:#a855f7;flex-shrink:0;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>
+              </div>
+              <span style="font-weight:700;font-size:14px;color:var(--color-text-primary);">GitHub Pull</span>
+            </div>
+            <p style="font-size:12px;color:var(--color-text-tertiary);line-height:1.4;margin-top:8px;">
+              Pull and sync files directly from an authorized GitHub repository.
+            </p>
+          </div>
+
+          <div onclick="setIntegrateStage('upload')" class="integrate-card" style="padding:16px;border:1px solid var(--color-border);border-radius:12px;background:var(--color-surface);cursor:pointer;transition:all 0.15s ease;">
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;border-radius:10px;background:rgba(59,130,246,0.15);display:flex;align-items:center;justify-content:center;color:#3b82f6;flex-shrink:0;">
+                <i data-lucide="upload" style="width:20px;height:20px;"></i>
+              </div>
+              <span style="font-weight:700;font-size:14px;color:var(--color-text-primary);">Local Upload</span>
+            </div>
+            <p style="font-size:12px;color:var(--color-text-tertiary);line-height:1.4;margin-top:8px;">
+              Upload local code files or a ZIP archive to integrate into this project.
+            </p>
+          </div>
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;">
+          <button type="button" onclick="closeIntegrateModal()" style="padding:8px 16px;font-size:13px;font-weight:600;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);color:var(--color-text-primary);cursor:pointer;">Cancel</button>
+        </div>
+      </div>
+
+      <!-- STAGE 2A: GitHub Setup -->
+      <div id="integrate-stage-github" style="display:none;">
+        <div id="gh-integrate-loading" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--color-text-tertiary);font-size:13px;">
+          <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;flex-shrink:0;"></i>
+          <span>Loading accessible GitHub repositories...</span>
+        </div>
+
+        <div id="gh-integrate-content" style="display:none;">
+          <div style="margin-bottom:16px;">
+            <label style="display:block;font-size:12px;font-weight:600;margin-bottom:6px;color:var(--color-text-secondary);">Select Source GitHub Repository *</label>
+            <select id="gh-repo-select" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;"></select>
+          </div>
+
+          <div id="gh-integrate-error" style="display:none;" class="msg-box error"></div>
+
+          <div style="display:flex;justify-content:space-between;margin-top:24px;">
+            <button type="button" onclick="setIntegrateStage('choose')" class="btn-secondary" style="padding:8px 16px;font-size:13px;">&larr; Back</button>
+            <button type="button" onclick="processGithubPullFetch()" class="btn-primary" style="padding:8px 16px;font-size:13px;">Fetch Files for Review &rarr;</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAGE 2B: Upload Setup -->
+      <div id="integrate-stage-upload" style="display:none;">
+        <div style="margin-bottom:20px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:8px;color:var(--color-text-secondary);">Upload ZIP Archive or Text File *</label>
+          <div style="border:2px dashed var(--color-border);border-radius:12px;padding:30px;text-align:center;background:var(--color-bg);position:relative;">
+            <i data-lucide="file-archive" style="width:36px;height:36px;color:#6366f1;margin:0 auto 10px auto;display:block;"></i>
+            <span style="font-size:13px;font-weight:600;display:block;margin-bottom:4px;color:var(--color-text-primary);">Click to select a ZIP archive or code file</span>
+            <span style="font-size:11px;color:var(--color-text-tertiary);">Supports .zip, .js, .json, .py, .yml, .tf up to 50 MB</span>
+            <input type="file" id="zip-file-input" onchange="handleZipFileUpload(event)" accept=".zip,.js,.jsx,.ts,.tsx,.json,.py,.yml,.yaml,.css,.html,.md,.tf" style="position:absolute;inset:0;opacity:0;cursor:pointer;" />
+          </div>
+        </div>
+
+        <div id="upload-integrate-error" style="display:none;" class="msg-box error"></div>
+
+        <div style="display:flex;justify-content:flex-start;margin-top:20px;">
+          <button type="button" onclick="setIntegrateStage('choose')" class="btn-secondary" style="padding:8px 16px;font-size:13px;">&larr; Back</button>
+        </div>
+      </div>
+
+      <!-- STAGE 3: Review Files & Confirm Commit -->
+      <div id="integrate-stage-review" style="display:none;">
+        <div style="margin-bottom:14px;">
+          <span style="font-size:13px;font-weight:700;color:var(--color-text-primary);display:block;margin-bottom:6px;">
+            Files Ready for Integration (<span id="integrate-file-count">0</span>)
+          </span>
+          <div id="integrate-files-preview" style="max-height:140px;overflow-y:auto;background:var(--color-bg);border:1px solid var(--color-border);border-radius:8px;padding:8px 12px;"></div>
+        </div>
+
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);">Target Branch Action</label>
+          <select id="integrate-target-action" onchange="toggleNewBranchInput()" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;">
+            <option value="current">Merge into Current Branch</option>
+            <option value="new">Create &amp; Integrate in New Branch</option>
+          </select>
+        </div>
+
+        <div id="new-branch-input-wrapper" style="display:none;margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);">New Branch Name *</label>
+          <input type="text" id="integrate-new-branch-name" placeholder="e.g. feature/code-integration" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;" />
+        </div>
+
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);">Commit Message</label>
+          <input type="text" id="integrate-commit-msg" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;" />
+        </div>
+
+        <div id="integrate-commit-error" style="display:none;" class="msg-box error"></div>
+        <div id="integrate-commit-success" style="display:none;" class="msg-box success">Code successfully integrated and committed!</div>
+
+        <div style="display:flex;justify-content:space-between;margin-top:20px;">
+          <button type="button" onclick="setIntegrateStage('choose')" class="btn-secondary" style="padding:8px 16px;font-size:13px;">&larr; Start Over</button>
+          <button type="button" onclick="executeIntegrationCommit()" id="btn-submit-integrate" class="btn-primary" style="padding:8px 18px;font-size:13px;">Commit &amp; Apply Integration</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ── SAVE & COMMIT MODAL ── -->
+  <div id="modal-commit-file" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:440px;">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--color-text-primary);">Commit File Changes</h3>
+      <form onsubmit="handleSaveAndCommitSubmit(event)">
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);">Target Branch</label>
+          <input type="text" id="commit-branch-val" disabled style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-tertiary);font-size:13px;" />
+        </div>
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);">Commit Message</label>
+          <textarea id="commit-msg-input" rows="3" required placeholder="Update configuration and fix API parameters" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;"></textarea>
+        </div>
+
+        <div id="commit-file-error" style="display:none;" class="msg-box error"></div>
+        <div id="commit-file-success" style="display:none;" class="msg-box success">Changes committed successfully!</div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+          <button type="button" onclick="closeSaveCommitModal()" class="btn-secondary" style="padding:8px 16px;font-size:13px;">Cancel</button>
+          <button type="submit" id="btn-submit-file-commit" class="btn-primary" style="padding:8px 16px;font-size:13px;">Commit Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── CREATE NEW FILE MODAL ── -->
+  <div id="modal-new-file" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:440px;">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--color-text-primary);">Create New File</h3>
+      <form onsubmit="handleCreateFileSubmit(event)">
+        <div style="margin-bottom:12px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);">File Path</label>
+          <input type="text" id="new-file-path-input" required placeholder="e.g. src/utils/helper.js" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;" />
+        </div>
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);">Initial Content (Optional)</label>
+          <textarea id="new-file-content-textarea" rows="4" placeholder="// Enter code snippet..." style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-family:monospace;font-size:13px;outline:none;"></textarea>
+        </div>
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);">Commit Message</label>
+          <input type="text" id="new-file-commit-msg-input" placeholder="Create file" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;" />
+        </div>
+
+        <div id="new-file-error" style="display:none;" class="msg-box error"></div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+          <button type="button" onclick="closeNewFileModal()" class="btn-secondary" style="padding:8px 16px;font-size:13px;">Cancel</button>
+          <button type="submit" id="btn-submit-new-file" class="btn-primary" style="padding:8px 16px;font-size:13px;">Create &amp; Commit</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── CREATE NEW FOLDER MODAL ── -->
+  <div id="modal-new-folder" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:440px;">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px;color:var(--color-text-primary);">Create New Folder</h3>
+      <form onsubmit="handleCreateFolderSubmit(event)">
+        <div style="margin-bottom:18px;">
+          <label style="display:block;font-size:12px;font-weight:600;margin-bottom:4px;color:var(--color-text-secondary);">Folder Name</label>
+          <input type="text" id="new-folder-name-input" required placeholder="e.g. docs/api" style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;" />
+        </div>
+
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;">
+          <button type="button" onclick="closeNewFolderModal()" class="btn-secondary" style="padding:8px 16px;font-size:13px;">Cancel</button>
+          <button type="submit" id="btn-submit-new-folder" class="btn-primary" style="padding:8px 16px;font-size:13px;">Create Folder</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── DELETE CONFIRMATION MODAL ── -->
+  <div id="modal-delete-confirm" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:440px;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;color:var(--color-danger);">
+        <i data-lucide="alert-triangle" style="width:24px;height:24px;"></i>
+        <h3 id="delete-modal-title" style="font-size:16px;font-weight:700;margin:0;">
+          Confirm Deletion
+        </h3>
+      </div>
+
+      <p id="delete-modal-desc" style="font-size:13px;color:var(--color-text-secondary);line-height:1.4;margin-bottom:18px;"></p>
+
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button type="button" onclick="closeDeleteModal()" class="btn-secondary" style="padding:8px 16px;font-size:13px;">Cancel</button>
+        <button type="button" onclick="handleDeleteConfirmSubmit()" id="btn-submit-delete" style="padding:8px 16px;background:var(--color-danger);color:white;border:none;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;">Delete Upstream</button>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,66 @@
+<div class="pipelines-container" style="max-width:1080px;margin:0 auto;padding-bottom:60px;">
+  <!-- Header Banner -->
+  <div class="page-header">
+    <div>
+      <div class="page-header-meta">
+        <span class="page-service-badge blue">
+          <i data-lucide="activity" style="width:12px;height:12px;"></i> AWS CODEPIPELINE ENGINE
+        </span>
+        <span class="page-header-context">
+          <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+          <span id="pipeline-name-tag" style="font-weight:600;color:var(--color-text-secondary);"></span>
+        </span>
+      </div>
+      <h1 class="page-title">CI/CD Pipelines &amp; Stage Monitor</h1>
+      <p class="page-subtitle">Real-time visualization of AWS CodePipeline execution stages, actions, status, and promotion gates.</p>
+    </div>
+
+    <div class="page-header-actions">
+      <button onclick="fetchPipeline(true)" id="btn-refresh-pipeline" class="btn-secondary">
+        <i data-lucide="refresh-cw" id="btn-refresh-pipe-icon" style="width:14px;height:14px;"></i> Refresh Status
+      </button>
+      <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
+        <button onclick="handleStartPipeline()" id="btn-run-pipeline" class="btn-primary">
+          <i data-lucide="play" style="width:14px;height:14px;"></i> Run Pipeline
+        </button>
+      <% } %>
+    </div>
+  </div>
+
+  <!-- Active Execution Card -->
+  <div id="active-execution-card" style="display:none;background:var(--color-surface);border:1px solid var(--color-border);border-radius:14px;padding:18px;margin-bottom:24px;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px;">
+    <div>
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--color-text-tertiary);">
+        Active AWS Pipeline Execution
+      </div>
+      <div id="exec-id-val" style="font-size:14px;font-weight:800;color:var(--color-text-primary);margin-top:2px;font-family:monospace;"></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:16px;font-size:12px;color:var(--color-text-secondary);">
+      <span>Status: <strong id="exec-status-val">--</strong></span>
+      <span>Started: <strong id="exec-time-val">--</strong></span>
+    </div>
+  </div>
+
+  <!-- Main Pipeline Stages Visualizer -->
+  <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:24px;box-shadow:0 4px 20px rgba(0,0,0,0.04);">
+    <h2 style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin-bottom:20px;display:flex;align-items:center;gap:8px;">
+      <i data-lucide="layers" style="width:18px;height:18px;color:#6366f1;"></i>
+      Live AWS CodePipeline Stages <span id="pipeline-stage-count" style="font-weight:600;font-size:14px;color:var(--color-text-tertiary);"></span>
+    </h2>
+
+    <!-- Loading State -->
+    <div id="pipeline-loading" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:var(--color-text-tertiary);font-size:13px;">
+      <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;flex-shrink:0;"></i>
+      <span>Querying AWS CodePipeline for live stage execution status...</span>
+    </div>
+
+    <!-- Empty State -->
+    <div id="pipeline-empty" style="display:none;padding:40px;text-align:center;color:var(--color-text-tertiary);font-size:13px;">
+      No active pipeline found for this project.
+    </div>
+
+    <!-- Stages List Container -->
+    <div id="pipeline-stages-list" style="display:none;flex-direction:column;gap:14px;"></div>
+  </div>
+</div>

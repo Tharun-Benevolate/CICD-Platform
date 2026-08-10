@@ -1,0 +1,241 @@
+<div class="setup-container">
+  <% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
+    <!-- Access Restricted View for Non-DevOps Roles -->
+    <div style="padding:40px;text-align:center;color:var(--color-text-tertiary);">
+      <i data-lucide="shield-alert" style="width:48px;height:48px;color:var(--color-warning);margin-bottom:12px;"></i>
+      <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">
+        Access Restricted
+      </h2>
+      <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">
+        You do not have permission to access this page. Please contact your organization administrator if you believe this is an error.
+      </p>
+    </div>
+  <% } else { %>
+    <!-- DevOps Setup Wizard View -->
+
+    <!-- Header -->
+    <div style="margin-bottom:28px;">
+      <h1 style="font-size:24px;font-weight:800;color:var(--color-text-primary);margin-bottom:6px;display:flex;align-items:center;gap:10px;">
+        <i data-lucide="sparkles" style="width:24px;height:24px;color:var(--color-primary);"></i>
+        Setup Wizard — <span id="setup-project-title">Platform</span>
+      </h1>
+      <p style="font-size:14px;color:var(--color-text-secondary);">
+        One shared foundation run plus two per-project Terraform runs build everything automatically. No console visits, no ARN pasting.
+      </p>
+    </div>
+
+    <!-- Overview Cards Row -->
+    <div class="setup-cards-row">
+      <div class="setup-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--color-primary-light);color:var(--color-primary);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">0</div>
+          <span style="font-weight:700;font-size:13px;color:var(--color-text-primary);">Shared Foundation</span>
+        </div>
+        <span style="font-size:11px;color:var(--color-text-tertiary);">
+          VPC &bull; Subnets &bull; NAT &bull; Shared ALB
+        </span>
+      </div>
+
+      <div class="setup-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--color-primary-light);color:var(--color-primary);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">1</div>
+          <span style="font-weight:700;font-size:13px;color:var(--color-text-primary);">Initial Infra</span>
+        </div>
+        <span style="font-size:11px;color:var(--color-text-tertiary);">
+          IAM &bull; S3 &bull; CodeBuild
+        </span>
+      </div>
+
+      <div class="setup-card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+          <div style="width:22px;height:22px;border-radius:50%;background:var(--color-primary-light);color:var(--color-primary);font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;">2</div>
+          <span style="font-weight:700;font-size:13px;color:var(--color-text-primary);">Deployment Infra</span>
+        </div>
+        <span style="font-size:11px;color:var(--color-text-tertiary);">
+          VPC &bull; ALB &bull; ECS &bull; Pipeline
+        </span>
+      </div>
+    </div>
+
+    <!-- Error Alert Message Box -->
+    <div id="setup-error-msg" style="display:none;padding:12px 16px;background:var(--color-danger-light);color:var(--color-danger);border-radius:12px;font-size:13px;font-weight:600;margin-bottom:20px;"></div>
+
+    <!-- ── LIVE TERRAFORM EXECUTION TERMINAL CONSOLE ── -->
+    <div id="terminal-box" class="terminal-box" style="display:none;">
+      <div class="terminal-header">
+        <div style="display:flex;align-items:center;gap:8px;color:#f8fafc;font-weight:700;font-size:14px;">
+          <i data-lucide="terminal" style="width:16px;height:16px;color:#38bdf8;"></i>
+          <span>Terraform Execution Console — <span id="terminal-type-label">LIVE</span></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span id="terminal-status-badge" style="font-size:12px;background:rgba(56,189,248,0.15);color:#38bdf8;padding:3px 10px;border-radius:20px;font-weight:700;display:flex;align-items:center;gap:6px;">
+            <i data-lucide="loader-2" class="animate-spin" style="width:12px;height:12px;"></i> RUNNING
+          </span>
+          <button type="button" onclick="closeTerminalConsole()" title="Close console" style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#94a3b8;border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;">
+            ✕
+          </button>
+        </div>
+      </div>
+      <pre id="terminal-logs-pre" class="terminal-pre"></pre>
+    </div>
+
+    <!-- SECTION 0: SHARED FOUNDATION INFRASTRUCTURE -->
+    <div class="setup-section-box">
+      <h2 style="font-size:17px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">
+        0. Shared Foundation Infrastructure (shared-foundation-terraform)
+      </h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:16px;">
+        One-time platform stack provisioning: VPC &bull; Public/Private Subnets &bull; NAT Gateway &bull; Shared ALB &bull; Shared Security Groups.
+      </p>
+
+      <div id="foundation-status-container" style="margin-bottom:16px;">
+        <div style="padding:8px 12px;background:var(--color-bg);border:1px solid var(--color-border);color:var(--color-text-tertiary);border-radius:8px;font-size:13px;font-weight:600;display:inline-flex;align-items:center;gap:6px;">
+          <i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;color:var(--color-primary);"></i> Checking Shared Foundation status...
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;" id="foundation-actions-row"></div>
+    </div>
+
+    <!-- SECTION 1: INITIAL INFRASTRUCTURE -->
+    <div class="setup-section-box">
+      <h2 style="font-size:17px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">
+        1. Initial Infrastructure
+      </h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:14px;">
+        Creates: S3 bucket &bull; GitHub CodeStar connection &bull; 3 IAM roles (Build, Pipeline, ECS Execution) &bull; CodeBuild project.
+      </p>
+
+      <div style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:20px;">
+        Repository is automatically sourced from your project configuration. Connected to repo <strong id="initial-repo-name" style="color:var(--color-text-primary);">...</strong>.
+      </div>
+
+      <div id="initial-status-badge" style="display:none;" class="badge-status-green">
+        <i data-lucide="check-circle-2" style="width:16px;height:16px;"></i> Initial Infrastructure Provisioned
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button id="btn-run-initial" onclick="handleRunInitial()" class="btn-grad-primary">
+          Create Initial Infrastructure
+        </button>
+        <button id="btn-destroy-initial" onclick="handlePromptDestroyInitial()" class="btn-outline-danger" style="display:none;">
+          <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Destroy Initial Infra
+        </button>
+      </div>
+    </div>
+
+    <!-- SECTION 2: DEPLOYMENT INFRASTRUCTURE -->
+    <div class="setup-section-box">
+      <h2 style="font-size:17px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">
+        2. Deployment Infrastructure
+      </h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:14px;">
+        Creates: VPC &bull; Private subnets &bull; NAT Gateway &bull; ALB (Dev, UAT, Prod Blue &amp; Green Target Groups) &bull; ECS Cluster &bull; Fargate services (Dev, UAT, Prod with CODE_DEPLOY controller) &bull; CodeDeploy application &amp; deployment group &bull; Auto-scaling &bull; Route53 DNS &bull; 7-stage CodePipeline.
+      </p>
+
+      <div style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:20px;">
+        All inputs are automatically sourced from Step 1 outputs — just click the button.
+      </div>
+
+      <div id="deploy-status-badge" style="display:none;" class="badge-status-green">
+        <i data-lucide="check-circle-2" style="width:16px;height:16px;"></i> Deployment Infrastructure Provisioned
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button id="btn-run-deploy" onclick="handleRunDeployment()" class="btn-grad-primary">
+          Create Deployment Infrastructure
+        </button>
+        <button id="btn-destroy-deploy" onclick="handlePromptDestroyDeployment()" class="btn-outline-danger" style="display:none;">
+          <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Destroy Deployment Infra
+        </button>
+      </div>
+    </div>
+
+    <!-- SECTION 3: DANGER ZONE — DESTROY ENTIRE PROJECT -->
+    <div class="setup-danger-box">
+      <h2 style="font-size:17px;font-weight:700;color:var(--color-danger);margin-bottom:6px;">
+        3. Danger Zone: Destroy Entire Project
+      </h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:20px;">
+        Deletes all infrastructure and settings saved for this project. This action is permanent.
+      </p>
+
+      <button onclick="handleOpenDestroyProjectModal()" class="btn-outline-danger">
+        Destroy &amp; Delete Project
+      </button>
+    </div>
+
+    <!-- ── CUSTOM CONFIRMATION MODAL OVERLAY ── -->
+    <div id="custom-confirm-modal" class="setup-modal-overlay" style="display:none;">
+      <div class="setup-modal-box">
+        <h3 id="modal-title" style="font-size:18px;font-weight:700;color:var(--color-danger);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          <i data-lucide="shield-alert" style="width:22px;height:22px;color:var(--color-danger);"></i>
+          <span id="modal-title-text">Confirm Action</span>
+        </h3>
+        <p id="modal-desc" style="font-size:13px;color:var(--color-text-secondary);line-height:1.6;margin-bottom:24px;white-space:pre-line;"></p>
+        <div style="display:flex;justify-content:flex-end;gap:12px;">
+          <button type="button" id="modal-btn-cancel" onclick="closeConfirmModal()" class="btn-secondary" style="padding:10px 18px;font-size:13px;">
+            Cancel
+          </button>
+          <button type="button" id="modal-btn-action" onclick="executeConfirmModalAction()" class="btn-danger" style="padding:10px 20px;font-size:13px;">
+            Confirm Action
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DESTROY PROJECT & REPOSITORIES MODAL ── -->
+    <div id="destroy-project-modal" class="setup-modal-overlay" style="display:none;">
+      <div class="setup-modal-box" style="max-width:520px;">
+        <h2 style="font-size:20px;font-weight:800;color:var(--color-danger);margin-bottom:8px;">
+          Destroy Project &amp; Repositories
+        </h2>
+        <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:20px;">
+          Are you absolutely sure you want to delete this project? Please choose repository cleanup action:
+        </p>
+
+        <!-- Provider Repository Deletion Checkbox Box -->
+        <div style="background:rgba(239, 68, 68, 0.05);border:1px solid rgba(239, 68, 68, 0.25);border-radius:14px;padding:16px;margin-bottom:20px;">
+          <label style="display:flex;gap:12px;cursor:pointer;align-items:flex-start;">
+            <input type="checkbox" id="chk-delete-provider-repos" style="margin-top:3px;width:16px;height:16px;accent-color:var(--color-danger);" />
+            <div>
+              <div style="font-size:13px;font-weight:800;color:var(--color-danger);letter-spacing:0.2px;">
+                DISCONNECT &amp; DELETE REPOSITORIES FROM PROVIDER (AWS/GITHUB)
+              </div>
+              <div style="font-size:12px;color:var(--color-text-secondary);margin-top:4px;line-height:1.4;">
+                If checked, we will trigger API calls to delete the connected git repositories from the hosting provider side as well.
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <!-- Confirmation Name Input -->
+        <div style="margin-bottom:24px;">
+          <label style="display:block;font-size:11px;font-weight:800;letter-spacing:0.6px;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:6px;">
+            TO CONFIRM, TYPE THE PROJECT NAME: <strong id="destroy-target-project-name" style="color:var(--color-text-primary);">...</strong>
+          </label>
+          <input
+            type="text"
+            id="destroy-confirm-input"
+            placeholder="Type project name here"
+            oninput="validateDestroyConfirmInput()"
+            style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:14px;outline:none;"
+          />
+        </div>
+
+        <div id="destroy-project-error" style="display:none;" class="msg-box error"></div>
+
+        <!-- Modal Actions -->
+        <div style="display:flex;justify-content:flex-end;gap:12px;">
+          <button type="button" onclick="closeDestroyProjectModal()" class="btn-secondary" style="padding:10px 20px;font-size:14px;">
+            Cancel
+          </button>
+          <button type="button" id="btn-confirm-destroy-project" disabled onclick="executeDestroyProject()" class="btn-danger" style="padding:10px 22px;font-size:14px;opacity:0.4;cursor:not-allowed;">
+            Completely Destroy Project
+          </button>
+        </div>
+      </div>
+    </div>
+
+  <% } %>
+</div>

@@ -1,0 +1,75 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ECSFullLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "ecs:CreateCluster", "ecs:DeleteCluster", "ecs:DescribeClusters",
+        "ecs:RegisterTaskDefinition", "ecs:DeregisterTaskDefinition", "ecs:DescribeTaskDefinition",
+        "ecs:CreateService", "ecs:UpdateService", "ecs:DeleteService", "ecs:DescribeServices",
+        "ecs:ListTasks", "ecs:DescribeTasks", "ecs:TagResource", "ecs:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "ECRRepoLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "ecr:CreateRepository", "ecr:DeleteRepository", "ecr:DescribeRepositories",
+        "ecr:DescribeImages", "ecr:GetAuthorizationToken", "ecr:SetRepositoryPolicy",
+        "ecr:TagResource", "ecr:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CodeBuildProjectLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "codebuild:CreateProject", "codebuild:UpdateProject", "codebuild:DeleteProject",
+        "codebuild:BatchGetProjects", "codebuild:ListProjects",
+        "codebuild:StartBuild", "codebuild:StopBuild", "codebuild:BatchGetBuilds",
+        "codebuild:ListBuildsForProject"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CodePipelineLifecycle",
+      "Effect": "Allow",
+      "Action": [
+        "codepipeline:CreatePipeline", "codepipeline:UpdatePipeline", "codepipeline:DeletePipeline",
+        "codepipeline:GetPipeline", "codepipeline:GetPipelineState", "codepipeline:ListPipelines",
+        "codepipeline:StartPipelineExecution", "codepipeline:StopPipelineExecution",
+        "codepipeline:ListPipelineExecutions", "codepipeline:GetPipelineExecution",
+        "codepipeline:PutApprovalResult", "codepipeline:RetryStageExecution",
+        "codepipeline:TagResource", "codepipeline:ListTagsForResource"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "CodeStarConnections",
+      "Effect": "Allow",
+      "Action": [
+        "codestar-connections:CreateConnection", "codestar-connections:DeleteConnection",
+        "codestar-connections:GetConnection", "codestar-connections:ListConnections",
+        "codestar-connections:UseConnection", "codestar-connections:TagResource",
+        "codestar-connections:ListTagsForResource", "codestar-connections:PassConnection",
+        "codeconnections:CreateConnection", "codeconnections:DeleteConnection",
+        "codeconnections:GetConnection", "codeconnections:ListConnections",
+        "codeconnections:UseConnection", "codeconnections:TagResource",
+        "codeconnections:ListTagsForResource", "codeconnections:PassConnection"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Sid": "LogGroupsForBuildsAndServices",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogGroup", "logs:DeleteLogGroup", "logs:DescribeLogGroups",
+        "logs:PutRetentionPolicy", "logs:CreateLogStream", "logs:PutLogEvents",
+        "logs:GetLogEvents", "logs:TagResource", "logs:ListTagsForResource"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
