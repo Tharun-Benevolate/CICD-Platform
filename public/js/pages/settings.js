@@ -76,8 +76,12 @@ async function checkOAuthConnections() {
   try {
     var res = await api.get('/api/my/credentials?t=' + Date.now());
     if (res && res.ok && Array.isArray(res.credentials)) {
-      var gh = res.credentials.find(function(c) { return c.provider && c.provider.toLowerCase() === 'github'; });
-      var sl = res.credentials.find(function(c) { return c.provider && c.provider.toLowerCase() === 'slack'; });
+      var gh = res.credentials.find(function(c) {
+        return (c.provider && c.provider.toLowerCase() === 'github') || (c.label && c.label.toLowerCase().includes('github'));
+      });
+      var sl = res.credentials.find(function(c) {
+        return (c.provider && c.provider.toLowerCase() === 'slack') || (c.label && c.label.toLowerCase().includes('slack'));
+      });
 
       // GitHub UI State
       var ghBadge = document.getElementById('gh-badge');
