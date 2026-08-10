@@ -19,7 +19,7 @@ const SLACK_CLIENT_ID     = process.env.SLACK_CLIENT_ID;
 const SLACK_CLIENT_SECRET = process.env.SLACK_CLIENT_SECRET;
 const SLACK_REDIRECT_URI  = process.env.SLACK_REDIRECT_URI  || "http://localhost:3000/api/oauth/slack/callback";
 
-const CLIENT_URL = process.env.CLIENT_URL || "http://localhost:5173";
+const CLIENT_URL = process.env.CLIENT_URL || "https://devops.benevolaite.com";
 
 // ── GitHub OAuth ──────────────────────────────────────────────────────────
 

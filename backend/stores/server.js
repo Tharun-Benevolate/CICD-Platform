@@ -131,7 +131,7 @@ app.get("*", (req, res) => {
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {
-    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const clientUrl = process.env.CLIENT_URL || "https://devops.benevolaite.com";
     res.redirect(`${clientUrl}${req.originalUrl}`);
   }
 });
