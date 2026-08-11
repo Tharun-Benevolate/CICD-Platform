@@ -111,7 +111,7 @@ router.get("/audit-logs", requireAuth, checkPageRole(), (req, res) => renderPage
 router.get("/pipelines", requireAuth, (req, res) => renderPage(res, req, "pipelines"));
 router.get("/build", requireAuth, (req, res) => renderPage(res, req, "build-logs"));
 
-const repoStore = require("../stores/repoStore");
+const repoStore = require("../stores/repositoryStore");
 
 router.get("/repos", requireAuth, async (req, res) => {
   const repos = await repoStore.listRepositories().catch(() => []);
