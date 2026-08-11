@@ -86,3 +86,9 @@ variable "github_branch" {
   type        = string
   default     = "main"
 }
+
+variable "buildspec" {
+  description = "Path to the buildspec file or inline buildspec YAML"
+  type        = string
+  default     = "buildspec.yml"
+}

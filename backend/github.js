@@ -275,7 +275,17 @@ async function mergeBranches(owner, repo, base, head, commitMessage, token) {
   }
 }
 
+async function fileExists(owner, repo, ref, path, token) {
+  try {
+    await gh(`/repos/${owner}/${repo}/contents/${path}?ref=${encodeURIComponent(ref)}`, { token });
+    return true;
+  } catch (err) {
+    if (err.status === 404) return false;
+    throw err;
+  }
+}
+
 module.exports = {
   getDefaultBranch, listBranches, getCommits, getCommit, compareBranches,
-  createBranch, deleteBranch, mergeBranches
+  createBranch, deleteBranch, mergeBranches, fileExists
 };

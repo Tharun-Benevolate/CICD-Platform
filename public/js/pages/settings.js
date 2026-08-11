@@ -10,6 +10,7 @@ function initSettingsPage() {
   var currentTab = 'profile';
 
   if (path.includes('/settings/notifications')) currentTab = 'notifications';
+  if (path.includes('/settings/project')) currentTab = 'project';
   if (path.includes('/settings/integrations') || search.includes('github_connected') || search.includes('slack_connected') || search.includes('oauth_error') || search.includes('slack_error')) {
     currentTab = 'integrations';
   }
@@ -64,6 +65,15 @@ window.confirmDisconnectGithub = confirmDisconnectGithub;
 window.promptDisconnectSlack = promptDisconnectSlack;
 window.cancelDisconnectSlack = cancelDisconnectSlack;
 window.confirmDisconnectSlack = confirmDisconnectSlack;
+window.loadGenericBuildspec = loadGenericBuildspec;
+window.saveProjectBuildspec = saveProjectBuildspec;
+
+// Listen for active project changes from topbar
+window.addEventListener('activeProjectChanged', function(e) {
+  if (document.getElementById('tab-content-project')?.style.display !== 'none') {
+    loadProjectBuildspec();
+  }
+});
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initSettingsPage);
@@ -171,7 +181,8 @@ function switchSettingsTab(tabName, updateUrl) {
   var tabLabelMap = {
     'profile': 'Profile & Security',
     'notifications': 'Notifications',
-    'integrations': 'Integrations'
+    'integrations': 'Integrations',
+    'project': 'Project Settings'
   };
 
   // Update topbar breadcrumbs (e.g. Settings > Integrations)
@@ -184,7 +195,7 @@ function switchSettingsTab(tabName, updateUrl) {
       '<span style="color:var(--color-text-primary);font-weight:600;">' + subLabel + '</span>';
   }
 
-  var tabs = ['profile', 'notifications', 'integrations'];
+  var tabs = ['profile', 'notifications', 'integrations', 'project'];
   tabs.forEach(function(t) {
     var btn = document.getElementById('tab-btn-' + t);
     var content = document.getElementById('tab-content-' + t);
@@ -194,7 +205,8 @@ function switchSettingsTab(tabName, updateUrl) {
     }
     if (content) {
       if (t === tabName) {
-        content.style.display = (t === 'notifications') ? 'block' : 'flex';
+        content.style.display = (t === 'notifications' || t === 'project') ? 'flex' : 'flex';
+        if (t === 'project') loadProjectBuildspec();
       } else {
         content.style.display = 'none';
       }
@@ -671,4 +683,58 @@ function showMsg(el, text, isError) {
   el.className = 'msg-box ' + (isError ? 'error' : 'success');
   el.textContent = text;
   el.style.display = 'block';
+}
+
+// ── Project Settings (Buildspec) ──────────────────────────────────────────
+async function loadProjectBuildspec() {
+  if (!window.activeProjectId) return;
+  
+  try {
+    var res = await api.get('/api/projects/' + window.activeProjectId);
+    if (res.ok && res.project) {
+      if (res.project.customBuildspec) {
+        document.getElementById('project-buildspec-input').value = res.project.customBuildspec;
+      } else {
+        loadGenericBuildspec();
+      }
+    }
+  } catch (e) {
+    console.error("Failed to load project:", e);
+  }
+}
+
+async function loadGenericBuildspec() {
+  try {
+    var res = await api.get('/api/settings/buildspec');
+    if (res.ok) {
+      document.getElementById('project-buildspec-input').value = res.buildspec;
+    }
+  } catch (e) {
+    console.error("Failed to load generic buildspec:", e);
+  }
+}
+
+async function saveProjectBuildspec() {
+  if (!window.activeProjectId) return;
+  var btn = document.getElementById('buildspec-save-btn');
+  var msgEl = document.getElementById('buildspec-msg');
+  var customBuildspec = document.getElementById('project-buildspec-input').value;
+  
+  btn.disabled = true;
+  msgEl.style.display = 'none';
+  
+  try {
+    var res = await api.put('/api/projects/' + window.activeProjectId + '/buildspec', {
+      customBuildspec: customBuildspec
+    });
+    
+    if (res.ok) {
+      showMsg(msgEl, '✔ Buildspec saved and updated on CodeBuild instantly!', false);
+    } else {
+      showMsg(msgEl, res.error || 'Failed to save buildspec.', true);
+    }
+  } catch (err) {
+    showMsg(msgEl, err.message || 'Server error', true);
+  }
+  btn.disabled = false;
 }

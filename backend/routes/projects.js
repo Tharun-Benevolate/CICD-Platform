@@ -209,6 +209,40 @@ router.delete("/projects/:id", auth.requireRole(...auth.ADMIN_ROLES), async (req
   }
 });
 
+// GET /api/settings/buildspec — Returns the platform's generic buildspec template
+router.get("/settings/buildspec", (req, res) => {
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    const filepath = path.join(__dirname, "../data/generic-buildspec.yml");
+    const content = fs.existsSync(filepath) ? fs.readFileSync(filepath, "utf8") : "";
+    res.json({ ok: true, buildspec: content });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// PUT /api/projects/:id/buildspec — Updates the custom buildspec and updates CodeBuild instantly
+router.put("/projects/:id/buildspec", async (req, res) => {
+  try {
+    const project = await store.getProject(req.params.id);
+    if (!project) return res.status(404).json({ ok: false, error: "Project not found" });
+
+    const { customBuildspec } = req.body;
+    const updated = await store.updateProject(req.params.id, { customBuildspec });
+
+    // Instantly update AWS CodeBuild if the project is already provisioned
+    if (project.buildProjectName && project.initialTfApplied) {
+      const aws = require("../config/aws");
+      await aws.updateBuildProject(project.region || "us-east-1", project.buildProjectName, customBuildspec);
+    }
+
+    res.json({ ok: true, project: updated });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // --- Shared helper functions exported for use by other route modules ---
 
 // helper: resolve project or 400 (async)

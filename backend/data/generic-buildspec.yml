@@ -1,0 +1,44 @@
+version: 0.2
+
+env:
+  # Injected by CodeBuild project environment variables (set in infra-initial/main.tf)
+  # ECR_REPO_URI, CONTAINER_NAME, CONTAINER_PORT, ECS_CLUSTER_NAME,
+  # EXECUTION_ROLE_ARN, TASK_ROLE_ARN, AWS_REGION, ADMIN_API_URL, LOG_GROUP_NAME
+  variables:
+    # Build-time only (if needed - e.g., private npm token)
+    # NPM_TOKEN: ""
+
+phases:
+  install:
+    runtime-versions:
+      nodejs: 20
+    commands:
+      - echo "Installing dependencies..."
+      - npm ci || npm install
+  pre_build:
+    commands:
+      - echo "Logging in to Amazon ECR..."
+      - aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI
+      - echo "Build started on $(date)"
+  build:
+    commands:
+      - echo "Building Docker image..."
+      - docker build -t $ECR_REPO_URI:latest .
+      - docker tag $ECR_REPO_URI:latest $ECR_REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION
+  post_build:
+    commands:
+      - echo "Pushing Docker image to ECR..."
+      - docker push $ECR_REPO_URI:latest
+      - docker push $ECR_REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION
+      - echo "Generating imagedefinitions.json for ECS deploy..."
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$CODEBUILD_RESOLVED_SOURCE_VERSION" > imagedefinitions.json
+      - cat imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
+  discard-paths: yes
+
+cache:
+  paths:
+    - node_modules/**/*

@@ -7,12 +7,12 @@ const {
 
 const {
   CodeCommitClient, ListRepositoriesCommand, GetRepositoryCommand, ListBranchesCommand,
-  GetBranchCommand, CreateBranchCommand, GetCommitCommand, CreateRepositoryCommand, DeleteRepositoryCommand, PutFileCommand
+  GetBranchCommand, CreateBranchCommand, GetCommitCommand, CreateRepositoryCommand, DeleteRepositoryCommand, PutFileCommand, GetFileCommand
 } = require("@aws-sdk/client-codecommit");
 
 const {
   CodeBuildClient, ListBuildsForProjectCommand, BatchGetBuildsCommand, CreateProjectCommand,
-  ListProjectsCommand, DeleteProjectCommand, StartBuildCommand
+  ListProjectsCommand, DeleteProjectCommand, StartBuildCommand, UpdateProjectCommand
 } = require("@aws-sdk/client-codebuild");
 
 const { CloudWatchLogsClient, GetLogEventsCommand } = require("@aws-sdk/client-cloudwatch-logs");
@@ -537,6 +537,23 @@ async function createBranch(region, repositoryName, branchName, baseBranch) {
   return { branchName, basedOn: baseBranch, commitId };
 }
 
+async function codecommitFileExists(region, repositoryName, branchName, filePath) {
+  try {
+    const { codecommit } = clients(region);
+    await codecommit.send(new GetFileCommand({
+      repositoryName,
+      commitSpecifier: branchName || "main",
+      filePath
+    }));
+    return true;
+  } catch (err) {
+    if (err.name === "FileDoesNotExistException" || err.name === "CommitDoesNotExistException") {
+      return false;
+    }
+    throw err;
+  }
+}
+
 // --- CodeBuild ---
 
 async function createBuildProject(region, { projectName, repoName, roleArn, buildspec, artifactBucket, computeImage }) {
@@ -551,6 +568,15 @@ async function createBuildProject(region, { projectName, repoName, roleArn, buil
       computeType: "BUILD_GENERAL1_SMALL"
     },
     serviceRole: roleArn
+  }));
+  return res.project;
+}
+
+async function updateBuildProject(region, projectName, buildspec) {
+  const { codebuild } = clients(region);
+  const res = await codebuild.send(new UpdateProjectCommand({
+    name: projectName,
+    source: { type: "CODEPIPELINE", buildspec: buildspec || undefined }
   }));
   return res.project;
 }
@@ -1287,8 +1313,8 @@ module.exports = {
   getPipelineExecution, waitForNewPipelineExecution,
   getPendingApprovals, approveAction, createPipeline, deletePipeline,
   stopPipeline, retryStage,
-  listRepos, getRepo, createRepo, deleteRepo, listBranches, getBranchDetail, createBranch,
-  createBuildProject, deleteBuildProject, startBuild, getLatestBuildForProject, getBuildLogs,
+  listRepos, getRepo, createRepo, deleteRepo, listBranches, getBranchDetail, createBranch, codecommitFileExists,
+  createBuildProject, updateBuildProject, deleteBuildProject, startBuild, getLatestBuildForProject, getBuildLogs,
   listConnections,
   createEcrRepo, listEcrImages,
   createEcsCluster, registerTaskDefinition, createEcsService, describeEcsService, describeTaskDefinition,

@@ -201,6 +201,43 @@ function _watchAndSaveFoundationDestroy(runId) {
   }, 1000);
 }
 
+// Helper: Determine the buildspec to pass to Terraform
+async function resolveBuildspecForTerraform(project, isCodeCommit, repoName, githubOwner, githubRepo, githubBranch) {
+  try {
+    let hasFile = false;
+    if (isCodeCommit) {
+      const aws = require("../config/aws");
+      const targetRepo = repoName || project.repoName;
+      const targetBranch = githubBranch || project.githubBranch || "main";
+      if (targetRepo) {
+        hasFile = await aws.codecommitFileExists(project.region || "us-east-1", targetRepo, targetBranch, "buildspec.yml");
+      }
+    } else {
+      const github = require("../github");
+      const owner = githubOwner || project.githubOwner;
+      const repo = githubRepo || project.githubRepo;
+      const targetBranch = githubBranch || project.githubBranch || "main";
+      if (owner && repo) {
+        hasFile = await github.fileExists(owner, repo, targetBranch, "buildspec.yml");
+      }
+    }
+    if (hasFile) return "buildspec.yml";
+  } catch (err) {
+    console.warn("Failed to check for buildspec.yml in repo:", err.message);
+  }
+
+  if (project.customBuildspec) return project.customBuildspec;
+
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    const filepath = path.join(__dirname, "../data/generic-buildspec.yml");
+    if (fs.existsSync(filepath)) return fs.readFileSync(filepath, "utf8");
+  } catch (e) { }
+
+  return "buildspec.yml";
+}
+
 // POST /api/terraform/initial/run — runs infra-initial, saves outputs to DB
 router.post("/terraform/initial/run", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
   try {
@@ -234,6 +271,7 @@ router.post("/terraform/initial/run", auth.requireRole(...auth.ADMIN_ROLES), asy
       github_branch: isCodeCommit ? "main" : (githubBranch || project.githubBranch || "main"),
       // CodeCommit vars
       codecommit_repo_name: isCodeCommit ? (repoName || project.repoName || "") : "",
+      buildspec: await resolveBuildspecForTerraform(project, isCodeCommit, repoName, githubOwner, githubRepo, githubBranch)
     };
 
     const runId = tf.startRun(tf.INITIAL_DIR, tfvars, { projectId: project.id, moduleLabel: "initial" });
@@ -423,7 +461,8 @@ router.post("/terraform/initial/reapply", auth.requireRole(...auth.ADMIN_ROLES),
       github_branch: project.githubBranch || "main",
       project_name:  project.buildProjectName || names.projectName,
       s3_bucket_name: project.artifactBucket || names.s3BucketName,
-      aws_region:    project.region || process.env.AWS_REGION || "us-east-1"
+      aws_region:    project.region || process.env.AWS_REGION || "us-east-1",
+      buildspec:     await resolveBuildspecForTerraform(project, project.sourceType === 'codecommit', project.repoName, project.githubOwner, project.githubRepo, project.githubBranch)
     };
     const runId = tf.startRun(tf.INITIAL_DIR, tfvars, { projectId: project.id, moduleLabel: "initial" });
     auditStore.logAction(auth.getLoggedInUser(req), "Re-apply Initial Infrastructure", project.name, "Started");

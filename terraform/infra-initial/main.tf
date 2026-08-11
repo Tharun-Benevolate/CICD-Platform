@@ -327,7 +327,7 @@ resource "aws_codebuild_project" "build" {
 
   source {
     type      = "CODEPIPELINE"
-    buildspec = "buildspec.yml"
+    buildspec = var.buildspec
   }
 
   logs_config {
