@@ -21,6 +21,10 @@ async function getRepository(id) {
 }
 
 async function listRepositories(projectId) {
+  if (!projectId) {
+    const [rows] = await pool.query("SELECT * FROM repositories ORDER BY created_at DESC");
+    return rows;
+  }
   const [rows] = await pool.query(
     "SELECT * FROM repositories WHERE project_id = ? ORDER BY created_at DESC",
     [projectId]

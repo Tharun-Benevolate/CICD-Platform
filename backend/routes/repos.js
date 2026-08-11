@@ -47,9 +47,14 @@ router.get("/repos", async (req, res) => {
     const isPrivileged = !username || userType === "super_admin" || userType === "devops" || userType === "admin";
 
     if (isPrivileged) {
-      // Admins/DevOps see all CodeCommit repos from AWS
+      // Return all connected repos from database first
+      const dbRepos = await repoStore.listRepositories().catch(() => []);
+      if (dbRepos && dbRepos.length > 0) {
+        return res.json({ ok: true, repos: dbRepos, repositories: dbRepos });
+      }
+      // Fallback to AWS CodeCommit repos if database is empty
       const r = region || process.env.AWS_REGION || "us-east-1";
-      const awsRepos = await aws.listRepos(r);
+      const awsRepos = await aws.listRepos(r).catch(() => []);
       return res.json({ ok: true, repos: awsRepos, repositories: awsRepos });
     }
 
