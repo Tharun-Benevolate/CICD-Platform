@@ -91,7 +91,7 @@
 
         // 5. Load & Run Page JS
         if (data.pageJS) {
-          var jsPath = '/js/pages/' + data.pageJS + '.js';
+          var jsPath = '/js/pages/' + data.pageJS + '.js?v=3';
           loadJS(jsPath, function() {
             var fnName = 'init' + capitalize(data.pageJS) + 'Page';
             var aliases = {
