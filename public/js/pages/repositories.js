@@ -89,7 +89,6 @@ async function fetchRepos() {
     if (emptyState) emptyState.style.display = 'block';
   }
 }
-
 function renderReposGrid() {
   var grid = document.getElementById('repos-grid');
   if (!grid) return;
@@ -100,25 +99,17 @@ function renderReposGrid() {
     var provider = repo.provider || 'codecommit';
     var isGitHub = provider === 'github';
     var defaultBranch = repo.default_branch || repo.defaultBranch || 'main';
-
     var cardId = repo.id || repoName;
-    var container = document.createElement('div');
-    container.className = 'repo-card-container';
-    container.id = 'repo-card-container-' + cardId;
 
-    var flipper = document.createElement('div');
-    flipper.className = 'repo-card-flipper';
+    var wrapper = document.createElement('div');
+    wrapper.className = 'repo-card-wrapper';
+    wrapper.id = 'repo-card-wrapper-' + cardId;
+    wrapper.style.cssText = 'background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;box-shadow:var(--shadow-sm);transition:all 0.2s ease;';
 
-    var frontCard = document.createElement('div');
-    frontCard.className = 'repo-card repo-card-front';
+    var ghSvg = '<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.374 0 0 5.373 0 12c0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23A11.509 11.509 0 0 1 12 5.803c1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576C20.566 21.797 24 17.3 24 12c0-6.627-5.373-12-12-12z"/></svg>';
+    var awsSvg = '<svg width="14" height="14" viewBox="0 0 24 24"><path fill="#FF9900" d="M6.763 10.036c0 .296.032.535.088.71.064.176.144.368.256.576.04.064.056.128.056.184 0 .08-.048.16-.152.24l-.504.336a.383.383 0 0 1-.208.072c-.08 0-.16-.04-.24-.112a2.47 2.47 0 0 1-.288-.376 6.18 6.18 0 0 1-.248-.472c-.624.736-1.408 1.104-2.352 1.104-.672 0-1.208-.192-1.6-.576-.392-.384-.592-.896-.592-1.536 0-.68.24-1.232.728-1.648.488-.416 1.136-.624 1.96-.624.272 0 .552.024.848.064.296.04.6.104.92.176v-.584c0-.608-.128-1.032-.376-1.28-.256-.248-.688-.368-1.304-.368-.28 0-.568.032-.864.104-.296.072-.584.168-.864.296a2.298 2.298 0 0 1-.28.104.488.488 0 0 1-.128.024c-.112 0-.168-.08-.168-.248v-.392c0-.128.016-.224.056-.28a.597.597 0 0 1 .224-.168c.28-.144.616-.264 1.008-.36A4.84 4.84 0 0 1 4.8 6.6c.952 0 1.648.216 2.096.648.44.432.664 1.088.664 1.968v2.82zm-3.24 1.212c.264 0 .536-.048.824-.144.288-.096.544-.272.76-.512.128-.152.224-.32.272-.512.048-.192.08-.424.08-.696v-.336a6.709 6.709 0 0 0-.736-.136 6.02 6.02 0 0 0-.752-.048c-.536 0-.928.104-1.192.32-.264.216-.392.52-.392.92 0 .376.096.656.296.848.192.2.464.296.84.296zm6.44.864c-.144 0-.24-.024-.304-.08-.064-.048-.12-.16-.168-.312L7.58 7.616a1.42 1.42 0 0 1-.072-.32c0-.128.064-.2.192-.2h.784c.152 0 .256.024.312.08.064.048.112.16.16.312l1.48 5.836 1.376-5.836c.04-.16.088-.264.152-.312a.56.56 0 0 1 .32-.08h.64c.152 0 .256.024.32.08.064.048.12.16.152.312l1.392 5.904 1.528-5.904c.048-.16.104-.264.16-.312a.52.52 0 0 1 .312-.08h.744c.128 0 .2.064.2.2 0 .04-.008.08-.016.128a1.137 1.137 0 0 1-.056.2l-2.128 6.104c-.048.16-.104.264-.168.312a.51.51 0 0 1-.304.08h-.688c-.152 0-.256-.024-.32-.08-.064-.056-.12-.16-.152-.32L12.96 7.964l-1.368 5.836c-.04.16-.088.264-.152.32-.064.056-.176.08-.32.08h-.688zm11.336.24c-.416 0-.832-.048-1.232-.144-.4-.096-.712-.2-.92-.32-.128-.072-.216-.152-.248-.224a.56.56 0 0 1-.048-.224v-.408c0-.168.064-.248.184-.248.048 0 .096.008.144.024.048.016.12.048.2.08.272.12.568.216.888.28.328.064.648.096.976.096.52 0 .92-.088 1.2-.264a.86.86 0 0 0 .424-.76.777.777 0 0 0-.212-.556c-.144-.152-.416-.288-.808-.416l-1.16-.36c-.584-.184-1.016-.456-1.288-.816a1.953 1.953 0 0 1-.408-1.184c0-.344.072-.648.216-.912.144-.264.336-.496.576-.688.24-.192.512-.336.832-.432.32-.096.656-.144 1.008-.144.176 0 .36.008.536.032.184.024.352.056.512.096.152.04.296.088.432.136.136.048.24.096.312.144a.649.649 0 0 1 .216.208.506.506 0 0 1 .064.256v.376c0 .168-.064.256-.184.256a.83.83 0 0 1-.3-.096 3.807 3.807 0 0 0-1.596-.328c-.472 0-.84.072-1.096.224-.256.152-.384.384-.384.704 0 .216.08.4.232.552.152.152.44.304.856.44l1.136.36c.576.184.992.44 1.24.768.248.328.368.704.368 1.12 0 .352-.072.672-.208.952-.144.28-.336.52-.592.72-.256.2-.56.344-.912.448-.368.112-.76.168-1.184.168z"/><path fill="#FF9900" d="M20.16 17.196c-2.464 1.8-6.032 2.752-9.112 2.752-4.312 0-8.2-1.6-11.136-4.248-.232-.208-.024-.496.256-.336 3.168 1.848 7.088 2.952 11.128 2.952 2.728 0 5.728-.568 8.488-1.744.416-.176.768.272.376.624z"/><path fill="#FF9900" d="M21.12 16.096c-.312-.4-2.072-.192-2.864-.096-.24.032-.28-.184-.064-.344 1.4-.984 3.704-.704 3.968-.368.264.336-.072 2.64-1.384 3.744-.2.168-.392.08-.304-.144.296-.736.952-2.392.648-2.792z"/></svg>';
 
-    var backCard = document.createElement('div');
-    backCard.className = 'repo-card-back';
-    backCard.id = 'repo-card-back-' + cardId;
-
-    var canManage = (typeof auth !== 'undefined' && auth.isAdmin) ? auth.isAdmin() : false;
-
-    var frontHtml =
+    var html =
       '<div>' +
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">' +
           '<div style="display:flex;align-items:center;gap:10px;">' +
@@ -129,8 +120,8 @@ function renderReposGrid() {
             '</div>' +
           '</div>' +
           '<div style="display:flex;align-items:center;gap:6px;">' +
-            '<button onclick="toggleRepoDiagnostics(\'' + cardId + '\', event)" title="Inspect Real-Time Diagnostics (i)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--color-border);background:var(--color-surface);color:#6366f1;font-weight:800;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow-sm);transition:all 0.2s ease;">' +
-              'i' +
+            '<button onclick="toggleRepoDiagnostics(\'' + cardId + '\', event)" title="Inspect Real-Time Diagnostics (i)" style="width:28px;height:28px;border-radius:50%;border:1px solid var(--color-border);background:var(--color-bg);color:#6366f1;font-weight:700;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s ease;">' +
+              '<i data-lucide="info" style="width:14px;height:14px;"></i>' +
             '</button>' +
             '<div class="' + (isGitHub ? 'provider-badge-gh' : 'provider-badge-aws') + '">' +
               (isGitHub ? ghSvg : awsSvg) + ' ' + (isGitHub ? 'GitHub' : 'CodeCommit') +
@@ -141,66 +132,57 @@ function renderReposGrid() {
           'Default Branch: <span style="font-family:monospace;font-weight:600;color:var(--color-text-primary);">' + defaultBranch + '</span>' +
         '</div>' +
       '</div>' +
+
       '<div style="display:flex;align-items:center;justify-content:space-between;border-top:1px solid var(--color-border);padding-top:14px;margin-top:10px;">' +
-        '<a href="/file-browser?repo=' + encodeURIComponent(repoName) + '" style="font-size:13px;color:#6366f1;text-decoration:none;font-weight:700;">Browse Files &rarr;</a>' +
-        '<div style="display:flex;align-items:center;gap:6px;">' +
-          '<button onclick="toggleRepoDiagnostics(\'' + cardId + '\', event)" style="padding:6px 10px;background:rgba(99,102,241,0.08);border:1px solid rgba(99,102,241,0.2);border-radius:8px;font-size:11px;font-weight:700;color:#6366f1;cursor:pointer;display:flex;align-items:center;gap:4px;">' +
-            'ℹ️ Diagnostics' +
+        '<a href="/file-browser?repo=' + encodeURIComponent(repoName) + '" style="font-size:13px;color:#6366f1;text-decoration:none;font-weight:700;display:flex;align-items:center;gap:4px;">Browse Files &rarr;</a>' +
+        '<div style="position:relative;">' +
+          '<button onclick="toggleRepoMenu(\'' + cardId + '\', event)" class="btn-manage-repo" style="padding:6px 12px;background:transparent;border:1px solid var(--color-border);border-radius:8px;font-size:12px;font-weight:600;color:var(--color-text-primary);cursor:pointer;display:flex;align-items:center;gap:6px;">' +
+            '<i data-lucide="settings" style="width:13px;height:13px;color:var(--color-text-secondary);"></i> Manage <i data-lucide="chevron-down" style="width:12px;height:12px;"></i>' +
           '</button>' +
-          (canManage ?
-          '<div style="position:relative;">' +
-            '<button onclick="toggleRepoMenu(\'' + cardId + '\', event)" class="btn-manage-repo" style="padding:6px 12px;background:transparent;border:1px solid var(--color-border);border-radius:8px;font-size:12px;font-weight:600;color:var(--color-text-primary);cursor:pointer;display:flex;align-items:center;gap:6px;">' +
-              '<i data-lucide="settings" style="width:13px;height:13px;color:var(--color-text-secondary);"></i> Manage <i data-lucide="chevron-down" style="width:12px;height:12px;"></i>' +
-            '</button>' +
-            '<div id="repo-menu-' + cardId + '" class="repo-dropdown-menu" style="display:none;">' +
-              '<div onclick="toggleRepoDiagnostics(\'' + cardId + '\', event); closeAllRepoMenus();" class="repo-dropdown-item">' +
-                '<i data-lucide="info" style="width:16px;height:16px;color:#6366f1;margin-top:2px;"></i>' +
-                '<div>' +
-                  '<div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Inspect Diagnostics (i)</div>' +
-                  '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px;">Check OAuth, scope &amp; status</div>' +
-                '</div>' +
-              '</div>' +
-              '<div style="height:1px;background:var(--color-border);margin:4px 0;"></div>' +
-              '<div onclick="promptDisconnectRepo(\'' + cardId + '\')" class="repo-dropdown-item">' +
-                '<i data-lucide="link-2-off" style="width:16px;height:16px;color:var(--color-warning);margin-top:2px;"></i>' +
-                '<div>' +
-                  '<div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Disconnect Repository</div>' +
-                  '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px;">Remove connection from project</div>' +
-                '</div>' +
-              '</div>' +
-              '<div style="height:1px;background:var(--color-border);margin:4px 0;"></div>' +
-              '<div onclick="promptDeleteRepo(\'' + cardId + '\')" class="repo-dropdown-item">' +
-                '<i data-lucide="trash-2" style="width:16px;height:16px;color:var(--color-danger);margin-top:2px;"></i>' +
-                '<div>' +
-                  '<div style="font-size:13px;font-weight:600;color:var(--color-danger);">Delete &amp; Disconnect Repo</div>' +
-                  '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px;">Permanently delete at AWS/GitHub</div>' +
-                '</div>' +
+          '<div id="repo-menu-' + cardId + '" class="repo-dropdown-menu" style="display:none;">' +
+            '<div onclick="toggleRepoDiagnostics(\'' + cardId + '\', event); closeAllRepoMenus();" class="repo-dropdown-item">' +
+              '<i data-lucide="info" style="width:15px;height:15px;color:#6366f1;margin-top:2px;"></i>' +
+              '<div>' +
+                '<div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Inspect Diagnostics (i)</div>' +
+                '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px;">Check OAuth, scope &amp; status</div>' +
               '</div>' +
             '</div>' +
-          '</div>' : '') +
+            '<div style="height:1px;background:var(--color-border);margin:4px 0;"></div>' +
+            '<div onclick="promptDisconnectRepo(\'' + cardId + '\')" class="repo-dropdown-item">' +
+              '<i data-lucide="link-2-off" style="width:15px;height:15px;color:var(--color-warning);margin-top:2px;"></i>' +
+              '<div>' +
+                '<div style="font-size:13px;font-weight:600;color:var(--color-text-primary);">Disconnect Repository</div>' +
+                '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px;">Remove connection from project</div>' +
+              '</div>' +
+            '</div>' +
+            '<div style="height:1px;background:var(--color-border);margin:4px 0;"></div>' +
+            '<div onclick="promptDeleteRepo(\'' + cardId + '\')" class="repo-dropdown-item">' +
+              '<i data-lucide="trash-2" style="width:15px;height:15px;color:var(--color-danger);margin-top:2px;"></i>' +
+              '<div>' +
+                '<div style="font-size:13px;font-weight:600;color:var(--color-danger);">Delete &amp; Disconnect Repo</div>' +
+                '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px;">Permanently delete at AWS/GitHub</div>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
-      '</div>';
-
-    var backHtml =
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
-        '<div style="font-size:13px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">' +
-          '<i data-lucide="activity" style="width:14px;height:14px;color:#6366f1;"></i> Real-Time Diagnostics' +
-        '</div>' +
-        '<button onclick="toggleRepoDiagnostics(\'' + cardId + '\', event)" style="background:none;border:none;color:var(--color-text-tertiary);cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:4px;">' +
-          '&larr; Back' +
-        '</button>' +
       '</div>' +
-      '<div id="diag-content-' + cardId + '" style="font-size:12px;color:var(--color-text-secondary);display:flex;flex-direction:column;gap:8px;">' +
-        '<div style="display:flex;align-items:center;gap:6px;color:var(--color-text-tertiary);"><i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> Fetching live status...</div>' +
+
+      '<div id="repo-diag-drawer-' + cardId + '" style="max-height:0;overflow:hidden;transition:max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1);margin-top:0;">' +
+        '<div style="border-top:1px dashed var(--color-border);padding-top:12px;margin-top:12px;">' +
+          '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">' +
+            '<div style="font-size:12px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">' +
+              '<i data-lucide="activity" style="width:14px;height:14px;color:#6366f1;"></i> Real-Time Diagnostics' +
+            '</div>' +
+            '<button onclick="toggleRepoDiagnostics(\'' + cardId + '\', event)" style="background:none;border:none;color:var(--color-text-tertiary);cursor:pointer;font-size:11px;font-weight:700;">Close &times;</button>' +
+          '</div>' +
+          '<div id="diag-content-' + cardId + '" style="font-size:12px;color:var(--color-text-secondary);display:flex;flex-direction:column;gap:8px;">' +
+            '<div style="display:flex;align-items:center;gap:6px;color:var(--color-text-tertiary);"><i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> Fetching live status...</div>' +
+          '</div>' +
+        '</div>' +
       '</div>';
 
-    frontCard.innerHTML = frontHtml;
-    backCard.innerHTML = backHtml;
-
-    flipper.appendChild(frontCard);
-    flipper.appendChild(backCard);
-    container.appendChild(flipper);
-    grid.appendChild(container);
+    wrapper.innerHTML = html;
+    grid.appendChild(wrapper);
   });
 
   if (window.lucide) lucide.createIcons();
@@ -208,16 +190,16 @@ function renderReposGrid() {
 
 async function toggleRepoDiagnostics(id, e) {
   if (e) e.stopPropagation();
-  var container = document.getElementById('repo-card-container-' + id);
-  if (!container) return;
+  var drawer = document.getElementById('repo-diag-drawer-' + id);
+  if (!drawer) return;
 
-  var isFlipped = container.classList.contains('flipped');
-  if (isFlipped) {
-    container.classList.remove('flipped');
+  var isOpen = drawer.style.maxHeight && drawer.style.maxHeight !== '0px';
+  if (isOpen) {
+    drawer.style.maxHeight = '0px';
     return;
   }
 
-  container.classList.add('flipped');
+  drawer.style.maxHeight = '320px';
   var content = document.getElementById('diag-content-' + id);
   if (!content) return;
 
@@ -229,7 +211,7 @@ async function toggleRepoDiagnostics(id, e) {
     if (res && res.ok && res.diagnostics) {
       var d = res.diagnostics;
       var statusBadgeClass = d.isAccessible ? 'background:rgba(16,185,129,0.12);color:#10b981;' : 'background:rgba(239,68,68,0.12);color:#ef4444;';
-      var statusText = d.isAccessible ? '✔ Active (' + d.httpStatusCode + ' OK)' : '✖ Status ' + d.httpStatusCode;
+      var statusText = d.isAccessible ? 'Active (HTTP 200 OK)' : 'Status ' + d.httpStatusCode;
 
       content.innerHTML =
         '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;background:var(--color-bg);border-radius:8px;">' +
@@ -246,17 +228,17 @@ async function toggleRepoDiagnostics(id, e) {
         '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
           '<span style="color:var(--color-text-tertiary);">Visibility:</span>' +
-          '<span style="font-weight:600;color:var(--color-text-primary);">' + (d.isPrivate ? '🔒 Private Repo' : '🌐 Public Repo') + '</span>' +
+          '<span style="font-weight:600;color:var(--color-text-primary);">' + (d.isPrivate ? 'Private Repository' : 'Public Repository') + '</span>' +
         '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
           '<span style="color:var(--color-text-tertiary);">Creator OAuth:</span>' +
-          '<span style="font-weight:600;' + (d.creatorOAuthConnected ? 'color:#10b981;' : 'color:var(--color-warning);') + '">' + (d.creatorOAuthConnected ? '✔ Connected' : '⚠️ Disconnected') + '</span>' +
+          '<span style="font-weight:600;' + (d.creatorOAuthConnected ? 'color:#10b981;' : 'color:var(--color-warning);') + '">' + (d.creatorOAuthConnected ? 'Connected' : 'Disconnected') + '</span>' +
         '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
           '<span style="color:var(--color-text-tertiary);">Effective Token:</span>' +
           '<span style="font-weight:600;color:var(--color-text-primary);">' + d.resolvedTokenSource + '</span>' +
         '</div>' +
-        '<div style="margin-top:4px;padding:8px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.18);border-radius:8px;font-size:11px;line-height:1.4;color:var(--color-text-secondary);">' +
+        '<div style="margin-top:4px;padding:8px 10px;background:rgba(99,102,241,0.06);border:1px solid rgba(99,102,241,0.18);border-radius:8px;font-size:11px;line-height:1.4;color:var(--color-text-secondary);">' +
           d.statusMessage +
         '</div>';
     } else {
@@ -266,7 +248,7 @@ async function toggleRepoDiagnostics(id, e) {
     content.innerHTML = '<div style="color:var(--color-danger);font-weight:600;">Error: ' + (err.message || 'Server error') + '</div>';
   }
 }
-window.toggleRepoDiagnostics = toggleRepoDiagnostics;
+window.toggleRepoDiagnostics = toggleRepoDiagnostics;toggleRepoDiagnostics;
 
   if (window.lucide) lucide.createIcons();
 }

@@ -111,15 +111,20 @@ router.get("/audit-logs", requireAuth, checkPageRole(), (req, res) => renderPage
 router.get("/pipelines", requireAuth, (req, res) => renderPage(res, req, "pipelines"));
 router.get("/build", requireAuth, (req, res) => renderPage(res, req, "build-logs"));
 
-const repoStore = require("../stores/repositoryStore");
+const projectStore = require("../stores/projectStore");
+const repositoryStore = require("../stores/repositoryStore");
 
 router.get("/repos", requireAuth, async (req, res) => {
-  const repos = await repoStore.listRepositories().catch(() => []);
-  renderPage(res, req, "repositories", { repos });
+  const projects = await projectStore.listProjects().catch(() => []);
+  const activeProj = projects.find(p => p.isActive) || projects[0];
+  const repos = activeProj ? await repositoryStore.listRepositories(activeProj.id).catch(() => []) : [];
+  renderPage(res, req, "repositories", { repos, activeProject: activeProj });
 });
 router.get("/repos/connect", requireAuth, async (req, res) => {
-  const repos = await repoStore.listRepositories().catch(() => []);
-  renderPage(res, req, "repositories", { repos });
+  const projects = await projectStore.listProjects().catch(() => []);
+  const activeProj = projects.find(p => p.isActive) || projects[0];
+  const repos = activeProj ? await repositoryStore.listRepositories(activeProj.id).catch(() => []) : [];
+  renderPage(res, req, "repositories", { repos, activeProject: activeProj });
 });
 router.get("/branches", requireAuth, (req, res) => renderPage(res, req, "branches"));
 router.get("/change-requests", requireAuth, (req, res) => renderPage(res, req, "change-requests"));
