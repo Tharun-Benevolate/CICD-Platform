@@ -4,9 +4,6 @@ env:
   # Injected by CodeBuild project environment variables (set in infra-initial/main.tf)
   # ECR_REPO_URI, CONTAINER_NAME, CONTAINER_PORT, ECS_CLUSTER_NAME,
   # EXECUTION_ROLE_ARN, TASK_ROLE_ARN, AWS_REGION, ADMIN_API_URL, LOG_GROUP_NAME
-  variables:
-    # Build-time only (if needed - e.g., private npm token)
-    # NPM_TOKEN: ""
 
 phases:
   install:
