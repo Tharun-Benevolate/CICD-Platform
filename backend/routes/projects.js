@@ -233,7 +233,7 @@ router.put("/projects/:id/buildspec", async (req, res) => {
 
     // Instantly update AWS CodeBuild if the project is already provisioned
     if (project.buildProjectName && project.initialTfApplied) {
-      const aws = require("../config/aws");
+      const aws = require("../aws");
       await aws.updateBuildProject(project.region || "us-east-1", project.buildProjectName, customBuildspec);
     }
 
