@@ -87,6 +87,12 @@ router.get("/oauth/github/callback", auth.requireAuth, async (req, res) => {
     const userStore = require("../stores/userStore");
     if (username) {
       await userStore.updateGithubProfile(username, ghUser.login, ghUser.avatar_url || null);
+      const freshUser = await userStore.getUser(username);
+      if (freshUser) {
+        const freshToken = auth.issueAuthToken(freshUser);
+        res.cookie("auth_token", freshToken, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
+        res.cookie("token", freshToken, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
+      }
     }
 
     auditStore.logAction(username, "Connected GitHub account via OAuth", `@${ghUser.login}`, "Success");
@@ -100,9 +106,34 @@ router.get("/oauth/github/callback", auth.requireAuth, async (req, res) => {
 // DELETE /api/oauth/github/disconnect
 router.delete("/oauth/github/disconnect", auth.requireAuth, async (req, res) => {
   try {
-    await credManager.deleteCredentialByProvider(req.user.username, "github");
-    auditStore.logAction(req.user.username, "Disconnected GitHub OAuth", "", "Success");
-    res.json({ ok: true });
+    const { pool } = require("../config/db");
+    const username = (req.user?.username || "").toLowerCase().trim();
+
+    // 1. Delete from repo_credentials
+    const [delRes] = await pool.query(
+      "DELETE FROM repo_credentials WHERE LOWER(username) = ? AND (LOWER(provider) = 'github' OR LOWER(label) LIKE '%github%')",
+      [username]
+    );
+
+    // 2. Reset github_username in users table
+    await pool.query("UPDATE users SET github_username = NULL WHERE LOWER(username) = ?", [username]).catch(() => {});
+
+    // 3. Refresh auth cookie session
+    const userStore = require("../stores/userStore");
+    const freshUser = await userStore.getUser(username);
+    if (freshUser) {
+      const freshToken = auth.issueAuthToken(freshUser);
+      res.cookie("auth_token", freshToken, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
+      res.cookie("token", freshToken, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
+    }
+
+    auditStore.logAction(username, "Disconnected GitHub OAuth", "", "Success");
+
+    if (delRes.affectedRows === 0) {
+      return res.status(404).json({ ok: false, error: "No active GitHub OAuth connection found to disconnect." });
+    }
+
+    res.json({ ok: true, message: "GitHub account disconnected successfully." });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -168,6 +199,18 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
       expiresAt: null,
     });
 
+    const { pool } = require("../config/db");
+    await pool.query("UPDATE users SET slack_id = ? WHERE LOWER(username) = ?", [slackUserId || channelId, username]).catch(() => {});
+
+    // Refresh auth cookie session
+    const userStore = require("../stores/userStore");
+    const freshUser = await userStore.getUser(username);
+    if (freshUser) {
+      const freshToken = auth.issueAuthToken(freshUser);
+      res.cookie("auth_token", freshToken, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
+      res.cookie("token", freshToken, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
+    }
+
     auditStore.logAction(username, "Connected Slack Account", channelName, "Success");
 
     // Automatically sync and backfill user into all existing project Slack channels
@@ -185,10 +228,36 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
 router.delete("/oauth/slack/disconnect", auth.requireAuth, async (req, res) => {
   try {
     const { pool } = require("../config/db");
-    await credManager.deleteCredentialByProvider(req.user.username, "slack");
-    await pool.query("UPDATE users SET slack_id = NULL WHERE username = ?", [req.user.username]).catch(() => {});
-    auditStore.logAction(req.user.username, "Disconnected Slack OAuth", "", "Success");
-    res.json({ ok: true });
+    const username = (req.user?.username || "").toLowerCase().trim();
+
+    // 1. Delete from repo_credentials
+    const [delRes] = await pool.query(
+      "DELETE FROM repo_credentials WHERE LOWER(username) = ? AND (LOWER(provider) = 'slack' OR LOWER(label) LIKE '%slack%')",
+      [username]
+    );
+
+    // 2. Reset slack_id in users table
+    await pool.query("UPDATE users SET slack_id = NULL WHERE LOWER(username) = ?", [username]).catch(() => {});
+
+    // 3. Reset slack_webhook_url in notification_settings
+    await pool.query("UPDATE notification_settings SET slack_webhook_url = NULL WHERE LOWER(user) = ?", [username]).catch(() => {});
+
+    // 4. Refresh auth cookie session
+    const userStore = require("../stores/userStore");
+    const freshUser = await userStore.getUser(username);
+    if (freshUser) {
+      const freshToken = auth.issueAuthToken(freshUser);
+      res.cookie("auth_token", freshToken, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
+      res.cookie("token", freshToken, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
+    }
+
+    auditStore.logAction(username, "Disconnected Slack OAuth", "", "Success");
+
+    if (delRes.affectedRows === 0) {
+      return res.status(404).json({ ok: false, error: "No active Slack OAuth connection found to disconnect." });
+    }
+
+    res.json({ ok: true, message: "Slack workspace disconnected successfully." });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

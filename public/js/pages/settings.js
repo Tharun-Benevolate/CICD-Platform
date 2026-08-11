@@ -24,8 +24,10 @@ function initSettingsPage() {
   var alertEl = document.getElementById('oauth-alert-msg');
   if (search.includes('github_connected=1')) {
     showMsg(alertEl, '✔ GitHub account connected successfully!', false);
+    updateGithubUI(true);
   } else if (search.includes('slack_connected=1')) {
     showMsg(alertEl, '✔ Slack workspace connected successfully!', false);
+    updateSlackUI(true);
   } else if (search.includes('oauth_error=')) {
     var errMatch = search.match(/oauth_error=([^&]+)/);
     var errMsg = errMatch ? decodeURIComponent(errMatch[1]) : 'GitHub OAuth authorization failed';
@@ -122,6 +124,17 @@ function cancelDisconnectGithub() {
   if (confirmBanner) confirmBanner.style.display = 'none';
 }
 
+function updateGithubUI(isConnected) {
+  var badge = document.getElementById('gh-badge');
+  var connDiv = document.getElementById('gh-actions-connected');
+  var disDiv = document.getElementById('gh-actions-disconnected');
+
+  if (badge) badge.style.display = isConnected ? 'inline-block' : 'none';
+  if (connDiv) connDiv.style.display = isConnected ? 'flex' : 'none';
+  if (disDiv) disDiv.style.display = isConnected ? 'none' : 'block';
+}
+window.updateGithubUI = updateGithubUI;
+
 async function confirmDisconnectGithub() {
   cancelDisconnectGithub();
   var alertEl = document.getElementById('oauth-alert-msg');
@@ -130,7 +143,7 @@ async function confirmDisconnectGithub() {
     var res = await api.delete('/api/oauth/github/disconnect');
     if (res && res.ok) {
       showMsg(alertEl, '✔ GitHub account disconnected successfully.', false);
-      checkOAuthConnections();
+      updateGithubUI(false);
     } else {
       showMsg(alertEl, (res && res.error) || 'Failed to disconnect GitHub account.', true);
     }
