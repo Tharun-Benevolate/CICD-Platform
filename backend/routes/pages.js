@@ -111,8 +111,16 @@ router.get("/audit-logs", requireAuth, checkPageRole(), (req, res) => renderPage
 router.get("/pipelines", requireAuth, (req, res) => renderPage(res, req, "pipelines"));
 router.get("/build", requireAuth, (req, res) => renderPage(res, req, "build-logs"));
 
-router.get("/repos", requireAuth, (req, res) => renderPage(res, req, "repositories"));
-router.get("/repos/connect", requireAuth, (req, res) => renderPage(res, req, "repositories"));
+const repoStore = require("../stores/repoStore");
+
+router.get("/repos", requireAuth, async (req, res) => {
+  const repos = await repoStore.listRepositories().catch(() => []);
+  renderPage(res, req, "repositories", { repos });
+});
+router.get("/repos/connect", requireAuth, async (req, res) => {
+  const repos = await repoStore.listRepositories().catch(() => []);
+  renderPage(res, req, "repositories", { repos });
+});
 router.get("/branches", requireAuth, (req, res) => renderPage(res, req, "branches"));
 router.get("/change-requests", requireAuth, (req, res) => renderPage(res, req, "change-requests"));
 router.get("/change-requests/new", requireAuth, (req, res) => renderPage(res, req, "change-requests"));

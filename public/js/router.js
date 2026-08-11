@@ -91,7 +91,7 @@
 
         // 5. Load & Run Page JS
         if (data.pageJS) {
-          var jsPath = '/js/pages/' + data.pageJS + '.js?v=3';
+          var jsPath = '/js/pages/' + data.pageJS + '.js';
           loadJS(jsPath, function() {
             var fnName = 'init' + capitalize(data.pageJS) + 'Page';
             var aliases = {
@@ -105,11 +105,13 @@
               'audit-logs':       'initAuditLogsPage',
               'setup-wizard':     'initSetupWizardPage',
               'file-browser':     'initFileBrowserPage',
-              'new-project':      'initNewProjectPage'
+              'new-project':      'initNewProjectPage',
+              'settings':         'initSettingsPage',
+              'repositories':     'initRepositoriesPage'
             };
             var fn = window[fnName] || window[aliases[data.pageJS]];
             if (typeof fn === 'function') {
-              fn();
+              try { fn(); } catch (e) { console.warn('Page init notice:', e); }
             }
           });
         }
@@ -150,15 +152,10 @@
   }
 
   function loadJS(src, callback) {
-    if (loadedJS[src]) {
-      if (callback) callback();
-      return;
-    }
-
+    var cleanSrc = src.split('?')[0] + '?t=' + Date.now();
     var script = document.createElement('script');
-    script.src = src;
+    script.src = cleanSrc;
     script.onload = function() {
-      loadedJS[src] = true;
       if (callback) callback();
     };
     document.body.appendChild(script);
