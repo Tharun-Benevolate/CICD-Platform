@@ -18,9 +18,17 @@ const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 50 
 // Helper: resolve GitHub token (user PAT -> system/admin PAT -> GITHUB_TOKEN env)
 async function getGithubToken(req) {
   try {
-    const username = auth.getLoggedInUser(req);
-    const credManager = require("../services/credentialManager");
-    return await credManager.resolveGithubToken(username);
+    const reposRouter = require("./repos");
+    const id = req.query.repositoryId || req.body.repositoryId;
+    const repoName = req.query.repo || req.body.repo;
+    let repo = null;
+    if (id) repo = await repoStore.getRepository(id);
+    if (!repo && repoName) {
+      const all = await repoStore.listRepositories();
+      repo = all.find(r => r.repo_name === repoName || r.repositoryName === repoName);
+    }
+    const { token } = await reposRouter.resolveGithubTokenForRepo(req, repo);
+    return token;
   } catch { return process.env.GITHUB_TOKEN || ""; }
 }
 

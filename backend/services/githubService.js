@@ -194,8 +194,39 @@ async function deleteRepo(owner, repo, token) {
   return { deleted: true };
 }
 
+async function testRepoAccess(owner, repo, token) {
+  try {
+    const r = cleanRepo(repo);
+    const tok = token || process.env.GITHUB_TOKEN;
+    if (!tok) return { ok: false, status: 401, message: "No token available" };
+
+    const res = await fetch(`https://api.github.com/repos/${owner}/${r}`, {
+      headers: {
+        "Authorization": `Bearer ${tok}`,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      }
+    });
+
+    if (!res.ok) {
+      return { ok: false, status: res.status };
+    }
+
+    const data = await res.json().catch(() => ({}));
+    return {
+      ok: true,
+      status: 200,
+      isPrivate: data.private ?? true,
+      defaultBranch: data.default_branch || "main",
+      ownerType: data.owner?.type || "User"
+    };
+  } catch (err) {
+    return { ok: false, status: 500, message: err.message };
+  }
+}
+
 module.exports = {
   getDefaultBranch, listBranches, getCommits, getCommit, compareBranches,
   createBranch, deleteBranch, mergeBranches, listUserRepos, listUserOrgs,
-  createRepo, deleteRepo
+  createRepo, deleteRepo, testRepoAccess
 };

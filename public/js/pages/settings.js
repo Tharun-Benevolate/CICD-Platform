@@ -212,6 +212,10 @@ function switchSettingsTab(tabName, updateUrl) {
       }
     }
   });
+
+  if (tabName === 'integrations') {
+    checkOAuthConnections();
+  }
 }
 
 // ── Password Strength Validator ───────────────────────────────────────────

@@ -177,15 +177,12 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
     if (provider === "github") {
       credId = "gh-" + crypto.randomUUID();
 
-      // Resolve the actual GitHub token for this user
-      let githubToken = process.env.GITHUB_TOKEN || "";
-      try {
-        const userToken = await credentialManager.getCredential(req.user.username, "github");
-        if (userToken) githubToken = userToken;
-      } catch (_) {}
+      // Resolve GitHub token using smart multi-tier fallback (User -> Creator -> System)
+      const reposRouter = require("./repos");
+      const { token: githubToken, source: tokenSource } = await reposRouter.resolveGithubTokenForRepo(req, repo);
 
       if (!githubToken) {
-        return res.status(400).json({ ok: false, error: "No GitHub token found for this user. Please save a PAT in Settings → Git Credentials." });
+        return res.status(400).json({ ok: false, error: "No GitHub token found. Please authorize GitHub in Settings → Integrations." });
       }
 
       gitUsername = "x-access-token";

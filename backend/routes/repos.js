@@ -298,20 +298,76 @@ router.post("/branches/create", async (req, res) => {
 });
 
 
-// ── GitHub token resolution ───────────────────────────────────────────────────
-// Priority: GITHUB_TOKEN env (static server PAT, never revoked by our OAuth app)
-// Fallback: user's stored credential from DB (may be an OAuth token).
-// If the stored cred causes a 401, it is auto-deleted so future calls don't retry it.
-async function resolveGithubToken(req) {
+// ── GitHub token resolution (Smart Multi-Tier Fallback) ────────────────────────
+// 1. Current logged-in user's stored token (if valid and has access to repo)
+// 2. Repo Creator's stored token (if user's token lacks repo access/gets 404)
+// 3. System/Admin stored GitHub PAT or process.env.GITHUB_TOKEN
+async function resolveGithubTokenForRepo(req, repo = null) {
   const { getLoggedInUser } = require("../middleware/auth");
   const username = getLoggedInUser(req) || "admin";
-  const token = await credManager.resolveGithubToken(username);
-  return { token, source: token ? "resolved" : "none", username };
+
+  let ghOwner = repo?.owner || "";
+  let ghRepo = repo?.repo_name || repo?.repoName || repo?.name || "";
+  if (ghRepo && ghRepo.includes("/")) {
+    const parts = ghRepo.split("/");
+    ghRepo = parts[parts.length - 1];
+    if (!ghOwner) ghOwner = parts[0];
+  }
+
+  // 1. Prioritize Repo Creator's token (the Admin/DevOps who connected this repo to the project)
+  const creator = repo?.created_by || repo?.createdBy;
+  if (creator && ghOwner && ghRepo) {
+    const creatorToken = await credManager.getCredential(creator, "github").catch(() => null);
+    if (creatorToken) {
+      const access = await gh.testRepoAccess(ghOwner, ghRepo, creatorToken);
+      if (access.ok) {
+        return { token: creatorToken, source: `Repo Creator (@${creator})`, username: creator };
+      }
+    }
+  }
+
+  // 2. Try current logged-in user's personal GitHub token
+  let userToken = await credManager.getCredential(username, "github").catch(() => null);
+  if (userToken) {
+    if (ghOwner && ghRepo) {
+      const access = await gh.testRepoAccess(ghOwner, ghRepo, userToken);
+      if (access.ok) {
+        return { token: userToken, source: `User (@${username})`, username };
+      }
+    } else {
+      return { token: userToken, source: `User (@${username})`, username };
+    }
+  }
+
+  // 3. Scan ALL stored GitHub credentials in DB for any Admin/DevOps token that can access this repository
+  try {
+    const { pool } = require("../config/db");
+    const [allGhCreds] = await pool.query(
+      `SELECT username, encrypted_token, token_iv, token_tag FROM repo_credentials WHERE LOWER(provider) = 'github' ORDER BY created_at DESC`
+    );
+    for (const row of allGhCreds) {
+      const tok = credManager.decrypt(row.encrypted_token, row.token_iv, row.token_tag);
+      if (tok && ghOwner && ghRepo) {
+        const access = await gh.testRepoAccess(ghOwner, ghRepo, tok);
+        if (access.ok) {
+          return { token: tok, source: `Team Admin Token (@${row.username})`, username: row.username };
+        }
+      } else if (tok && (!ghOwner || !ghRepo)) {
+        return { token: tok, source: `Team Admin Token (@${row.username})`, username: row.username };
+      }
+    }
+  } catch (_) {}
+
+  // 4. Fallback to process.env.GITHUB_TOKEN
+  const fallbackToken = await credManager.resolveGithubToken(username);
+  return { token: fallbackToken || userToken || "", source: "System Env Token", username };
 }
 
+async function resolveGithubToken(req) {
+  return await resolveGithubTokenForRepo(req, null);
+}
 
 // Auto-clears the stored GitHub token for a user if it returned 401.
-// Called by endpoints when GitHub API rejects the stored credential.
 async function clearInvalidGithubToken(username) {
   if (!username) return;
   try {
@@ -319,6 +375,125 @@ async function clearInvalidGithubToken(username) {
     console.log(`[github] Auto-cleared invalid stored token for user: ${username}`);
   } catch (_) {}
 }
+
+// GET /api/repos/:id/diagnostics — Real-time live status and ownership diagnostics for a repo
+router.get("/repos/:id/diagnostics", async (req, res) => {
+  try {
+    const repositoryId = req.params.id;
+    let repo = await repoStore.getRepository(repositoryId);
+    if (!repo) {
+      const allRepos = await repoStore.listRepositories();
+      repo = allRepos.find(r => r.id === repositoryId || r.repo_name === repositoryId || r.repoName === repositoryId);
+    }
+
+    if (!repo) {
+      return res.status(404).json({ ok: false, error: "Repository not found in workspace" });
+    }
+
+    const { getLoggedInUser } = require("../middleware/auth");
+    const loggedInUser = getLoggedInUser(req) || "admin";
+    const provider = repo.provider || "codecommit";
+    const repoName = repo.repo_name || repo.repoName;
+    const owner = repo.owner || "";
+    const createdBy = repo.created_by || repo.createdBy || "system";
+    const createdAt = repo.created_at || repo.createdAt || null;
+
+    let scope = "Personal Account";
+    if (owner && owner.toLowerCase() !== createdBy.toLowerCase()) {
+      scope = `Organization (@${owner})`;
+    } else if (owner) {
+      scope = `Personal Account (@${owner})`;
+    } else {
+      scope = `AWS CodeCommit (${process.env.AWS_REGION || "us-east-1"})`;
+    }
+
+    let creatorOAuthConnected = false;
+    if (provider === "github" && createdBy) {
+      const creatorTok = await credManager.getCredential(createdBy, "github").catch(() => null);
+      creatorOAuthConnected = !!creatorTok;
+    }
+
+    let currentUserOAuthConnected = false;
+    if (provider === "github") {
+      const userTok = await credManager.getCredential(loggedInUser, "github").catch(() => null);
+      currentUserOAuthConnected = !!userTok;
+    }
+
+    let httpStatusCode = 200;
+    let userDirectAccess = true;
+    let isPrivate = true;
+    let resolvedTokenSource = "Direct User Token";
+    let statusMessage = "Repository is active and fully accessible.";
+
+    if (provider === "github") {
+      let ghOwner = owner || "";
+      let ghRepo = repoName || "";
+      if (ghRepo.includes("/")) {
+        const parts = ghRepo.split("/");
+        ghRepo = parts[parts.length - 1];
+        if (!ghOwner) ghOwner = parts[0];
+      }
+
+      // 1. Test current user's token directly
+      const userTok = await credManager.getCredential(loggedInUser, "github").catch(() => null);
+      if (userTok && ghOwner && ghRepo) {
+        const userTest = await gh.testRepoAccess(ghOwner, ghRepo, userTok);
+        if (!userTest.ok) {
+          userDirectAccess = false;
+          httpStatusCode = userTest.status || 404;
+        } else {
+          isPrivate = userTest.isPrivate ?? true;
+        }
+      } else if (!userTok) {
+        userDirectAccess = false;
+      }
+
+      // 2. Test smart fallback token
+      const { token: effectiveToken, source } = await resolveGithubTokenForRepo(req, repo);
+      if (effectiveToken && ghOwner && ghRepo) {
+        const fallbackTest = await gh.testRepoAccess(ghOwner, ghRepo, effectiveToken);
+        if (fallbackTest.ok) {
+          httpStatusCode = 200;
+          resolvedTokenSource = source;
+          isPrivate = fallbackTest.isPrivate ?? true;
+          if (!userDirectAccess) {
+            statusMessage = `Your GitHub account lacks direct permissions on GitHub (404), but team fallback token (${source}) is active and serving data.`;
+          }
+        } else {
+          httpStatusCode = fallbackTest.status || 404;
+          statusMessage = `Repository returned HTTP ${httpStatusCode}. GitHub token lacks permissions or repository was deleted on GitHub.`;
+        }
+      } else {
+        httpStatusCode = 401;
+        statusMessage = "No valid GitHub token available for this repository.";
+      }
+    }
+
+    res.json({
+      ok: true,
+      diagnostics: {
+        repoId: repo.id || repositoryId,
+        repoName: repoName,
+        owner: owner,
+        fullPath: owner ? `${owner}/${repoName}` : repoName,
+        provider: provider,
+        scope: scope,
+        createdBy: createdBy,
+        createdAt: createdAt,
+        isPrivate: isPrivate,
+        creatorOAuthConnected: creatorOAuthConnected,
+        currentUserOAuthConnected: currentUserOAuthConnected,
+        userDirectAccess: userDirectAccess,
+        httpStatusCode: httpStatusCode,
+        resolvedTokenSource: resolvedTokenSource,
+        statusMessage: statusMessage,
+        isAccessible: httpStatusCode === 200
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 
 // GET /api/branches/by-repo?repositoryId=xxx&projectId=xxx
 // Fetches branches for ANY connected repo (GitHub or CodeCommit) by repositoryId.
@@ -347,7 +522,7 @@ router.get("/branches/by-repo", async (req, res) => {
     const owner = repo.owner;
 
     if (provider === "github") {
-      const { token, source, username } = await resolveGithubToken(req);
+      const { token, source, username } = await resolveGithubTokenForRepo(req, repo);
       if (!token) {
         return res.status(401).json({
           ok: false,
@@ -441,7 +616,7 @@ router.get("/commits/by-repo", async (req, res) => {
     const targetBranch = branch || repo.default_branch || repo.defaultBranch || "main";
 
     if (provider === "github") {
-      const { token, source, username } = await resolveGithubToken(req);
+      const { token, source, username } = await resolveGithubTokenForRepo(req, repo);
       if (!token) {
         return res.status(401).json({
           ok: false, authRequired: true,
@@ -597,6 +772,8 @@ router.post("/branches/create-for-repo", async (req, res) => {
   }
 });
 
+router.resolveGithubTokenForRepo = resolveGithubTokenForRepo;
+router.resolveGithubToken = resolveGithubToken;
 module.exports = router;
 
 // ─── Branch Compare & Merge (used by Git Diff & Merge page) ─────────────────

@@ -330,6 +330,11 @@
         Authorize your official GitHub and Slack accounts for automated repository management and private channel alerts.
       </p>
 
+      <%
+        const userCreds = (typeof credentials !== 'undefined' && Array.isArray(credentials)) ? credentials : [];
+        const hasGh = userCreds.some(c => (c.provider && c.provider.toLowerCase() === 'github') || (c.label && c.label.toLowerCase().includes('github'))) || (typeof user !== 'undefined' && user && user.githubUsername);
+        const hasSlack = userCreds.some(c => (c.provider && c.provider.toLowerCase() === 'slack') || (c.label && c.label.toLowerCase().includes('slack')));
+      %>
       <div id="oauth-alert-msg" style="display:none;" class="msg-box"></div>
 
       <div style="display:flex;flex-direction:column;gap:16px;">
@@ -345,7 +350,7 @@
               <div>
                 <div style="font-weight:700;font-size:15px;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;">
                   GitHub Integration
-                  <span id="gh-badge" style="display:none;font-size:11px;background:rgba(16,185,129,0.12);color:#10b981;padding:2px 8px;border-radius:6px;font-weight:700;">
+                  <span id="gh-badge" style="display:<%= hasGh ? 'inline-block' : 'none' %>;font-size:11px;background:rgba(16,185,129,0.12);color:#10b981;padding:2px 8px;border-radius:6px;font-weight:700;">
                     ✔ Connected
                   </span>
                 </div>
@@ -355,7 +360,7 @@
               </div>
             </div>
 
-            <div id="gh-actions-connected" style="display:none;gap:10px;">
+            <div id="gh-actions-connected" style="display:<%= hasGh ? 'flex' : 'none' %>;gap:10px;">
               <a href="/api/oauth/github" class="btn-secondary">
                 Reconnect <i data-lucide="external-link" style="width:14px;height:14px;"></i>
               </a>
@@ -364,7 +369,7 @@
               </button>
             </div>
 
-            <div id="gh-actions-disconnected" style="display:block;">
+            <div id="gh-actions-disconnected" style="display:<%= hasGh ? 'none' : 'block' %>;">
               <a href="/api/oauth/github" style="padding:10px 20px;background:#24292e;border:none;border-radius:10px;color:white;text-decoration:none;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:8px;box-shadow:var(--shadow-sm);">
                 Connect GitHub Account <i data-lucide="external-link" style="width:14px;height:14px;"></i>
               </a>
@@ -402,7 +407,7 @@
               <div>
                 <div style="font-weight:700;font-size:15px;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;">
                   Slack Workspace OAuth
-                  <span id="slack-badge" style="display:none;font-size:11px;background:rgba(16,185,129,0.12);color:#10b981;padding:2px 8px;border-radius:6px;font-weight:700;">
+                  <span id="slack-badge" style="display:<%= hasSlack ? 'inline-block' : 'none' %>;font-size:11px;background:rgba(16,185,129,0.12);color:#10b981;padding:2px 8px;border-radius:6px;font-weight:700;">
                     ✔ Connected
                   </span>
                 </div>
@@ -412,7 +417,7 @@
               </div>
             </div>
 
-            <div id="slack-actions-connected" style="display:none;gap:10px;">
+            <div id="slack-actions-connected" style="display:<%= hasSlack ? 'flex' : 'none' %>;gap:10px;">
               <a href="/api/oauth/slack" class="btn-secondary">
                 Reconnect <i data-lucide="external-link" style="width:14px;height:14px;"></i>
               </a>
@@ -421,7 +426,7 @@
               </button>
             </div>
 
-            <div id="slack-actions-disconnected" style="display:block;">
+            <div id="slack-actions-disconnected" style="display:<%= hasSlack ? 'none' : 'block' %>;">
               <a href="/api/oauth/slack" style="padding:10px 20px;background:#4A154B;border:1px solid var(--color-border);border-radius:10px;color:white;text-decoration:none;font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:8px;box-shadow:var(--shadow-sm);">
                 Connect Slack Account <i data-lucide="external-link" style="width:14px;height:14px;"></i>
               </a>

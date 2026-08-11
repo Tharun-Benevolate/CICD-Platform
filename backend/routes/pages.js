@@ -130,8 +130,16 @@ router.get("/setup", requireAuth, checkPageRole(), (req, res) => renderPage(res,
 router.get("/setup/:step", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "setup-wizard"));
 
 router.get("/admin/users", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "admin-users"));
-router.get("/settings", requireAuth, (req, res) => renderPage(res, req, "settings"));
-router.get("/settings/:tab", requireAuth, (req, res) => renderPage(res, req, "settings"));
+const credManager = require("../services/credentialManager");
+
+router.get("/settings", requireAuth, async (req, res) => {
+  const creds = await credManager.listCredentials(req.pageUser.username).catch(() => []);
+  renderPage(res, req, "settings", { credentials: creds });
+});
+router.get("/settings/:tab", requireAuth, async (req, res) => {
+  const creds = await credManager.listCredentials(req.pageUser.username).catch(() => []);
+  renderPage(res, req, "settings", { credentials: creds });
+});
 router.get("/new-project", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "new-project"));
 
 // ── Catch-all: redirect unknown routes to dashboard ──
