@@ -805,3 +805,21 @@ async function handleCreateNewSubmit() {
   }
   btn.disabled = false;
 }
+
+// ── Global Window Exports for Inline HTML Onclick Attributes ─────────────────
+window.toggleRepoDiagnostics = toggleRepoDiagnostics;
+window.toggleRepoMenu = toggleRepoMenu;
+window.closeAllRepoMenus = closeAllRepoMenus;
+window.toggleTempCliSection = toggleTempCliSection;
+window.openConnectModal = openConnectModal;
+window.closeConnectModal = closeConnectModal;
+window.promptDisconnectRepo = promptDisconnectRepo;
+window.promptDeleteRepo = promptDeleteRepo;
+window.selectDuration = selectDuration;
+window.handleGenerateTempCreds = handleGenerateTempCreds;
+window.toggleProviderDropdown = toggleProviderDropdown;
+window.selectConnProvider = selectConnProvider;
+window.fetchAvailableRepos = fetchAvailableRepos;
+window.handleConnectExistingSubmit = handleConnectExistingSubmit;
+window.handleCreateNewSubmit = handleCreateNewSubmit;
+window.switchConnTab = switchConnTab;
