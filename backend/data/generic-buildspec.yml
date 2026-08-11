@@ -3,27 +3,69 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      # ── 1. Validate required environment variables (POSIX-compatible) ────────
+      # ── 1. Validate required environment variables ───────────────────────────
       - |
         [ -z "$AWS_REGION" ]     && echo "ERROR: AWS_REGION is not set."     >&2 && exit 1 || true
         [ -z "$ECR_REPO_URI" ]   && echo "ERROR: ECR_REPO_URI is not set."   >&2 && exit 1 || true
         [ -z "$CONTAINER_NAME" ] && echo "ERROR: CONTAINER_NAME is not set." >&2 && exit 1 || true
         echo "All required environment variables are present."
 
-      # ── 2. Authenticate to Amazon ECR ───────────────────────────────────────
+      # ── 2. Auto-generate Dockerfile if the repo doesn't have one ────────────
+      # Supports: static HTML/CSS/JS sites (nginx), Node.js apps, Python apps.
+      # Priority: existing Dockerfile > auto-detected > generic nginx fallback.
+      - |
+        if [ -f Dockerfile ]; then
+          echo "Dockerfile found in repo — using project Dockerfile."
+        elif [ -f package.json ]; then
+          echo "No Dockerfile found — detected Node.js project. Generating Dockerfile..."
+          NODE_VERSION=$(node -e "try{const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));const e=p.engines&&p.engines.node;console.log(e?e.replace(/[^0-9.]/g,'').split('.')[0]:'20')}catch(e){console.log('20')}" 2>/dev/null || echo "20")
+          cat > Dockerfile << EOF
+FROM node:${NODE_VERSION}-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 3000
+CMD ["node", "$(node -e "try{const p=JSON.parse(require('fs').readFileSync('package.json','utf8'));console.log(p.main||'index.js')}catch(e){console.log('index.js')}" 2>/dev/null || echo 'index.js')"]
+EOF
+        elif [ -f requirements.txt ] || [ -f pyproject.toml ]; then
+          echo "No Dockerfile found — detected Python project. Generating Dockerfile..."
+          cat > Dockerfile << 'EOF'
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements*.txt ./
+RUN pip install --no-cache-dir -r requirements.txt 2>/dev/null || true
+COPY . .
+EXPOSE 8000
+CMD ["python", "app.py"]
+EOF
+        else
+          echo "No Dockerfile found — using generic nginx static site Dockerfile."
+          cat > Dockerfile << 'EOF'
+FROM nginx:alpine
+RUN rm /etc/nginx/conf.d/default.conf
+COPY . /usr/share/nginx/html
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
+EOF
+        fi
+        echo "--- Dockerfile being used ---"
+        cat Dockerfile
+
+      # ── 3. Authenticate to Amazon ECR ───────────────────────────────────────
       - echo "Logging in to Amazon ECR..."
       - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REPO_URI"
 
-      # ── 3. Set image tag to commit SHA (immutable), fallback to 'latest' ────
+      # ── 4. Set image tag to commit SHA (immutable), fallback to 'latest' ────
       - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}"
       - echo "Image tag -> $IMAGE_TAG"
 
-      # ── 4. Pull latest for Docker layer cache (failure is OK if first run) ──
+      # ── 5. Pull latest for Docker layer cache (OK to fail on first run) ─────
       - docker pull "$ECR_REPO_URI:latest" || true
 
   build:
     commands:
-      # ── 5. Build Docker image with layer cache ───────────────────────────────
+      # ── 6. Build Docker image with layer cache ───────────────────────────────
       - echo "Building Docker image..."
       - |
         docker build \
@@ -35,17 +77,17 @@ phases:
 
   post_build:
     commands:
-      # ── 6. Push both the commit-SHA tag and latest to ECR ───────────────────
+      # ── 7. Push both commit-SHA tag and latest to ECR ────────────────────────
       - echo "Pushing images to ECR..."
       - docker push "$ECR_REPO_URI:$IMAGE_TAG"
       - docker push "$ECR_REPO_URI:latest"
 
-      # ── 7. Generate imagedefinitions.json for ECS CodePipeline deploy ───────
+      # ── 8. Generate imagedefinitions.json for ECS CodePipeline deploy ────────
       - echo "Generating imagedefinitions.json..."
       - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$IMAGE_TAG" > imagedefinitions.json
       - cat imagedefinitions.json
 
-      # ── 8. Free disk space by removing local image layers ───────────────────
+      # ── 9. Free disk space by removing local image layers ────────────────────
       - docker rmi "$ECR_REPO_URI:$IMAGE_TAG" "$ECR_REPO_URI:latest" || true
 
 artifacts:
