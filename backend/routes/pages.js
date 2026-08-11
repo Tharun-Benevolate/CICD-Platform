@@ -38,6 +38,8 @@ function requireAuth(req, res, next) {
   next();
 }
 
+const BUILD_VERSION = Date.now();
+
 // ── Helper: render a page inside the layout shell (or JSON fragment for SPA router) ──
 function renderPage(res, req, pageName, extra = {}) {
   const isXhr = req.headers["x-requested-with"] === "XMLHttpRequest";
@@ -46,6 +48,7 @@ function renderPage(res, req, pageName, extra = {}) {
     res.render(`pages/${pageName}`, {
       user: req.pageUser,
       activePage: pageName,
+      appVersion: BUILD_VERSION,
       ...extra
     }, (err, html) => {
       if (err) {
@@ -57,6 +60,7 @@ function renderPage(res, req, pageName, extra = {}) {
         html: html,
         pageCSS: pageName,
         pageJS: pageName,
+        appVersion: BUILD_VERSION,
         user: req.pageUser
       });
 
@@ -66,6 +70,7 @@ function renderPage(res, req, pageName, extra = {}) {
       page: pageName,
       pageCSS: pageName,
       pageJS: pageName,
+      appVersion: BUILD_VERSION,
       user: req.pageUser,
       ...extra
     });

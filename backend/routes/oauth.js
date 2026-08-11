@@ -184,7 +184,9 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
 // DELETE /api/oauth/slack/disconnect — Disconnect Slack integration
 router.delete("/oauth/slack/disconnect", auth.requireAuth, async (req, res) => {
   try {
+    const { pool } = require("../config/db");
     await credManager.deleteCredentialByProvider(req.user.username, "slack");
+    await pool.query("UPDATE users SET slack_id = NULL WHERE username = ?", [req.user.username]).catch(() => {});
     auditStore.logAction(req.user.username, "Disconnected Slack OAuth", "", "Success");
     res.json({ ok: true });
   } catch (err) {

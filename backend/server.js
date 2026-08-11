@@ -30,7 +30,17 @@ const PORT = process.env.PORT || 3000;
 // ── Core middleware ───────────────────────────────────────────────────────
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
-app.use(express.static(path.join(__dirname, "../public"), { index: false, maxAge: "1d" }));
+app.use(express.static(path.join(__dirname, "../public"), {
+  index: false,
+  maxAge: 0,
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith(".js") || filePath.endsWith(".css") || filePath.endsWith(".html")) {
+      res.setHeader("Cache-Control", "no-cache, must-revalidate");
+    } else {
+      res.setHeader("Cache-Control", "public, max-age=86400");
+    }
+  }
+}));
 
 // ── EJS view engine ──────────────────────────────────────────────────────
 app.set("view engine", "ejs");
