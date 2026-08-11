@@ -248,23 +248,38 @@ async function toggleRepoDiagnostics(id, e) {
     content.innerHTML = '<div style="color:var(--color-danger);font-weight:600;">Error: ' + (err.message || 'Server error') + '</div>';
   }
 }
-window.toggleRepoDiagnostics = toggleRepoDiagnostics;toggleRepoDiagnostics;
-
-  if (window.lucide) lucide.createIcons();
-}
 
 function toggleRepoMenu(id, e) {
-  e.stopPropagation();
+  if (e) e.stopPropagation();
   var menu = document.getElementById('repo-menu-' + id);
-  var isOpen = menu && menu.style.display === 'block';
+  if (!menu) return;
+  var isOpen = menu.style.display === 'block';
   closeAllRepoMenus();
-  if (menu && !isOpen) menu.style.display = 'block';
+  if (!isOpen) menu.style.display = 'block';
 }
 
 function closeAllRepoMenus() {
   document.querySelectorAll('.repo-dropdown-menu').forEach(function(m) {
     m.style.display = 'none';
   });
+}
+
+function toggleTempCliSection() {
+  var section = document.getElementById('temp-cli-section');
+  if (!section) return;
+  var isHidden = section.style.display === 'none' || getComputedStyle(section).display === 'none';
+  section.style.display = isHidden ? 'block' : 'none';
+}
+
+function openConnectModal() {
+  var modal = document.getElementById('modal-connect-repo');
+  if (modal) modal.style.display = 'flex';
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeConnectModal() {
+  var modal = document.getElementById('modal-connect-repo');
+  if (modal) modal.style.display = 'none';
 }
 
 // ── Disconnect & Delete Modals ─────────────────────────────────────────────
