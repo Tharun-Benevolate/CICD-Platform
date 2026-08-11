@@ -687,10 +687,10 @@ function showMsg(el, text, isError) {
 
 // ── Project Settings (Buildspec) ──────────────────────────────────────────
 async function loadProjectBuildspec() {
-  if (!window.activeProjectId) return;
+  if (!window._activeProjectId) return;
   
   try {
-    var res = await api.get('/api/projects/' + window.activeProjectId);
+    var res = await api.get('/api/projects/' + window._activeProjectId);
     if (res.ok && res.project) {
       if (res.project.customBuildspec) {
         document.getElementById('project-buildspec-input').value = res.project.customBuildspec;
@@ -715,7 +715,7 @@ async function loadGenericBuildspec() {
 }
 
 async function saveProjectBuildspec() {
-  if (!window.activeProjectId) return;
+  if (!window._activeProjectId) return;
   var btn = document.getElementById('buildspec-save-btn');
   var msgEl = document.getElementById('buildspec-msg');
   var customBuildspec = document.getElementById('project-buildspec-input').value;
@@ -724,7 +724,7 @@ async function saveProjectBuildspec() {
   msgEl.style.display = 'none';
   
   try {
-    var res = await api.put('/api/projects/' + window.activeProjectId + '/buildspec', {
+    var res = await api.put('/api/projects/' + window._activeProjectId + '/buildspec', {
       customBuildspec: customBuildspec
     });
     
