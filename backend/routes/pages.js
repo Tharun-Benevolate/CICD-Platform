@@ -56,7 +56,7 @@ function renderPage(res, req, pageName, extra = {}) {
         page: pageName,
         html: html,
         pageCSS: pageName,
-        pageJS: pageName,
+        pageJS: pageName + "?v=2",
         user: req.pageUser
       });
 
