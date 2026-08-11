@@ -149,6 +149,17 @@ function cancelDisconnectSlack() {
   if (confirmBanner) confirmBanner.style.display = 'none';
 }
 
+function updateSlackUI(isConnected) {
+  var badge = document.getElementById('slack-badge');
+  var connDiv = document.getElementById('slack-actions-connected');
+  var disDiv = document.getElementById('slack-actions-disconnected');
+
+  if (badge) badge.style.display = isConnected ? 'inline-block' : 'none';
+  if (connDiv) connDiv.style.display = isConnected ? 'flex' : 'none';
+  if (disDiv) disDiv.style.display = isConnected ? 'none' : 'block';
+}
+window.updateSlackUI = updateSlackUI;
+
 async function confirmDisconnectSlack() {
   cancelDisconnectSlack();
   var alertEl = document.getElementById('oauth-alert-msg');
@@ -157,7 +168,7 @@ async function confirmDisconnectSlack() {
     var res = await api.delete('/api/oauth/slack/disconnect');
     if (res && res.ok) {
       showMsg(alertEl, '✔ Slack workspace disconnected successfully.', false);
-      checkOAuthConnections();
+      updateSlackUI(false);
     } else {
       showMsg(alertEl, (res && res.error) || 'Failed to disconnect Slack workspace.', true);
     }
