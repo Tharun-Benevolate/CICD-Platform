@@ -231,10 +231,20 @@ router.put("/projects/:id/buildspec", async (req, res) => {
     const { customBuildspec } = req.body;
     const updated = await store.updateProject(req.params.id, { customBuildspec });
 
-    // Instantly update AWS CodeBuild if the project is already provisioned
-    if (project.buildProjectName && project.initialTfApplied) {
-      const aws = require("../aws");
-      await aws.updateBuildProject(project.region || "us-east-1", project.buildProjectName, customBuildspec);
+    // Instantly update AWS CodeBuild if the project has a CodeBuild project name
+    console.log(`[buildspec] project.buildProjectName=${project.buildProjectName} initialTfApplied=${project.initialTfApplied}`);
+    if (project.buildProjectName) {
+      try {
+        const aws = require("../aws");
+        await aws.updateBuildProject(project.region || "us-east-1", project.buildProjectName, customBuildspec);
+        console.log(`[buildspec] ✔ CodeBuild project '${project.buildProjectName}' updated successfully`);
+      } catch (awsErr) {
+        console.error(`[buildspec] ✘ Failed to update CodeBuild:`, awsErr.message);
+        // Still return success for DB save, but include a warning
+        return res.json({ ok: true, project: updated, warning: `Saved to DB but CodeBuild update failed: ${awsErr.message}` });
+      }
+    } else {
+      console.warn(`[buildspec] Skipping CodeBuild update — buildProjectName not set on project '${project.name}'`);
     }
 
     res.json({ ok: true, project: updated });

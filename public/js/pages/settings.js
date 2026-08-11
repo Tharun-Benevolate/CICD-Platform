@@ -729,7 +729,11 @@ async function saveProjectBuildspec() {
     });
     
     if (res.ok) {
-      showMsg(msgEl, '✔ Buildspec saved and updated on CodeBuild instantly!', false);
+      if (res.warning) {
+        showMsg(msgEl, '⚠ Saved to database, but CodeBuild update failed: ' + res.warning, true);
+      } else {
+        showMsg(msgEl, '✔ Buildspec saved and updated on CodeBuild instantly!', false);
+      }
     } else {
       showMsg(msgEl, res.error || 'Failed to save buildspec.', true);
     }
