@@ -3,30 +3,27 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      # ── 1. Validate required environment variables ──────────────────────────
+      # ── 1. Validate required environment variables (POSIX-compatible) ────────
       - |
-        for VAR in AWS_REGION ECR_REPO_URI CONTAINER_NAME; do
-          if [ -z "${!VAR:-}" ]; then
-            echo "ERROR: Required environment variable '$VAR' is not set." >&2
-            exit 1
-          fi
-        done
-        echo "✔ All required environment variables are present."
+        [ -z "$AWS_REGION" ]     && echo "ERROR: AWS_REGION is not set."     >&2 && exit 1 || true
+        [ -z "$ECR_REPO_URI" ]   && echo "ERROR: ECR_REPO_URI is not set."   >&2 && exit 1 || true
+        [ -z "$CONTAINER_NAME" ] && echo "ERROR: CONTAINER_NAME is not set." >&2 && exit 1 || true
+        echo "All required environment variables are present."
 
       # ── 2. Authenticate to Amazon ECR ───────────────────────────────────────
-      - echo "Logging in to Amazon ECR ($ECR_REPO_URI)..."
+      - echo "Logging in to Amazon ECR..."
       - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REPO_URI"
 
-      # ── 3. Set image tags ───────────────────────────────────────────────────
+      # ── 3. Set image tag to commit SHA (immutable), fallback to 'latest' ────
       - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}"
-      - echo "Image tag will be $IMAGE_TAG"
+      - echo "Image tag -> $IMAGE_TAG"
 
-      # ── 4. Pull latest image for layer caching ─────────────────────────────
+      # ── 4. Pull latest for Docker layer cache (failure is OK if first run) ──
       - docker pull "$ECR_REPO_URI:latest" || true
 
   build:
     commands:
-      # ── 5. Build Docker image (with layer cache) ────────────────────────────
+      # ── 5. Build Docker image with layer cache ───────────────────────────────
       - echo "Building Docker image..."
       - |
         docker build \
@@ -38,22 +35,17 @@ phases:
 
   post_build:
     commands:
-      # ── 6. Push both tags to ECR ────────────────────────────────────────────
-      - echo "Pushing Docker image to ECR..."
+      # ── 6. Push both the commit-SHA tag and latest to ECR ───────────────────
+      - echo "Pushing images to ECR..."
       - docker push "$ECR_REPO_URI:$IMAGE_TAG"
       - docker push "$ECR_REPO_URI:latest"
 
-      # ── 7. Generate imagedefinitions.json for ECS deploy ───────────────────
+      # ── 7. Generate imagedefinitions.json for ECS CodePipeline deploy ───────
       - echo "Generating imagedefinitions.json..."
-      - |
-        printf '[{"name":"%s","imageUri":"%s"}]' \
-          "$CONTAINER_NAME" \
-          "$ECR_REPO_URI:$IMAGE_TAG" \
-          > imagedefinitions.json
-      - echo "imagedefinitions.json contents:"
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$IMAGE_TAG" > imagedefinitions.json
       - cat imagedefinitions.json
 
-      # ── 8. Clean up local Docker images to free disk ────────────────────────
+      # ── 8. Free disk space by removing local image layers ───────────────────
       - docker rmi "$ECR_REPO_URI:$IMAGE_TAG" "$ECR_REPO_URI:latest" || true
 
 artifacts:
