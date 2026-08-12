@@ -39,7 +39,7 @@ router.get("/oauth/github", auth.requireAuth, (req, res) => {
 });
 
 // GET /api/oauth/github/callback — GitHub redirects here after user authorizes
-router.get("/oauth/github/callback", auth.requireAuth, async (req, res) => {
+router.get("/oauth/github/callback", async (req, res) => {
   const { code, state, error } = req.query;
 
   if (error) {
@@ -170,7 +170,7 @@ router.get("/oauth/slack", auth.requireAuth, (req, res) => {
 });
 
 // GET /api/oauth/slack/callback — Slack redirects here after user authorizes
-router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
+router.get("/oauth/slack/callback", async (req, res) => {
   const { code, state, error } = req.query;
 
   if (error) return res.redirect(`/settings/integrations?slack_error=${encodeURIComponent(error)}`);
