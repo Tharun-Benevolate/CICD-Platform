@@ -87,6 +87,15 @@ async function getUserSlackCreds(username) {
         slackUserId: meta.slackUserId || meta.channelId 
       };
     }
+
+    // Fallback: check users table for slack_id
+    const [userRows] = await pool.query(
+      `SELECT slack_id FROM users WHERE LOWER(username) = ? LIMIT 1`,
+      [normUser]
+    );
+    if (userRows.length > 0 && userRows[0].slack_id) {
+      return { token: null, slackUserId: userRows[0].slack_id };
+    }
   } catch (err) {
     console.error("Error fetching user Slack creds:", err.message);
   }

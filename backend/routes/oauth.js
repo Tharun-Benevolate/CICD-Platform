@@ -151,6 +151,7 @@ router.get("/oauth/slack", auth.requireAuth, (req, res) => {
   const params = new URLSearchParams({
     client_id:    clientId,
     scope:        "chat:write,channels:read,channels:manage,groups:write,users:read,users:read.email",
+    user_scope:   "chat:write,channels:read,channels:manage,groups:write,users:read,users:read.email",
     redirect_uri: redirectUri,
     state:        req.user.username,
   });
