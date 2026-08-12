@@ -249,8 +249,18 @@ function requireRole(...allowedRoles) {
   };
 }
 
-function getLoggedInUser(req)     { const d = decodeToken(req); return d && !d.pending2FA ? d.username : null; }
-function getLoggedInUserType(req) { const d = decodeToken(req); return d && !d.pending2FA ? d.userType : null; }
+function getLoggedInUser(req) {
+  if (req.user && req.user.username) return req.user.username;
+  if (req.pageUser && req.pageUser.username) return req.pageUser.username;
+  const d = decodeToken(req);
+  return d && !d.pending2FA ? d.username : null;
+}
+function getLoggedInUserType(req) {
+  if (req.user && req.user.userType) return req.user.userType;
+  if (req.pageUser && req.pageUser.userType) return req.pageUser.userType;
+  const d = decodeToken(req);
+  return d && !d.pending2FA ? d.userType : null;
+}
 
 module.exports = {
   registerUser,

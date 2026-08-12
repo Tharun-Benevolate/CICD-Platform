@@ -69,13 +69,15 @@ async function saveSlackConfig({ devWebhookUrl, opsWebhookUrl, enabled = 1 }) {
  * Lookup Slack user credentials for direct messaging (DMs) & joining channels
  */
 async function getUserSlackCreds(username) {
+  if (!username) return null;
+  const normUser = (username || "").toLowerCase().trim();
   try {
     const [rows] = await pool.query(
-      `SELECT meta FROM repo_credentials WHERE username = ? AND provider = 'slack' LIMIT 1`,
-      [username]
+      `SELECT username, meta FROM repo_credentials WHERE LOWER(username) = ? AND LOWER(provider) = 'slack' LIMIT 1`,
+      [normUser]
     );
     if (rows.length > 0) {
-      const token = await credManager.getCredential(username, 'slack');
+      const token = await credManager.getCredential(rows[0].username, 'slack');
       const meta = JSON.parse(rows[0].meta || "{}");
       return { token, channelId: meta.channelId, slackUserId: meta.slackUserId || meta.channelId };
     }
