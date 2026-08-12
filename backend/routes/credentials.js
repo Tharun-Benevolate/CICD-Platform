@@ -3,11 +3,14 @@
 
 const router = require("express").Router();
 const credentialManager = require("../services/credentialManager");
+const auth = require("../middleware/auth");
 
 // GET /api/my/credentials — list saved credentials (labels only, never the token)
 router.get("/my/credentials", async (req, res) => {
   try {
-    const creds = await credentialManager.listCredentials(req.user.username);
+    const username = auth.getLoggedInUser(req) || req.user?.username;
+    if (!username) return res.json({ ok: true, credentials: [] });
+    const creds = await credentialManager.listCredentials(username);
     res.json({ ok: true, credentials: creds });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
@@ -17,7 +20,9 @@ router.get("/my/credentials", async (req, res) => {
 // GET /api/my/credentials/check-expiry — validate credentials & check expiration
 router.get("/my/credentials/check-expiry", async (req, res) => {
   try {
-    const creds = await credentialManager.listCredentials(req.user.username);
+    const username = auth.getLoggedInUser(req) || req.user?.username;
+    if (!username) return res.json({ ok: true, credentialsCheck: [] });
+    const creds = await credentialManager.listCredentials(username);
     const results = [];
     const now = Date.now();
 

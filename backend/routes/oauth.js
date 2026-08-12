@@ -142,9 +142,19 @@ router.delete("/oauth/github/disconnect", auth.requireAuth, async (req, res) => 
 // ── Slack OAuth ───────────────────────────────────────────────────────────
 
 // GET /api/oauth/slack — Redirect user to Slack authorization page
+function getSlackRedirectUri(req) {
+  if (process.env.SLACK_REDIRECT_URI && !process.env.SLACK_REDIRECT_URI.includes("localhost")) {
+    return process.env.SLACK_REDIRECT_URI;
+  }
+  const proto = req.headers["x-forwarded-proto"] || req.protocol || "https";
+  const host = req.headers["x-forwarded-host"] || req.get("host") || "devops.benevolaite.com";
+  return `${proto}://${host}/api/oauth/slack/callback`;
+}
+
+// GET /api/oauth/slack — Redirect user to Slack authorization page
 router.get("/oauth/slack", auth.requireAuth, (req, res) => {
   const clientId = process.env.SLACK_CLIENT_ID || SLACK_CLIENT_ID;
-  const redirectUri = process.env.SLACK_REDIRECT_URI || SLACK_REDIRECT_URI;
+  const redirectUri = getSlackRedirectUri(req);
   if (!clientId) {
     return res.status(503).json({ ok: false, error: "Slack OAuth not configured. Set SLACK_CLIENT_ID in .env" });
   }
@@ -168,7 +178,7 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
 
   const clientId = process.env.SLACK_CLIENT_ID || SLACK_CLIENT_ID;
   const clientSecret = process.env.SLACK_CLIENT_SECRET || SLACK_CLIENT_SECRET;
-  const redirectUri = process.env.SLACK_REDIRECT_URI || SLACK_REDIRECT_URI;
+  const redirectUri = getSlackRedirectUri(req);
 
   try {
     const tokenRes = await fetch("https://slack.com/api/oauth.v2.access", {
@@ -184,6 +194,7 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
     const tokenData = await tokenRes.json();
 
     if (!tokenData.ok) {
+      console.error("[Slack OAuth Token Exchange Error]:", tokenData.error, tokenData);
       return res.redirect(`/settings/integrations?slack_error=${encodeURIComponent(tokenData.error)}`);
     }
 
