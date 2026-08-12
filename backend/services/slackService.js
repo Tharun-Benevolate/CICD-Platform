@@ -36,9 +36,10 @@ async function getSlackConfig() {
 async function getAnySlackToken() {
   if (process.env.SLACK_BOT_TOKEN) return process.env.SLACK_BOT_TOKEN;
   try {
-    const [rows] = await pool.query("SELECT username FROM repo_credentials WHERE provider = 'slack' LIMIT 1");
+    const [rows] = await pool.query("SELECT username FROM repo_credentials WHERE LOWER(provider) = 'slack' ORDER BY created_at DESC LIMIT 1");
     if (rows.length > 0) {
-      return credManager.getCredential(rows[0].username, 'slack');
+      const cred = await credManager.getCredential(rows[0].username, 'slack');
+      if (cred) return cred;
     }
   } catch (err) {
     console.error("Error fetching Slack token:", err.message);

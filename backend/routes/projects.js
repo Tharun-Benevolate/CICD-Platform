@@ -135,13 +135,22 @@ router.post("/projects", auth.requireRole(...auth.ADMIN_ROLES), async (req, res)
     }
 
     const slackService = require("../services/slackService");
-    slackService.autoProvisionProjectSlackChannel({
-      projectId: project.id,
-      projectName: project.name,
-      creator: username || "admin"
-    }).catch(() => {});
+    let slackResult = null;
+    try {
+      slackResult = await slackService.autoProvisionProjectSlackChannel({
+        projectId: project.id,
+        projectName: project.name,
+        creator: username || "admin"
+      });
+    } catch (sErr) {
+      console.error("[Project Creation Slack Exception]:", sErr.message);
+    }
 
-    res.json({ ok: true, project });
+    res.json({ 
+      ok: true, 
+      project,
+      slackChannel: slackResult ? slackResult.channelName : null
+    });
   } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
