@@ -79,7 +79,13 @@ async function getUserSlackCreds(username) {
     if (rows.length > 0) {
       const token = await credManager.getCredential(rows[0].username, 'slack');
       const meta = JSON.parse(rows[0].meta || "{}");
-      return { token, channelId: meta.channelId, slackUserId: meta.slackUserId || meta.channelId };
+      return { 
+        token, 
+        userToken: meta.userToken || token, 
+        botToken: meta.botToken || token, 
+        channelId: meta.channelId, 
+        slackUserId: meta.slackUserId || meta.channelId 
+      };
     }
   } catch (err) {
     console.error("Error fetching user Slack creds:", err.message);
@@ -269,7 +275,7 @@ async function inviteAdminsAndDevOpsToChannel(channelId) {
 async function autoProvisionProjectSlackChannel({ projectId, projectName, creator }) {
   // First attempt to use creator's connected Slack token, then any Slack token, then env SLACK_BOT_TOKEN
   const creatorCreds = creator ? await getUserSlackCreds(creator) : null;
-  const token = (creatorCreds && creatorCreds.token) || (await getAnySlackToken());
+  const token = (creatorCreds && (creatorCreds.userToken || creatorCreds.token)) || (await getAnySlackToken());
 
   if (!token) {
     console.log(`[Slack] Notice: No Slack token available to auto-create Slack channel for creator: @${creator}`);
@@ -315,9 +321,13 @@ async function autoProvisionProjectSlackChannel({ projectId, projectName, creato
           "Authorization": `Bearer ${token}`,
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ name: channelName, is_private: true })
+        body: JSON.stringify({ name: channelName, is_private: false })
       });
       data = await response.json();
+    }
+
+    if (!data.ok) {
+      console.error(`[Slack Error] Failed to create channel #${channelName}:`, data.error, data);
     }
 
     let channelId = data.channel ? data.channel.id : null;

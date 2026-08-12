@@ -187,6 +187,7 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
 
     const username   = (req.user?.username || state || "").toLowerCase().trim();
     const botToken   = tokenData.access_token;
+    const userToken  = tokenData.authed_user?.access_token || null;
     const slackUserId = tokenData.authed_user?.id || tokenData.user_id || null;
     const channelId  = tokenData.incoming_webhook?.channel_id || slackUserId || null;
     const channelName= tokenData.incoming_webhook?.channel    || "slack";
@@ -194,8 +195,8 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
     await credManager.storeCredential(username, {
       provider:  "slack",
       label:     `Slack (@${username})`,
-      token:     botToken,
-      meta:      JSON.stringify({ slackUserId, channelId, channelName }),
+      token:     userToken || botToken,
+      meta:      JSON.stringify({ slackUserId, channelId, channelName, botToken, userToken }),
       expiresAt: null,
     });
 
