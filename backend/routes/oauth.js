@@ -241,34 +241,6 @@ router.get("/oauth/slack/callback", async (req, res) => {
   }
 });
 
-// POST /api/oauth/slack/manual-token — Save a Slack Bot/User Token manually
-router.post("/oauth/slack/manual-token", auth.requireAuth, async (req, res) => {
-  try {
-    const { token } = req.body;
-    if (!token || !token.trim()) {
-      return res.status(400).json({ ok: false, error: "Slack Token is required" });
-    }
-    const cleanToken = token.trim();
-    const username = (auth.getLoggedInUser(req) || req.user?.username || "admin").toLowerCase().trim();
-
-    await credManager.storeCredential(username, {
-      provider: "slack",
-      label: `Slack (@${username})`,
-      token: cleanToken,
-      meta: JSON.stringify({ botToken: cleanToken, userToken: cleanToken }),
-      expiresAt: null,
-    });
-
-    const { pool } = require("../config/db");
-    await pool.query("UPDATE users SET slack_id = ? WHERE LOWER(username) = ?", ["U_MANUAL", username]).catch(() => {});
-
-    auditStore.logAction(username, "Saved Manual Slack Token", "Manual Token", "Success");
-    res.json({ ok: true, message: "Slack token saved successfully!" });
-  } catch (err) {
-    res.status(500).json({ ok: false, error: err.message });
-  }
-});
-
 // DELETE /api/oauth/slack/disconnect — Disconnect Slack integration
 router.delete("/oauth/slack/disconnect", auth.requireAuth, async (req, res) => {
   try {

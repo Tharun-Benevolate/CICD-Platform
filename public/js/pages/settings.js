@@ -152,27 +152,6 @@ async function confirmDisconnectGithub() {
   }
 }
 
-async function saveManualSlackToken() {
-  var input = document.getElementById('manual-slack-token');
-  var token = input ? input.value.trim() : '';
-  if (!token) {
-    toast.error('Please enter a valid Slack Bot (xoxb-...) or User (xoxp-...) token.');
-    return;
-  }
-  try {
-    var res = await api.post('/api/oauth/slack/manual-token', { token: token });
-    if (res && res.ok) {
-      toast.success('Slack Token saved successfully!');
-      if (input) input.value = '';
-      checkOAuthConnections();
-    } else {
-      toast.error((res && res.error) || 'Failed to save Slack Token');
-    }
-  } catch (e) {
-    toast.error(e.message || 'Error saving Slack token');
-  }
-}
-
 function promptDisconnectSlack() {
   var confirmBanner = document.getElementById('slack-disconnect-confirm');
   if (confirmBanner) confirmBanner.style.display = 'flex';
