@@ -219,7 +219,9 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
 
     // Automatically sync and backfill user into all existing project Slack channels
     const slackService = require("../services/slackService");
-    slackService.syncUserToAllProjectSlackChannels(username).catch(() => {});
+    if (typeof slackService.syncUserToAllProjectSlackChannels === "function") {
+      slackService.syncUserToAllProjectSlackChannels(username).catch(() => {});
+    }
 
     res.redirect("/settings/integrations?slack_connected=1");
   } catch (err) {

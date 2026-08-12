@@ -266,6 +266,23 @@ async function sendSlackNotification({ channelType = 'both', customWebhookUrl = 
 }
 
 /**
+ * Automatically sync and backfill user into all existing project Slack channels
+ */
+async function syncUserToAllProjectSlackChannels(username) {
+  if (!username) return;
+  try {
+    const [projects] = await pool.query(
+      "SELECT slack_channel_id FROM projects WHERE slack_channel_id IS NOT NULL AND slack_channel_id != ''"
+    );
+    for (const proj of projects) {
+      await autoJoinSlackChannel(proj.slack_channel_id, username);
+    }
+  } catch (err) {
+    console.error("Error syncing user to project Slack channels:", err.message);
+  }
+}
+
+/**
  * Auto-invite all Admins and DevOps engineers into a Slack channel
  */
 async function inviteAdminsAndDevOpsToChannel(channelId) {
