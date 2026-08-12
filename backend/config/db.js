@@ -64,6 +64,12 @@ const pool = new Proxy({}, {
   }
 });
 
+async function ensureSlackProviderEnum() {
+  try {
+    await activePool.query("ALTER TABLE repo_credentials MODIFY COLUMN provider ENUM('github','gitlab','codecommit','bitbucket','azure_devops','gitea','slack') NOT NULL");
+  } catch (_) {}
+}
+
 async function verifyConnection() {
   try {
     const conn = await primaryPool.getConnection();
@@ -72,6 +78,7 @@ async function verifyConnection() {
     activePool  = primaryPool;
     activeLabel = `${process.env.DB_HOST || "127.0.0.1"}:${process.env.DB_PORT || "3306"}`;
     console.log(`✔  DB connected  [PRIMARY]  → ${activeLabel}/${process.env.DB_NAME || "cicd_admin"}`);
+    await ensureSlackProviderEnum();
     return;
   } catch (primaryErr) {
     const isFallback = ["ETIMEDOUT","ECONNREFUSED","ENOTFOUND","ER_ACCESS_DENIED_ERROR"]
@@ -88,6 +95,7 @@ async function verifyConnection() {
       activePool  = fallbackPool;
       activeLabel = `${process.env.DB_FALLBACK_HOST}:${process.env.DB_FALLBACK_PORT || "3306"}`;
       console.log(`✔  DB connected  [FALLBACK] → ${activeLabel}/${process.env.DB_FALLBACK_NAME}`);
+      await ensureSlackProviderEnum();
     } catch (fallbackErr) {
       console.error("✘  Both primary AND fallback DB are unreachable.");
       throw new Error(

@@ -53,9 +53,9 @@ async function storeCredential(username, { provider, repositoryId, credentialTyp
     const id = existing[0].id;
     await pool.query(
       `UPDATE repo_credentials
-       SET username = ?, encrypted_token = ?, token_iv = ?, token_tag = ?, label = ?, meta = ?, expires_at = ?
+       SET username = ?, provider = ?, encrypted_token = ?, token_iv = ?, token_tag = ?, label = ?, meta = ?, expires_at = ?
        WHERE id = ?`,
-      [normUser, encrypted, iv, tag, label || null, metaStr, expiresAt || null, id]
+      [normUser, normProvider, encrypted, iv, tag, label || null, metaStr, expiresAt || null, id]
     );
     return { id, username: normUser, provider: normProvider, credentialType: credentialType || "pat", label, repositoryId };
   } else {

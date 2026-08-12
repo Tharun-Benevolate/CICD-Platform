@@ -124,7 +124,7 @@ const TABLES = [
       id              VARCHAR(64)   NOT NULL,
       username        VARCHAR(128)  NOT NULL,
       repository_id   VARCHAR(64)   NULL     COMMENT 'NULL = applies to all repos for this provider',
-      provider        ENUM('github','gitlab','codecommit','bitbucket','azure_devops','gitea') NOT NULL,
+      provider        ENUM('github','gitlab','codecommit','bitbucket','azure_devops','gitea','slack') NOT NULL,
       credential_type ENUM('pat','oauth','ssh_key','basic','app_password') NOT NULL DEFAULT 'pat',
       encrypted_token TEXT          NOT NULL,
       token_iv        VARCHAR(64)   NOT NULL COMMENT 'AES-GCM 96-bit nonce (hex)',
