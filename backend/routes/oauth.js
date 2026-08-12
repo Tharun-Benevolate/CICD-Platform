@@ -148,12 +148,13 @@ router.get("/oauth/slack", auth.requireAuth, (req, res) => {
   if (!clientId) {
     return res.status(503).json({ ok: false, error: "Slack OAuth not configured. Set SLACK_CLIENT_ID in .env" });
   }
+  const username = auth.getLoggedInUser(req) || req.user?.username || "admin";
   const params = new URLSearchParams({
     client_id:    clientId,
     scope:        "chat:write,channels:read,channels:manage,groups:write,users:read,users:read.email",
     user_scope:   "channels:write,groups:write,channels:read,chat:write",
     redirect_uri: redirectUri,
-    state:        req.user.username,
+    state:        username,
   });
   res.redirect(`https://slack.com/oauth/v2/authorize?${params}`);
 });
@@ -186,7 +187,8 @@ router.get("/oauth/slack/callback", auth.requireAuth, async (req, res) => {
       return res.redirect(`/settings/integrations?slack_error=${encodeURIComponent(tokenData.error)}`);
     }
 
-    const username   = (req.user?.username || state || "").toLowerCase().trim();
+    const loggedInUser = auth.getLoggedInUser(req) || req.user?.username;
+    const username = (loggedInUser || (state && state !== "undefined" ? state : "admin")).toLowerCase().trim();
     const botToken   = tokenData.access_token;
     const userToken  = tokenData.authed_user?.access_token || null;
     const slackUserId = tokenData.authed_user?.id || tokenData.user_id || null;
