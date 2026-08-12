@@ -265,9 +265,12 @@ async function inviteAdminsAndDevOpsToChannel(channelId) {
  * and automatically invites the creator, Admins, DevOps engineers, and assigned team members.
  */
 async function autoProvisionProjectSlackChannel({ projectId, projectName, creator }) {
-  const token = await getAnySlackToken();
+  // First attempt to use creator's connected Slack token, then any Slack token, then env SLACK_BOT_TOKEN
+  const creatorCreds = creator ? await getUserSlackCreds(creator) : null;
+  const token = (creatorCreds && creatorCreds.token) || (await getAnySlackToken());
+
   if (!token) {
-    console.log("Notice: No Slack token available to auto-create Slack channel.");
+    console.log(`[Slack] Notice: No Slack token available to auto-create Slack channel for creator: @${creator}`);
     return null;
   }
 
@@ -275,6 +278,7 @@ async function autoProvisionProjectSlackChannel({ projectId, projectName, creato
   let channelName = `proj-${sanitized}`;
 
   try {
+    // 1. Try creating Private Channel (is_private: true)
     let response = await fetch("https://slack.com/api/conversations.create", {
       method: "POST",
       headers: {
@@ -285,7 +289,21 @@ async function autoProvisionProjectSlackChannel({ projectId, projectName, creato
     });
     let data = await response.json();
 
-    // If channel name is taken in Slack workspace, retry with a unique suffix
+    // 2. If private channel creation fails (e.g. scope/workspace restriction), fallback to Public Channel
+    if (!data.ok && data.error !== 'name_taken') {
+      console.log(`[Slack] Private channel creation notice (${data.error}). Falling back to public channel #${channelName}...`);
+      response = await fetch("https://slack.com/api/conversations.create", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name: channelName, is_private: false })
+      });
+      data = await response.json();
+    }
+
+    // 3. If channel name is taken in Slack workspace, retry with a unique suffix
     if (!data.ok && data.error === 'name_taken') {
       const suffix = Math.floor(100 + Math.random() * 900);
       channelName = `proj-${sanitized}-${suffix}`;
