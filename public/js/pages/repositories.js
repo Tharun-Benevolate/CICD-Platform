@@ -20,6 +20,7 @@ var _availableRepos = [];
 function initRepositoriesPage() {
   loadActiveProjectAndRepos();
   checkOAuthConnectCallback();
+  checkActiveTempCredentials();
 
   document.addEventListener('click', function(e) {
     if (!e.target.closest('.repo-dropdown-menu') && !e.target.closest('.btn-manage-repo')) {
@@ -378,7 +379,36 @@ async function confirmDeleteRepo() {
   btn.disabled = false;
 }
 
-// ── Temporary CLI Credentials Section ───────────────────────────────────────
+async function checkActiveTempCredentials() {
+  try {
+    var res = await api.get('/api/codecommit/temp-credentials');
+    if (res && res.ok && res.credentials && res.credentials.length > 0) {
+      var active = res.credentials[0];
+      var expiresMs = new Date(active.expiresAt).getTime();
+      var nowMs = Date.now();
+      
+      if (expiresMs > nowMs) {
+        _tempCredential = active;
+        _tempTimeLeftSec = Math.max(0, Math.floor((expiresMs - nowMs) / 1000));
+        
+        var section = document.getElementById('temp-cli-section');
+        var stepSelect = document.getElementById('temp-step-select');
+        var stepGen = document.getElementById('temp-step-generating');
+        var stepDone = document.getElementById('temp-step-done');
+        
+        if (section) section.style.display = 'block';
+        if (stepSelect) stepSelect.style.display = 'none';
+        if (stepGen) stepGen.style.display = 'none';
+        if (stepDone) stepDone.style.display = 'flex';
+
+        displayTempCredential();
+      } else {
+        resetTempCliView();
+      }
+    }
+  } catch (e) {}
+}
+
 function toggleTempCliSection() {
   var section = document.getElementById('temp-cli-section');
   var btn = document.getElementById('btn-toggle-temp-cli');
@@ -399,7 +429,17 @@ function toggleTempCliSection() {
       btn.style.borderColor = '#6366f1';
       btn.style.color = '#6366f1';
     }
-    loadTempReposList();
+    if (_tempCredential && _tempTimeLeftSec > 0) {
+      var stepSelect = document.getElementById('temp-step-select');
+      var stepGen = document.getElementById('temp-step-generating');
+      var stepDone = document.getElementById('temp-step-done');
+      if (stepSelect) stepSelect.style.display = 'none';
+      if (stepGen) stepGen.style.display = 'none';
+      if (stepDone) stepDone.style.display = 'flex';
+      displayTempCredential();
+    } else {
+      loadTempReposList();
+    }
   }
   if (window.lucide) lucide.createIcons();
 }
@@ -550,8 +590,9 @@ function startTempCountdown() {
     _tempTimeLeftSec--;
     if (_tempTimeLeftSec <= 0) {
       clearInterval(_tempTimer);
-      document.getElementById('temp-time-left').textContent = 'Expired';
-      resetTempCliView();
+      var timeSpan = document.getElementById('temp-time-left');
+      if (timeSpan) timeSpan.textContent = 'Expired';
+      handleRevokeTempCreds();
     } else {
       updateTempCountdownDisplay();
     }
@@ -567,13 +608,19 @@ function updateTempCountdownDisplay() {
 }
 
 async function handleRevokeTempCreds() {
-  if (!_tempCredential) return;
+  if (_tempTimer) clearInterval(_tempTimer);
+  var targetId = _tempCredential ? _tempCredential.id : null;
+  _tempCredential = null;
+  _tempTimeLeftSec = 0;
+
   var btn = document.getElementById('btn-revoke-temp');
   if (btn) btn.disabled = true;
 
-  try {
-    await api.delete('/api/codecommit/temp-credentials/' + _tempCredential.id);
-  } catch (e) {}
+  if (targetId) {
+    try {
+      await api.delete('/api/codecommit/temp-credentials/' + targetId);
+    } catch (e) {}
+  }
 
   resetTempCliView();
 }

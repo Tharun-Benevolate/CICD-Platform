@@ -124,7 +124,18 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
     const repoStore = require("../stores/repositoryStore");
     const projectStore = require("../stores/projectStore");
     const aws = require("../config/aws");
-    const crypto = require("crypto");
+    // Clean up any existing active temp credential for this user to prevent stacking multiple sessions
+    for (const [existingId, existingCred] of activeTempCredentials.entries()) {
+      if (existingCred.username === req.user.username) {
+        clearTimeout(existingCred.timer);
+        if (existingCred.provider === "codecommit" && existingCred.iamUsername) {
+          try {
+            await aws.deleteServiceSpecificGitCredential(existingCred.region || "us-east-1", existingCred.iamUsername, existingCred.id);
+          } catch (_) {}
+        }
+        activeTempCredentials.delete(existingId);
+      }
+    }
 
     let repo = null;
     let region = process.env.AWS_REGION || "us-east-1";
@@ -366,8 +377,10 @@ router.get("/codecommit/temp-credentials", async (req, res) => {
       list.push({
         id: cred.id,
         repoName: cred.repoName,
+        provider: cred.provider,
         region: cred.region,
         gitUsername: cred.gitUsername,
+        gitPassword: cred.gitPassword,
         oneClickCmd: cred.oneClickCmd,
         clientIp: cred.clientIp,
         durationMinutes: cred.durationMinutes,
