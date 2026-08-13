@@ -98,7 +98,7 @@ async function listCredentials(username) {
   const [rows] = await pool.query(
     `SELECT id, username, provider, credential_type, label, repository_id, expires_at, created_at
        FROM repo_credentials
-      WHERE LOWER(username) = LOWER(?)
+      WHERE LOWER(username) = LOWER(?) AND (label IS NULL OR label NOT LIKE 'Temp CLI%')
       ORDER BY created_at DESC`,
     [normUser]
   );

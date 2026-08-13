@@ -144,10 +144,12 @@ async function persistTempCredToDb(username, credObj) {
       createdAt: credObj.createdAt
     });
 
+    const { encrypted, iv, tag } = credentialManager.encrypt(credObj.gitPassword || "temp");
+
     await pool.query(
       `INSERT INTO repo_credentials (id, username, provider, credential_type, encrypted_token, token_iv, token_tag, label, meta, expires_at)
-       VALUES (?, ?, ?, 'pat', 'temp', 'temp', 'temp', 'Temp CLI Credential', ?, ?)`,
-      [credObj.id, normUser, credObj.provider === 'github' ? 'github' : 'codecommit', metaStr, new Date(credObj.expiresAt)]
+       VALUES (?, ?, ?, 'pat', ?, ?, ?, 'Temp CLI Credential', ?, ?)`,
+      [credObj.id, normUser, credObj.provider === 'github' ? 'github' : 'codecommit', encrypted, iv, tag, metaStr, new Date(credObj.expiresAt)]
     );
   } catch (e) {
     console.error("Notice persisting temp cred to DB:", e.message);

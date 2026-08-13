@@ -571,6 +571,7 @@ function displayTempCredential() {
 
   var btnRevoke = document.getElementById('btn-revoke-temp');
   if (btnRevoke) {
+    btnRevoke.disabled = false;
     btnRevoke.textContent = _tempCredential.provider !== 'github' ? 'Revoke & Destroy on AWS' : 'Revoke & Invalidate Token';
   }
 
@@ -628,6 +629,9 @@ async function handleRevokeTempCreds() {
 function resetTempCliView() {
   if (_tempTimer) clearInterval(_tempTimer);
   _tempCredential = null;
+
+  var btnRevoke = document.getElementById('btn-revoke-temp');
+  if (btnRevoke) btnRevoke.disabled = false;
 
   var stepSelect = document.getElementById('temp-step-select');
   var stepGen = document.getElementById('temp-step-generating');
