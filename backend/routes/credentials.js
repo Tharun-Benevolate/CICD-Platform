@@ -112,21 +112,63 @@ router.post("/my/credentials/:id/test", async (req, res) => {
 // CLI Setup: CodeCommit Temporary Git Credentials & One-Click Clone Command
 // ─────────────────────────────────────────────────────────────────────────────
 
-const activeTempCredentials = new Map(); // id -> { id, username, iamUsername, repositoryId, repoName, cloneUrl, oneClickCmd, clientIp, expiresAt, timer }
+// ─────────────────────────────────────────────────────────────────────────────
+// CLI Setup: CodeCommit / GitHub Temporary Git Credentials & One-Click Clone Command
+// ─────────────────────────────────────────────────────────────────────────────
+
+const activeTempCredentials = new Map(); // id -> sessionObj
+
+// Helper to save temp CLI credential to DB for persistence across restarts/reloads
+async function persistTempCredToDb(username, credObj) {
+  try {
+    const { pool } = require("../config/db");
+    const normUser = (username || "").toLowerCase().trim();
+    // Delete any existing temp CLI session for this user
+    await pool.query(
+      "DELETE FROM repo_credentials WHERE LOWER(username) = LOWER(?) AND label = 'Temp CLI Credential'",
+      [normUser]
+    ).catch(() => {});
+
+    const metaStr = JSON.stringify({
+      credId: credObj.id,
+      repoName: credObj.repoName,
+      provider: credObj.provider,
+      region: credObj.region,
+      gitUsername: credObj.gitUsername,
+      gitPassword: credObj.gitPassword,
+      oneClickCmd: credObj.oneClickCmd,
+      iamUsername: credObj.iamUsername || null,
+      clientIp: credObj.clientIp,
+      durationMinutes: credObj.durationMinutes,
+      expiresAt: credObj.expiresAt,
+      createdAt: credObj.createdAt
+    });
+
+    await pool.query(
+      `INSERT INTO repo_credentials (id, username, provider, credential_type, encrypted_token, token_iv, token_tag, label, meta, expires_at)
+       VALUES (?, ?, ?, 'pat', 'temp', 'temp', 'temp', 'Temp CLI Credential', ?, ?)`,
+      [credObj.id, normUser, credObj.provider === 'github' ? 'github' : 'codecommit', metaStr, new Date(credObj.expiresAt)]
+    );
+  } catch (e) {
+    console.error("Notice persisting temp cred to DB:", e.message);
+  }
+}
 
 // POST /api/codecommit/create-temp-credentials
-router.post("/codecommit/create-temp-credentials", async (req, res) => {
+router.post("/codecommit/create-temp-credentials", auth.requireAuth, async (req, res) => {
   try {
     const { repositoryId, durationMinutes } = req.body;
-    // repositoryId is optional — when omitted we create CodeCommit IAM credentials
-    // without a specific repo clone URL (they work for any repo in the account).
+    const username = (auth.getLoggedInUser(req) || req.user?.username || "").toLowerCase().trim();
+    if (!username) return res.status(401).json({ ok: false, error: "Authentication required" });
 
     const repoStore = require("../stores/repositoryStore");
     const projectStore = require("../stores/projectStore");
     const aws = require("../config/aws");
+    const crypto = require("crypto");
+
     // Clean up any existing active temp credential for this user to prevent stacking multiple sessions
     for (const [existingId, existingCred] of activeTempCredentials.entries()) {
-      if (existingCred.username === req.user.username) {
+      if ((existingCred.username || "").toLowerCase() === username) {
         clearTimeout(existingCred.timer);
         if (existingCred.provider === "codecommit" && existingCred.iamUsername) {
           try {
@@ -144,7 +186,6 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
       repo = await repoStore.getRepository(repositoryId);
 
       if (!repo) {
-        // Lookup by repo_name across active project or database
         const [allDbRepos] = await require("../config/db").pool.query(
           "SELECT * FROM repositories WHERE id = ? OR repo_name = ? OR owner = ?",
           [repositoryId, repositoryId, repositoryId]
@@ -154,7 +195,6 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
         }
       }
 
-      // Handle synthesized project repository (e.g. p-<projectId>)
       if (!repo && (repositoryId.startsWith("p-") || req.body.projectId)) {
         const projId = repositoryId.startsWith("p-") ? repositoryId.replace(/^p-/, "") : req.body.projectId;
         const project = await projectStore.getProject(projId);
@@ -178,7 +218,7 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
       }
     }
 
-    const duration = Math.min(Math.max(parseInt(durationMinutes) || 60, 5), 480); // 5m to 8h
+    const duration = Math.min(Math.max(parseInt(durationMinutes) || 60, 5), 480);
     const userIp = req.headers["x-forwarded-for"]?.split(",")[0]?.trim() || req.ip || req.socket.remoteAddress || "Unknown";
     const expiresAt = new Date(Date.now() + duration * 60 * 1000);
     const repoName = repo ? (repo.repo_name || repo.repoName || "repo") : "";
@@ -193,7 +233,6 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
     if (provider === "github") {
       credId = "gh-" + crypto.randomUUID();
 
-      // Resolve GitHub token using smart multi-tier fallback (User -> Creator -> System)
       const reposRouter = require("./repos");
       const { token: githubToken, source: tokenSource } = await reposRouter.resolveGithubTokenForRepo(req, repo);
 
@@ -202,7 +241,6 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
       }
 
       gitUsername = "x-access-token";
-      // Show only first 8 chars to the client — full token stored server-side for revocation
       gitPassword = githubToken;
 
       const cleanGhRepo = repoName.endsWith(".git") ? repoName : `${repoName}.git`;
@@ -212,7 +250,7 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
 
       const sessionObj = {
         id: credId,
-        username: req.user.username,
+        username,
         provider: "github",
         repositoryId,
         repoName,
@@ -221,14 +259,13 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
         clientIp: userIp,
         gitUsername,
         gitPassword,
-        rawGithubToken: githubToken,  // stored server-side only — used for revocation
+        rawGithubToken: githubToken,
         oneClickCmd,
         durationMinutes: duration,
         createdAt: new Date().toISOString(),
         expiresAt: expiresAt.toISOString()
       };
 
-      // Auto-expire temp CLI credential session
       const timer = setTimeout(() => {
         console.log(`[GitHub temp-cred] Expired session ${credId} for ${repoName}`);
         activeTempCredentials.delete(credId);
@@ -236,6 +273,7 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
 
       sessionObj.timer = timer;
       activeTempCredentials.set(credId, sessionObj);
+      await persistTempCredToDb(username, sessionObj);
 
       return res.json({
         ok: true,
@@ -266,7 +304,7 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
           }
         } catch {}
       }
-      if (!iamUsername) iamUsername = req.user.username;
+      if (!iamUsername) iamUsername = username;
 
       try {
         const cred = await aws.createServiceSpecificGitCredential(region, iamUsername);
@@ -309,7 +347,7 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
 
       const sessionObj = {
         id: credId,
-        username: req.user.username,
+        username,
         provider: "codecommit",
         iamUsername,
         repositoryId,
@@ -337,6 +375,7 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
 
       sessionObj.timer = timer;
       activeTempCredentials.set(credId, sessionObj);
+      await persistTempCredToDb(username, sessionObj);
 
       return res.json({
         ok: true,
@@ -360,90 +399,117 @@ router.post("/codecommit/create-temp-credentials", async (req, res) => {
   }
 });
 
-// GET /api/codecommit/temp-credentials — list active temporary credentials
-router.get("/codecommit/temp-credentials", async (req, res) => {
-  const now = Date.now();
-  const list = [];
+// GET /api/codecommit/temp-credentials — list active temporary credentials (memory + MySQL fallback)
+router.get("/codecommit/temp-credentials", auth.requireAuth, async (req, res) => {
+  try {
+    const username = (auth.getLoggedInUser(req) || req.user?.username || "").toLowerCase().trim();
+    if (!username) return res.json({ ok: true, credentials: [] });
 
-  for (const [id, cred] of activeTempCredentials.entries()) {
-    if (new Date(cred.expiresAt).getTime() <= now) {
-      clearTimeout(cred.timer);
-      try {
-        const awsClient = require("../config/aws");
-        await awsClient.deleteServiceSpecificGitCredential(cred.region, cred.iamUsername, cred.id);
-      } catch {}
-      activeTempCredentials.delete(id);
-    } else if (cred.username === req.user.username || req.user.user_type === "super_admin") {
-      list.push({
-        id: cred.id,
-        repoName: cred.repoName,
-        provider: cred.provider,
-        region: cred.region,
-        gitUsername: cred.gitUsername,
-        gitPassword: cred.gitPassword,
-        oneClickCmd: cred.oneClickCmd,
-        clientIp: cred.clientIp,
-        durationMinutes: cred.durationMinutes,
-        expiresAt: cred.expiresAt,
-        createdAt: cred.createdAt
-      });
+    const nowMs = Date.now();
+    const list = [];
+    const seenIds = new Set();
+
+    // 1. Check in-memory active temp credentials first
+    for (const [id, cred] of activeTempCredentials.entries()) {
+      if (new Date(cred.expiresAt).getTime() <= nowMs) {
+        clearTimeout(cred.timer);
+        if (cred.provider === "codecommit" && cred.iamUsername) {
+          try {
+            const awsClient = require("../config/aws");
+            await awsClient.deleteServiceSpecificGitCredential(cred.region, cred.iamUsername, cred.id);
+          } catch {}
+        }
+        activeTempCredentials.delete(id);
+      } else if ((cred.username || "").toLowerCase() === username || req.user.user_type === "super_admin") {
+        seenIds.add(cred.id);
+        list.push({
+          id: cred.id,
+          repoName: cred.repoName,
+          provider: cred.provider,
+          region: cred.region,
+          gitUsername: cred.gitUsername,
+          gitPassword: cred.gitPassword,
+          oneClickCmd: cred.oneClickCmd,
+          clientIp: cred.clientIp,
+          durationMinutes: cred.durationMinutes,
+          expiresAt: cred.expiresAt,
+          createdAt: cred.createdAt
+        });
+      }
     }
-  }
 
-  res.json({ ok: true, credentials: list });
+    // 2. Query MySQL database fallback for persistence across reloads/restarts
+    const { pool } = require("../config/db");
+    const [rows] = await pool.query(
+      `SELECT id, username, meta, expires_at FROM repo_credentials
+       WHERE LOWER(username) = LOWER(?) AND label = 'Temp CLI Credential' AND expires_at > NOW()
+       ORDER BY created_at DESC`,
+      [username]
+    );
+
+    for (const row of rows) {
+      if (seenIds.has(row.id)) continue;
+      try {
+        const meta = JSON.parse(row.meta || "{}");
+        seenIds.add(row.id);
+        list.push({
+          id: row.id,
+          repoName: meta.repoName,
+          provider: meta.provider,
+          region: meta.region,
+          gitUsername: meta.gitUsername,
+          gitPassword: meta.gitPassword,
+          oneClickCmd: meta.oneClickCmd,
+          clientIp: meta.clientIp,
+          durationMinutes: meta.durationMinutes,
+          expiresAt: meta.expiresAt || (row.expires_at ? new Date(row.expires_at).toISOString() : null),
+          createdAt: meta.createdAt
+        });
+      } catch (_) {}
+    }
+
+    res.json({ ok: true, credentials: list });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
-// ── GitHub OAuth token revocation helper ─────────────────────────────────────
-// Uses GitHub OAuth Apps API: DELETE /applications/{client_id}/token
-// Requires GITHUB_CLIENT_ID + GITHUB_CLIENT_SECRET (HTTP Basic auth).
-async function revokeGithubToken(token) {
-  const clientId = process.env.GITHUB_CLIENT_ID;
-  const clientSecret = process.env.GITHUB_CLIENT_SECRET;
-
-  if (!clientId || !clientSecret) {
-    throw new Error("GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET not configured in .env — cannot revoke GitHub token.");
-  }
-
-  const basicAuth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  const res = await fetch(`https://api.github.com/applications/${clientId}/token`, {
-    method: "DELETE",
-    headers: {
-      "Authorization": `Basic ${basicAuth}`,
-      "Accept": "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28",
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ access_token: token })
-  });
-
-  // 204 = successfully revoked, 404 = already revoked / token unknown
-  if (res.status !== 204 && res.status !== 404) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(`GitHub revocation failed (${res.status}): ${body.message || "unknown error"}`);
-  }
-  return { revoked: true };
-}
-
 // DELETE /api/codecommit/temp-credentials/:id — revoke/destroy temp credential immediately
-router.delete("/codecommit/temp-credentials/:id", async (req, res) => {
-  const cred = activeTempCredentials.get(req.params.id);
-  if (!cred) return res.status(404).json({ ok: false, error: "Credential session not found or already expired" });
+router.delete("/codecommit/temp-credentials/:id", auth.requireAuth, async (req, res) => {
+  try {
+    const username = (auth.getLoggedInUser(req) || req.user?.username || "").toLowerCase().trim();
+    const id = req.params.id;
+    const { pool } = require("../config/db");
 
-  clearTimeout(cred.timer);
+    // Fetch meta from DB first to get IAM info if CodeCommit
+    const [rows] = await pool.query(
+      "SELECT meta FROM repo_credentials WHERE id = ? AND LOWER(username) = LOWER(?)",
+      [id, username]
+    );
 
-  if (cred.provider === "github") {
-    // Destroy temporary CLI session only — do NOT revoke the user's primary OAuth connection
-    console.log(`[GitHub temp-cred] Destroyed temp CLI session for ${cred.repoName}`);
-  } else {
-    // CodeCommit: delete IAM service-specific git credential
-    if (cred.iamUsername) {
-      const aws = require("../config/aws");
-      await aws.deleteServiceSpecificGitCredential(cred.region || "us-east-1", cred.iamUsername, cred.id).catch(() => {});
+    if (rows.length > 0) {
+      try {
+        const meta = JSON.parse(rows[0].meta || "{}");
+        if (meta.provider === "codecommit" && meta.iamUsername) {
+          const aws = require("../config/aws");
+          await aws.deleteServiceSpecificGitCredential(meta.region || "us-east-1", meta.iamUsername, id).catch(() => {});
+        }
+      } catch (_) {}
     }
-  }
 
-  activeTempCredentials.delete(req.params.id);
-  res.json({ ok: true, message: "Temporary credential destroyed and access revoked." });
+    // Delete from DB and memory
+    await pool.query("DELETE FROM repo_credentials WHERE id = ? AND LOWER(username) = LOWER(?)", [id, username]);
+
+    const memCred = activeTempCredentials.get(id);
+    if (memCred) {
+      clearTimeout(memCred.timer);
+      activeTempCredentials.delete(id);
+    }
+
+    res.json({ ok: true, message: "Temporary credential destroyed and access revoked." });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 module.exports = router;
