@@ -24,7 +24,15 @@ function rowToProject(row) {
   // `data` already contains the full project object (including id/name);
   // the separate id/name columns exist only for indexing.
   const data = typeof row.data === "string" ? JSON.parse(row.data) : (row.data || {});
-  const project = { id: row.id, name: row.name, ...data };
+  const project = {
+    id: row.id,
+    name: row.name,
+    slack_channel_id: row.slack_channel_id || data.slack_channel_id || data.slackChannelId || null,
+    slack_channel_name: row.slack_channel_name || data.slack_channel_name || data.slackChannelName || null,
+    slackChannelId: row.slack_channel_id || data.slack_channel_id || data.slackChannelId || null,
+    slackChannelName: row.slack_channel_name || data.slack_channel_name || data.slackChannelName || null,
+    ...data
+  };
   if (project.githubRepo && project.githubRepo.includes("/")) {
     project.githubRepo = project.githubRepo.split("/").pop();
   }
@@ -32,12 +40,12 @@ function rowToProject(row) {
 }
 
 async function listProjects() {
-  const [rows] = await pool.query("SELECT id, name, data FROM projects ORDER BY created_at ASC");
+  const [rows] = await pool.query("SELECT id, name, slack_channel_id, slack_channel_name, data FROM projects ORDER BY created_at ASC");
   return rows.map(rowToProject);
 }
 
 async function getProject(id) {
-  const [rows] = await pool.query("SELECT id, name, data FROM projects WHERE id = ?", [id]);
+  const [rows] = await pool.query("SELECT id, name, slack_channel_id, slack_channel_name, data FROM projects WHERE id = ?", [id]);
   return rows.length ? rowToProject(rows[0]) : null;
 }
 

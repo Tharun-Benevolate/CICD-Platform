@@ -313,111 +313,110 @@ async function autoProvisionProjectSlackChannel({ projectId, projectName, creato
   const token = (creatorCreds && (creatorCreds.userToken || creatorCreds.token)) || (await getAnySlackToken());
 
   if (!token) {
-    console.log(`[Slack] Notice: No Slack token available to auto-create Slack channel for creator: @${creator}`);
+    console.log(`[Slack] Notice: No Slack token available to create channel for creator: @${creator}`);
     return null;
   }
 
-  const sanitized = projectName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").slice(0, 70);
-  let channelName = `proj-${sanitized}`;
+  const sanitized = projectName.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "").slice(0, 70);
+  const channelName = `proj-${sanitized}`;
+  let channelId = null;
 
   try {
-    // 1. Try creating Private Channel (is_private: true)
-    let response = await fetch("https://slack.com/api/conversations.create", {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({ name: channelName, is_private: true })
-    });
-    let data = await response.json();
-
-    // 2. If private channel creation fails (e.g. scope/workspace restriction), fallback to Public Channel
-    if (!data.ok && data.error !== 'name_taken') {
-      console.log(`[Slack] Private channel creation notice (${data.error}). Falling back to public channel #${channelName}...`);
-      response = await fetch("https://slack.com/api/conversations.create", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ name: channelName, is_private: false })
+    // 1. First, check if channel already exists in workspace
+    try {
+      const listRes = await fetch("https://slack.com/api/conversations.list?types=private_channel,public_channel", {
+        headers: { "Authorization": `Bearer ${token}` }
       });
-      data = await response.json();
-    }
-
-    // 3. If channel name is taken in Slack workspace, retry with a unique suffix
-    if (!data.ok && data.error === 'name_taken') {
-      const suffix = Math.floor(100 + Math.random() * 900);
-      channelName = `proj-${sanitized}-${suffix}`;
-      response = await fetch("https://slack.com/api/conversations.create", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ name: channelName, is_private: false })
-      });
-      data = await response.json();
-    }
-
-    if (!data.ok) {
-      console.error(`[Slack Error] Failed to create channel #${channelName}:`, data.error, data);
-    }
-
-    let channelId = data.channel ? data.channel.id : null;
-
-    // If channel already exists, fetch its ID
-    if (!channelId && data.error === 'name_taken') {
-      try {
-        const listRes = await fetch("https://slack.com/api/conversations.list?types=public_channel,private_channel", {
-          headers: { "Authorization": `Bearer ${token}` }
-        });
-        const listData = await listRes.json();
-        if (listData.ok && Array.isArray(listData.channels)) {
-          const match = listData.channels.find(c => c.name === channelName);
-          if (match) channelId = match.id;
+      const listData = await listRes.json();
+      if (listData.ok && Array.isArray(listData.channels)) {
+        const match = listData.channels.find(c => c.name === channelName);
+        if (match) {
+          channelId = match.id;
+          console.log(`✔ Found existing Slack channel #${channelName} (${channelId})`);
         }
-      } catch (_) {}
+      }
+    } catch (_) {}
+
+    // 2. If channel does not exist, create it as a STRICT PRIVATE channel (is_private: true)
+    if (!channelId) {
+      const response = await fetch("https://slack.com/api/conversations.create", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ name: channelName, is_private: true })
+      });
+      const data = await response.json();
+
+      if (data.ok && data.channel) {
+        channelId = data.channel.id;
+        console.log(`✔ Successfully created Private Slack Channel #${channelName} (${channelId})`);
+      } else if (data.error === 'name_taken') {
+        try {
+          const listRes = await fetch("https://slack.com/api/conversations.list?types=private_channel,public_channel", {
+            headers: { "Authorization": `Bearer ${token}` }
+          });
+          const listData = await listRes.json();
+          if (listData.ok && Array.isArray(listData.channels)) {
+            const match = listData.channels.find(c => c.name === channelName);
+            if (match) channelId = match.id;
+          }
+        } catch (_) {}
+      } else {
+        console.error(`[Slack Error] Failed to create private channel #${channelName}:`, data.error, data);
+      }
     }
 
     if (channelId) {
+      // Update both database columns AND project data JSON blob
       await pool.query(
         "UPDATE projects SET slack_channel_id = ?, slack_channel_name = ? WHERE id = ?",
         [channelId, channelName, projectId]
       );
-      console.log(`✔ Auto-created & linked Private Slack channel #${channelName} (${channelId}) for project ${projectName}`);
+
+      try {
+        const projectStore = require("../stores/projectStore");
+        await projectStore.updateProject(projectId, {
+          slack_channel_id: channelId,
+          slack_channel_name: channelName,
+          slackChannelId: channelId,
+          slackChannelName: channelName
+        });
+      } catch (_) {}
+
+      console.log(`✔ Linked Private Slack channel #${channelName} (${channelId}) to project ${projectName}`);
 
       // Auto-invite creator immediately and send DM notification!
       if (creator) {
         await autoJoinSlackChannel(channelId, creator);
         await sendSlackDM(creator, {
-          title: `🔒 Private Slack Channel #${channelName} Created`,
-          message: `Project *${projectName}* created! Private channel *#${channelName}* has been provisioned and you have been added.`,
+          title: `🔒 Private Slack Channel #${channelName} Linked`,
+          message: `Project *${projectName}* is linked to Private Channel *#${channelName}*. You have been added.`,
           fields: [
             { title: "Project Name", value: projectName },
             { title: "Slack Channel", value: `#${channelName}` }
           ],
           color: "#10b981"
-        });
+        }).catch(() => {});
       }
 
-      // Auto-invite all Admins & DevOps engineers into the new private channel immediately
+      // Auto-invite all Admins & DevOps engineers into the private channel immediately
       await inviteAdminsAndDevOpsToChannel(channelId);
 
       sendSlackNotification({
         channelType: 'dev',
-        title: `🚀 Project Private Slack Channel #${channelName} Created`,
-        message: `Welcome! *@${creator}* created project *${projectName}*. Private Slack channel *#${channelName}* has been automatically provisioned.`,
+        title: `🚀 Project Private Slack Channel #${channelName} Active`,
+        message: `Project *${projectName}* is linked to Private Slack channel *#${channelName}*.`,
         color: '#10b981'
       }).catch(() => {});
 
       return { channelId, channelName };
     } else {
-      console.log("Slack conversations.create notice:", data.error || data);
+      console.log("Slack channel provisioning notice: Channel ID could not be resolved");
     }
   } catch (err) {
-    console.error("Failed to auto-create Slack channel:", err.message);
+    console.error("Failed to provision Private Slack channel:", err.message);
   }
   return null;
 }
