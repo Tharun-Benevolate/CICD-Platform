@@ -187,13 +187,27 @@ async function renderTeamActivity() {
     var res = await api.get('/api/audit-logs?limit=60');
     var rawLogs = (res && res.ok && res.logs) ? res.logs : [];
 
-    // Filter out login/logout actions to show developer work (commits, branches, pipelines, deployments)
+    // Filter to strictly show: Git operations, Pipeline/Build updates, Deployments, and Team Access/Member notifications
+    var allowedKeywords = [
+      'branch', 'commit', 'git', 'pull', 'merge', 'cr', 'review',
+      'pipeline', 'build', 'deploy', 'webhook',
+      'granted', 'access', 'member'
+    ];
+
+    var blockedKeywords = [
+      'logged', 'login', 'logout', 'sso', 'oauth', 'slack account', 'github account',
+      'role for', 'deleted user account', 'user account'
+    ];
+
     var logs = rawLogs.filter(function(l) {
       var act = (l.action || '').toLowerCase();
-      if (act.includes('logged in') || act.includes('logged out') || act.includes('login') || act.includes('logout') || act.includes('sso')) {
-        return false;
+      for (var b = 0; b < blockedKeywords.length; b++) {
+        if (act.includes(blockedKeywords[b])) return false;
       }
-      return true;
+      for (var a = 0; a < allowedKeywords.length; a++) {
+        if (act.includes(allowedKeywords[a])) return true;
+      }
+      return false;
     });
 
     if (logs.length === 0) {

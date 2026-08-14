@@ -107,7 +107,7 @@ function filterAuditLogs() {
       '<div>' +
         '<div style="font-weight:600;font-size:14px;color:var(--color-text-primary);">' + (log.action || 'Action') + '</div>' +
         '<div style="font-size:12px;color:var(--color-text-tertiary);margin-top:2px;">' +
-          'User: <b style="color:var(--color-text-secondary);">' + (log.username || log.user || 'system') + '</b> &bull; Category: ' + (log.category || 'General') + ' &bull; Project: ' + (log.project_name || log.projectName || 'N/A') +
+          'User: <b style="color:var(--color-text-secondary);">' + (log.username || log.user || 'system') + '</b> &bull; IP: <b style="color:var(--color-text-secondary);">' + (log.ipAddress || log.ip_address || '127.0.0.1') + '</b> &bull; Category: ' + (log.category || 'General') + ' &bull; Project: ' + (log.project_name || log.projectName || 'N/A') +
         '</div>' +
       '</div>' +
       '<div style="text-align:right;">' +

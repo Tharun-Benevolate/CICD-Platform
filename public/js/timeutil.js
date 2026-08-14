@@ -8,17 +8,42 @@
   var _tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   var _tzAbbrev = '';
 
-  // Compute timezone abbreviation (e.g. "IST", "CST", "UTC")
-  try {
-    _tzAbbrev = new Intl.DateTimeFormat('en', {
-      timeZone: _tz,
-      timeZoneName: 'short'
-    }).formatToParts(new Date()).find(function(p) {
-      return p.type === 'timeZoneName';
-    }).value || _tz;
-  } catch(e) {
-    _tzAbbrev = _tz;
+  // Compute clean timezone abbreviation (e.g. "IST", "CST", "EST", "PST", "UTC")
+  function getCleanTzAbbrev(tz) {
+    var tzMap = {
+      'Asia/Kolkata': 'IST',
+      'Asia/Calcutta': 'IST',
+      'America/Chicago': 'CST',
+      'America/Indiana/Knox': 'CST',
+      'America/New_York': 'EST',
+      'America/Los_Angeles': 'PST',
+      'America/Denver': 'MST',
+      'Europe/London': 'GMT',
+      'UTC': 'UTC'
+    };
+    if (tzMap[tz]) return tzMap[tz];
+
+    try {
+      var raw = new Intl.DateTimeFormat('en-US', {
+        timeZone: tz,
+        timeZoneName: 'short'
+      }).formatToParts(new Date()).find(function(p) {
+        return p.type === 'timeZoneName';
+      }).value || '';
+
+      if (raw === 'GMT+5:30' || raw === 'GMT+5.5') return 'IST';
+      if (raw === 'GMT-6' || raw === 'GMT-5') return 'CST';
+      if (raw.indexOf('GMT+') !== -1 || raw.indexOf('GMT-') !== -1) {
+        if (raw.indexOf('+5:30') !== -1) return 'IST';
+        if (raw.indexOf('-6') !== -1 || raw.indexOf('-5') !== -1) return 'CST';
+      }
+      return raw || tz;
+    } catch(e) {
+      return tz;
+    }
   }
+
+  var _tzAbbrev = getCleanTzAbbrev(_tz);
 
   /**
    * Format a timestamp (string or Date) as a full local datetime string

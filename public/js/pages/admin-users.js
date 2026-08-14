@@ -296,10 +296,9 @@ async function openInspectUserModal(username) {
 
     function formatTimestamp(ts) {
       if (!ts) return 'N/A';
-      var d = new Date(ts);
-      if (isNaN(d.getTime())) return String(ts);
-      // Show local with timezone offset label (IST = +5:30 from GMT)
-      return d.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', year:'numeric', month:'numeric', day:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit', hour12:false }) + ' GMT+5:30';
+      return (window.TimeUtil && typeof TimeUtil.formatDateTime === 'function')
+        ? TimeUtil.formatDateTime(ts)
+        : (new Date(ts).toLocaleString());
     }
 
     var logsHtml = '';

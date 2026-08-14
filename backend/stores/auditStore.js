@@ -50,9 +50,19 @@ function extractClientIp(reqOrIp) {
  */
 async function logAction(user, action, projectName, result, category, reqOrIp) {
   try {
+    let reqObj = reqOrIp;
+    let actualCategory = category;
+
+    if (!reqObj) {
+      if (typeof category === "object" && category !== null && (category.headers || category.ip || category.socket)) {
+        reqObj = category;
+        actualCategory = undefined;
+      }
+    }
+
     const extId = Date.now().toString() + "-" + Math.random().toString(36).substring(2, 7);
-    const resolvedCategory = VALID_CATEGORIES.includes(category) ? category : inferCategory(action);
-    const clientIp = extractClientIp(reqOrIp);
+    const resolvedCategory = VALID_CATEGORIES.includes(actualCategory) ? actualCategory : inferCategory(action);
+    const clientIp = extractClientIp(reqObj);
 
     await pool.query(
       `INSERT INTO audit_log (ext_id, username, action, category, project_name, result, ip_address)
