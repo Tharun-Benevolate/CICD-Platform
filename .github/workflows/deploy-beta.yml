@@ -16,7 +16,7 @@ env:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: CICD Platform Beta
+    environment: CICD Platform
 
     steps:
       - name: Checkout code
