@@ -4,8 +4,81 @@
       Access Restricted
     </div>
   <% } else { %>
-    <div id="content">
-      <div style="padding:40px;text-align:center;color:var(--color-text-tertiary);">Loading...</div>
+    <div id="content" style="position:relative;">
+      <!-- Background Loading Overlay -->
+      <div id="beta-page-loader" style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.7);backdrop-filter:blur(2px);z-index:20;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--color-text-secondary);font-size:14px;font-weight:600;transition:opacity 0.2s ease;">
+        <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;"></i>
+        <span>Loading...</span>
+      </div>
+
+      <!-- Pre-rendered Ready Page Skeleton Structure -->
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+        <div>
+          <h1 style="font-size:22px;font-weight:700;margin-bottom:4px;color:var(--color-text-primary);">Beta Environment</h1>
+          <p style="font-size:13px;color:var(--color-text-secondary);">Manage cookie-based beta access for active project</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;">
+          <button onclick="betaTeardown()" style="padding:8px 16px;background:transparent;color:var(--color-danger, #ef4444);border:1px solid var(--color-danger, #ef4444);border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;">
+            Tear Down Beta
+          </button>
+        </div>
+      </div>
+
+      <div id="beta-dashboard-area">
+        <div style="display:grid;gap:20px;">
+          <!-- Service Status Card -->
+          <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;overflow:hidden;">
+            <div style="padding:16px 24px;border-bottom:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center;">
+              <h3 style="font-size:15px;font-weight:700;margin:0;color:var(--color-text-primary);">Beta Service Status</h3>
+              <span style="background:var(--color-bg, #f1f5f9);color:var(--color-text-secondary, #64748b);border:1px solid var(--color-border);padding:4px 10px;border-radius:12px;font-size:12px;font-weight:700;">Fetching Status...</span>
+            </div>
+            <div style="padding:24px;">
+              <p style="margin:0 0 16px 0;font-size:13px;color:var(--color-text-primary);">
+                <strong>Current Beta Image:</strong> 
+                <span style="color:var(--color-text-tertiary);">Checking active tasks...</span>
+              </p>
+            </div>
+          </div>
+
+          <!-- How Org ID Routing Works -->
+          <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:16px;overflow:hidden;">
+            <div style="padding:16px 24px;border-bottom:1px solid var(--color-border);">
+              <h3 style="font-size:15px;font-weight:700;margin:0;color:var(--color-text-primary);">How Org ID Routing Works</h3>
+            </div>
+            <div style="padding:24px;font-size:13px;line-height:1.6;color:var(--color-text-secondary);">
+              <p style="margin:0 0 12px 0;">
+                An <strong>Org ID</strong> is a plain string your app assigns to a group of users, and the <strong>Email Domain</strong> is what actually maps a real login to that ID.
+              </p>
+            </div>
+          </div>
+
+          <!-- Authorized Orgs -->
+          <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;overflow:hidden;">
+            <div style="padding:16px 24px;border-bottom:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center;">
+              <h3 style="font-size:15px;font-weight:700;margin:0;color:var(--color-text-primary);">Authorized Beta Organizations</h3>
+              <button onclick="addBetaOrgPrompt()" style="padding:8px 16px;background:var(--color-surface);color:var(--color-text-primary);border:1px solid var(--color-border);border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;">+ Add Org</button>
+            </div>
+            <div style="padding:24px;">
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;text-align:left;">
+                  <thead>
+                    <tr style="border-bottom:2px solid var(--color-border);">
+                      <th style="padding:12px 16px;color:var(--color-text-secondary);font-size:12px;font-weight:700;text-transform:uppercase;">Org ID</th>
+                      <th style="padding:12px 16px;color:var(--color-text-secondary);font-size:12px;font-weight:700;text-transform:uppercase;">Name</th>
+                      <th style="padding:12px 16px;color:var(--color-text-secondary);font-size:12px;font-weight:700;text-transform:uppercase;">Email Domain</th>
+                      <th style="padding:12px 16px;color:var(--color-text-secondary);font-size:12px;font-weight:700;text-transform:uppercase;">Notes</th>
+                      <th style="padding:12px 16px;color:var(--color-text-secondary);font-size:12px;font-weight:700;text-transform:uppercase;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr><td colspan="5" style="padding:16px;text-align:center;color:var(--color-text-tertiary);font-size:13px;">Loading organizations...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   <% } %>
 </div>

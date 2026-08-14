@@ -6,8 +6,40 @@
       <p style="font-size:13px;color:var(--color-text-secondary);">DevOps or Administrator privileges are required to manage release branches.</p>
     </div>
   <% } else { %>
-    <div id="content">
-      <div style="padding:40px;text-align:center;color:var(--color-text-tertiary);">Loading...</div>
+    <div id="content" style="position:relative;">
+      <!-- Background Loading Overlay -->
+      <div id="release-page-loader" style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(255,255,255,0.7);backdrop-filter:blur(2px);z-index:20;display:flex;align-items:center;justify-content:center;gap:10px;color:var(--color-text-secondary);font-size:14px;font-weight:600;transition:opacity 0.2s ease;">
+        <i data-lucide="loader-2" class="animate-spin" style="width:20px;height:20px;color:#6366f1;"></i>
+        <span>Loading...</span>
+      </div>
+
+      <!-- Pre-rendered Ready Page Skeleton Structure -->
+      <div style="margin-bottom:24px;">
+        <h1 style="font-size:22px;font-weight:700;margin-bottom:4px;color:var(--color-text-primary);">Release Management</h1>
+        <p style="font-size:13px;color:var(--color-text-secondary);">Manage release promotion workflows and environment deployments</p>
+      </div>
+
+      <div class="release-layout">
+        <div class="release-branch-panel">
+          <div style="padding:16px;border-bottom:1px solid var(--color-border);font-weight:700;font-size:14px;color:var(--color-text-primary);">
+            Active Release Branches
+          </div>
+          <div style="padding:20px;text-align:center;color:var(--color-text-tertiary);font-size:13px;">
+            Loading branches...
+          </div>
+        </div>
+        <div class="release-steps-col">
+          <div class="release-step-card">
+            <div class="release-step-header">
+              <div class="release-step-num">1</div>
+              <div>
+                <div class="release-step-title">Select Release Candidate</div>
+                <div class="release-step-sub">Choose a release branch from the left panel to begin promotion</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   <% } %>
 </div>
