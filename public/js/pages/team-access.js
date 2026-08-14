@@ -184,10 +184,17 @@ async function renderTeamActivity() {
   if (!actEl) return;
 
   try {
-    var res = await api.get('/api/audit-logs?limit=15');
-    var logs = (res && res.ok && res.logs) ? res.logs.filter(function(l) {
-      return _projectMembers.some(function(m) { return m.username === (l.username || l.user); });
-    }) : [];
+    var res = await api.get('/api/audit-logs?limit=60');
+    var rawLogs = (res && res.ok && res.logs) ? res.logs : [];
+
+    // Filter out login/logout actions to show developer work (commits, branches, pipelines, deployments)
+    var logs = rawLogs.filter(function(l) {
+      var act = (l.action || '').toLowerCase();
+      if (act.includes('logged in') || act.includes('logged out') || act.includes('login') || act.includes('logout') || act.includes('sso')) {
+        return false;
+      }
+      return true;
+    });
 
     if (logs.length === 0) {
       actEl.style.display = 'none';
@@ -197,13 +204,31 @@ async function renderTeamActivity() {
     if (actEmpty) actEmpty.style.display = 'none';
     actEl.style.display = 'flex';
     actEl.innerHTML = '';
-    logs.slice(0, 6).forEach(function(log) {
+
+    logs.slice(0, 8).forEach(function(log) {
+      var actText = log.action || 'Action';
+      var userText = log.username || log.user || 'Team Member';
+      var timeText = log.timestamp ? new Date(log.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '';
+      var icon = 'git-commit';
+
+      var actLower = actText.toLowerCase();
+      if (actLower.includes('branch')) icon = 'git-branch';
+      else if (actLower.includes('pipeline') || actLower.includes('build')) icon = 'play-circle';
+      else if (actLower.includes('deploy') || actLower.includes('ecs')) icon = 'rocket';
+      else if (actLower.includes('cr') || actLower.includes('review') || actLower.includes('merge')) icon = 'git-merge';
+      else if (actLower.includes('access')) icon = 'user-check';
+
       var d = document.createElement('div');
-      d.style.cssText = 'font-size:12px;color:var(--color-text-secondary);padding:10px 12px;border-radius:10px;background:var(--color-bg);border:1px solid var(--color-border);';
-      d.innerHTML = '<div style="font-weight:600;color:var(--color-text-primary);">' + (log.action || 'Action') + '</div>' +
-        '<div style="color:var(--color-text-tertiary);margin-top:4px;font-size:11px;">' + (log.username || log.user || 'system') + ' &bull; ' + (log.timestamp ? new Date(log.timestamp).toLocaleString() : '') + '</div>';
+      d.style.cssText = 'font-size:12px;color:var(--color-text-secondary);padding:10px 12px;border-radius:10px;background:var(--color-bg);border:1px solid var(--color-border);display:flex;align-items:flex-start;gap:10px;';
+      d.innerHTML =
+        '<i data-lucide="' + icon + '" style="width:15px;height:15px;color:#6366f1;margin-top:2px;flex-shrink:0;"></i>' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div style="font-weight:600;color:var(--color-text-primary);line-height:1.3;">' + actText + '</div>' +
+          '<div style="color:var(--color-text-tertiary);margin-top:4px;font-size:11px;">' + userText + ' &bull; ' + timeText + '</div>' +
+        '</div>';
       actEl.appendChild(d);
     });
+    if (window.lucide) lucide.createIcons();
   } catch (e) {
     if (actEmpty) actEmpty.style.display = 'block';
   }
