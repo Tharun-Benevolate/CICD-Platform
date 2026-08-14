@@ -27,6 +27,9 @@ const releaseStore= require("./stores/releasePromotionStore");
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
+// Trust reverse proxy (nginx-proxy / ALB) to capture client public IP from X-Forwarded-For
+app.set("trust proxy", true);
+
 // ── Core middleware ───────────────────────────────────────────────────────
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());

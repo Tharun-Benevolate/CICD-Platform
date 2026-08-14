@@ -208,7 +208,9 @@ async function renderTeamActivity() {
     logs.slice(0, 8).forEach(function(log) {
       var actText = log.action || 'Action';
       var userText = log.username || log.user || 'Team Member';
-      var timeText = log.timestamp ? new Date(log.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : '';
+      var timeText = (window.TimeUtil && typeof TimeUtil.formatDateTime === 'function')
+        ? TimeUtil.formatDateTime(log.timestamp)
+        : (log.timestamp ? new Date(log.timestamp).toLocaleString() : '');
       var icon = 'git-commit';
 
       var actLower = actText.toLowerCase();

@@ -27,11 +27,15 @@ function extractClientIp(reqOrIp) {
   if (typeof reqOrIp === "string") {
     raw = reqOrIp;
   } else if (typeof reqOrIp === "object") {
-    raw = reqOrIp.headers?.["x-forwarded-for"] || reqOrIp.socket?.remoteAddress || reqOrIp.ip || "";
+    const headers = reqOrIp.headers || {};
+    raw = headers["x-forwarded-for"] || headers["x-real-ip"] || reqOrIp.ip || reqOrIp.socket?.remoteAddress || "";
   }
-  raw = raw.split(",")[0].trim();
+  if (raw.includes(",")) {
+    raw = raw.split(",")[0];
+  }
+  raw = raw.trim();
   if (raw.startsWith("::ffff:")) raw = raw.replace("::ffff:", "");
-  if (raw === "::1" || !raw) raw = "127.0.0.1";
+  if (raw === "::1" || raw === "127.0.0.1" || !raw) return "127.0.0.1";
   return raw;
 }
 
