@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Benevolate — Sign In</title>
+  <title>Benevolate Integr8 — Sign In</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -20,19 +20,18 @@
       <div class="splash-bg"></div>
       <div class="splash-content">
         <div class="splash-logo">
-          <img src="/favicon.png" width="72" height="72" alt="Benevolate"
-               style="object-fit:contain;filter:drop-shadow(0 0 24px rgba(99,102,241,0.6));">
+          <img src="/favicon.png" width="76" height="76" alt="Benevolate Integr8"
+               style="object-fit:contain;filter:drop-shadow(0 0 32px rgba(99,102,241,0.7));">
         </div>
-        <div class="splash-wordmark">Benevolate</div>
+        <div class="splash-wordmark">BENEVOLATE INTEGR8</div>
         <h1 class="splash-tagline">Ship faster.<br>Stay in control.</h1>
-        <p class="splash-sub">
-          The all-in-one developer platform for CI/CD, code review, and
-          infrastructure — built for teams who move fast without breaking things.
-        </p>
-        <button class="splash-cta" onclick="showAuthStage()">
-          Continue <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
-        </button>
-        <div class="splash-footnote">Employee portal &nbsp;·&nbsp; Secure access &nbsp;·&nbsp; © 2026 Benevolate</div>
+        
+        <div style="margin-top:40px;">
+          <button class="splash-cta" onclick="showAuthStage()">
+            Continue <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+          </button>
+        </div>
+        <div class="splash-footnote">Enterprise Platform &nbsp;·&nbsp; Secure SSO Access &nbsp;·&nbsp; © 2026 Benevolate</div>
       </div>
     </div>
 
@@ -45,54 +44,54 @@
 
         <!-- Normal Login Form -->
         <div id="login-form-section">
-          <div class="auth-logo">
-            <img src="/favicon.png" width="48" height="48" alt="Benevolate" style="object-fit:contain;margin-bottom:12px;">
+          <div class="auth-logo" style="text-align:center;">
+            <img src="/favicon.png" width="52" height="52" alt="Benevolate Integr8" style="object-fit:contain;margin-bottom:12px;filter:drop-shadow(0 0 20px rgba(99,102,241,0.5));">
           </div>
-          <h2 style="font-size:22px;font-weight:700;color:#fff;text-align:center;margin-bottom:4px;">
-            Welcome back
+          <h2 style="font-size:22px;font-weight:800;color:#fff;text-align:center;margin-bottom:4px;letter-spacing:-0.5px;">
+            Benevolate Integr8
           </h2>
-          <p style="font-size:13px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:20px;">
-            Sign in to your account to continue
+          <p style="font-size:13px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:24px;">
+            Sign in to access your organization workspace
           </p>
 
-          <!-- Google SSO -->
-          <div style="display:flex;justify-content:center;margin-bottom:20px;">
-            <div id="g_id_signin_btn" style="min-height:44px;"></div>
+          <!-- Google SSO Container -->
+          <div style="display:flex;justify-content:center;margin-bottom:22px;width:100%;">
+            <div id="g_id_signin_btn" style="min-height:44px;width:100%;display:flex;justify-content:center;"></div>
           </div>
 
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;color:rgba(255,255,255,0.4);font-size:12px;">
-            <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">
+            <div style="flex:1;height:1px;background:rgba(255,255,255,0.12);"></div>
             <span>or sign in with credentials</span>
-            <div style="flex:1;height:1px;background:rgba(255,255,255,0.1);"></div>
+            <div style="flex:1;height:1px;background:rgba(255,255,255,0.12);"></div>
           </div>
 
           <form id="login-form" onsubmit="handleLoginSubmit(event)">
             <div style="margin-bottom:16px;">
-              <label style="display:block;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);margin-bottom:6px;">
+              <label style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.8);margin-bottom:6px;">
                 Username
               </label>
               <div style="position:relative;">
-                <i data-lucide="user" style="width:16px;height:16px;position:absolute;left:12px;top:12px;color:rgba(255,255,255,0.4);"></i>
+                <i data-lucide="user" style="width:16px;height:16px;position:absolute;left:14px;top:12px;color:rgba(255,255,255,0.4);"></i>
                 <input type="text" id="login-username" placeholder="Enter username..." autocomplete="username"
-                  style="width:100%;padding:10px 12px 10px 38px;font-size:14px;border:1px solid rgba(255,255,255,0.15);border-radius:10px;background:rgba(0,0,0,0.2);color:#fff;outline:none;font-family:var(--font-family);">
+                  style="width:100%;padding:11px 14px 11px 40px;font-size:13px;border:1px solid rgba(255,255,255,0.14);border-radius:10px;background:rgba(15,23,42,0.6);color:#fff;outline:none;font-family:var(--font-family);transition:all 0.15s ease;">
               </div>
             </div>
 
             <div style="margin-bottom:20px;">
-              <label style="display:block;font-size:12px;font-weight:500;color:rgba(255,255,255,0.7);margin-bottom:6px;">
+              <label style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.8);margin-bottom:6px;">
                 Password
               </label>
               <div style="position:relative;">
-                <i data-lucide="lock" style="width:16px;height:16px;position:absolute;left:12px;top:12px;color:rgba(255,255,255,0.4);"></i>
+                <i data-lucide="lock" style="width:16px;height:16px;position:absolute;left:14px;top:12px;color:rgba(255,255,255,0.4);"></i>
                 <input type="password" id="login-password" placeholder="Enter password..." autocomplete="current-password"
-                  style="width:100%;padding:10px 12px 10px 38px;font-size:14px;border:1px solid rgba(255,255,255,0.15);border-radius:10px;background:rgba(0,0,0,0.2);color:#fff;outline:none;font-family:var(--font-family);">
+                  style="width:100%;padding:11px 14px 11px 40px;font-size:13px;border:1px solid rgba(255,255,255,0.14);border-radius:10px;background:rgba(15,23,42,0.6);color:#fff;outline:none;font-family:var(--font-family);transition:all 0.15s ease;">
               </div>
             </div>
 
             <div id="login-error" style="display:none;padding:10px 12px;margin-bottom:16px;font-size:13px;color:#f87171;background:rgba(239,68,68,0.15);border-radius:8px;border:1px solid rgba(239,68,68,0.3);text-align:center;"></div>
 
             <button type="submit" id="login-submit-btn"
-              style="width:100%;padding:12px;font-size:15px;font-weight:700;background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;border:none;border-radius:10px;cursor:pointer;box-shadow:0 4px 20px rgba(99,102,241,0.4);font-family:var(--font-family);">
+              style="width:100%;padding:12px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#fff;border:none;border-radius:10px;cursor:pointer;box-shadow:0 4px 20px rgba(99,102,241,0.4);font-family:var(--font-family);transition:all 0.15s ease;">
               Sign In
             </button>
           </form>
@@ -263,8 +262,8 @@
         if (btnContainer) {
           btnContainer.innerHTML = '';
           window.google.accounts.id.renderButton(btnContainer, {
-            type: 'standard', shape: 'rectangular', theme: 'outline',
-            text: 'signin_with', size: 'large', logo_alignment: 'left', width: 348
+            type: 'standard', shape: 'pill', theme: 'filled_black',
+            text: 'continue_with', size: 'large', logo_alignment: 'left', width: 348
           });
         }
       } catch(err) {
