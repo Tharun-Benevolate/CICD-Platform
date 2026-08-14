@@ -1,0 +1,157 @@
+name: Build & Deploy Beta to Lightsail
+
+on:
+  push:
+    branches:
+      - beta
+
+concurrency:
+  group: deploy-lightsail-beta
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  CONTAINER_NAME: cicd-admin-app-beta
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    environment: CICD Platform Beta
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Fetch runtime secrets from Secrets Manager
+        id: app-secrets
+        env:
+          APP_SECRETS_SECRET_ARN: ${{ secrets.APP_SECRETS_SECRET_ARN }}
+        run: |
+          if [ -z "${APP_SECRETS_SECRET_ARN:-}" ]; then
+            echo "APP_SECRETS_SECRET_ARN is missing. Add it to GitHub Secrets before deploying."
+            exit 1
+          fi
+
+          secret_json=$(aws secretsmanager get-secret-value \
+            --secret-id "$APP_SECRETS_SECRET_ARN" \
+            --region "${{ env.AWS_REGION }}" \
+            --query SecretString \
+            --output text)
+          echo "secret_json_b64=$(printf '%s' "$secret_json" | base64 -w0)" >> "$GITHUB_OUTPUT"
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build, Tag & Push Docker image
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+            -t $ECR_REGISTRY/$ECR_REPOSITORY:beta .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:beta
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Scan image for vulnerabilities (Trivy - warn only)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.build-image.outputs.image }}
+          severity: 'HIGH,CRITICAL'
+          exit-code: 0
+
+      - name: Deploy to Lightsail via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          APP_SECRETS_B64: ${{ steps.app-secrets.outputs.secret_json_b64 }}
+          DOMAIN_NAME: ${{ secrets.DOMAIN_NAME }}
+          LETSENCRYPT_EMAIL: ${{ secrets.LETSENCRYPT_EMAIL }}
+        with:
+          host: ${{ secrets.LIGHTSAIL_HOST }}
+          username: ec2-user
+          key: ${{ secrets.LIGHTSAIL_SSH_KEY }}
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_REGION,APP_SECRETS_B64,DOMAIN_NAME,LETSENCRYPT_EMAIL
+          script: |
+            set -euo pipefail
+
+            echo "Logging into AWS ECR..."
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin ${{ steps.login-ecr.outputs.registry }}
+
+            echo "Writing temporary runtime secrets file..."
+            mkdir -p /tmp/cicd-admin
+            rm -rf /tmp/cicd-admin/app-secrets.json
+            printf '%s' "$APP_SECRETS_B64" | base64 -d > /tmp/cicd-admin/app-secrets.json
+            chmod 600 /tmp/cicd-admin/app-secrets.json
+
+            echo "Ensuring shared proxy network exists..."
+            docker network inspect web >/dev/null 2>&1 || docker network create web
+
+            echo "Ensuring nginx-proxy + acme-companion are running..."
+            docker volume create certs >/dev/null
+            docker volume create vhost >/dev/null
+            docker volume create html >/dev/null
+            docker volume create acme >/dev/null
+
+            if [ -z "$(docker ps -aq -f name=^nginx-proxy$)" ]; then
+              docker run -d \
+                --name nginx-proxy \
+                --network web \
+                -p 80:80 \
+                -p 443:443 \
+                -v certs:/etc/nginx/certs \
+                -v vhost:/etc/nginx/vhost.d \
+                -v html:/usr/share/nginx/html \
+                -v /var/run/docker.sock:/tmp/docker.sock:ro \
+                --restart unless-stopped \
+                nginxproxy/nginx-proxy
+            fi
+
+            if [ -z "$(docker ps -aq -f name=^nginx-proxy-acme$)" ]; then
+              docker run -d \
+                --name nginx-proxy-acme \
+                --network web \
+                -v certs:/etc/nginx/certs \
+                -v vhost:/etc/nginx/vhost.d \
+                -v html:/usr/share/nginx/html \
+                -v acme:/etc/acme.sh \
+                -v /var/run/docker.sock:/var/run/docker.sock:ro \
+                -e NGINX_PROXY_CONTAINER=nginx-proxy \
+                -e DEFAULT_EMAIL=$LETSENCRYPT_EMAIL \
+                --restart unless-stopped \
+                nginxproxy/acme-companion
+            fi
+
+            echo "Pulling new image: ${{ steps.build-image.outputs.image }}..."
+            docker pull ${{ steps.build-image.outputs.image }}
+            
+            echo "Stopping old app container..."
+            docker stop ${{ env.CONTAINER_NAME }} || true
+            docker rm ${{ env.CONTAINER_NAME }} || true
+            
+            echo "Starting new app container on the proxy network..."
+            docker run -d \
+              --name ${{ env.CONTAINER_NAME }} \
+              --network web \
+              -e APP_SECRETS_FILE=/run/secrets/app-secrets.json \
+              -e VIRTUAL_HOST=beta.$DOMAIN_NAME \
+              -e VIRTUAL_PORT=3000 \
+              -e LETSENCRYPT_HOST=beta.$DOMAIN_NAME \
+              -e LETSENCRYPT_EMAIL=$LETSENCRYPT_EMAIL \
+              -v /tmp/cicd-admin/app-secrets.json:/run/secrets/app-secrets.json:ro \
+              --restart unless-stopped \
+              ${{ steps.build-image.outputs.image }}
+
+            rm -f /tmp/cicd-admin/app-secrets.json
+            
+            echo "Deployment successful! nginx-proxy will auto-issue/renew the cert for $DOMAIN_NAME."
