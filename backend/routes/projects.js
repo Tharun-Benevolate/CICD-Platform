@@ -154,6 +154,42 @@ router.post("/projects", auth.requireRole(...auth.ADMIN_ROLES), async (req, res)
   } catch (err) { res.status(500).json({ ok: false, error: err.message }); }
 });
 
+// POST /api/projects/:id/provision-slack — Manually provision/re-sync Private Slack Channel for a project
+router.post("/projects/:id/provision-slack", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+  try {
+    const { id } = req.params;
+    const project = await store.getProject(id);
+    if (!project) return res.status(404).json({ ok: false, error: "Project not found" });
+
+    const username = auth.getLoggedInUser(req) || "admin";
+    const slackService = require("../services/slackService");
+
+    const slackResult = await slackService.autoProvisionProjectSlackChannel({
+      projectId: id,
+      projectName: project.name,
+      creator: username
+    });
+
+    const accessStore = require("../stores/accessStore");
+    const accessList = await accessStore.getProjectAccess(id);
+    const assignedUsernames = accessList.map(a => a.username);
+
+    await slackService.syncProjectMembersToSlackChannel({
+      projectId: id,
+      assignedMembers: assignedUsernames
+    });
+
+    const updated = await store.getProject(id);
+    res.json({
+      ok: true,
+      project: updated,
+      slackChannel: updated.slackChannelName || updated.slack_channel_name || (slackResult ? slackResult.channelName : null)
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // POST /api/projects/switch — Switch active project
 router.post("/projects/switch", async (req, res) => {
   try {
