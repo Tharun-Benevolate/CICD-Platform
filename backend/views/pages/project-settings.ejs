@@ -1,0 +1,117 @@
+<div class="project-settings-container" style="max-width:1080px;margin:0 auto;padding-bottom:60px;">
+  <% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
+    <div style="padding:60px;text-align:center;color:var(--color-text-tertiary);">
+      <i data-lucide="shield-alert" style="width:48px;height:48px;margin-bottom:12px;opacity:0.5;color:var(--color-danger);"></i>
+      <h3 style="font-size:18px;color:var(--color-text-primary);margin-bottom:8px;font-weight:700;">Access Restricted</h3>
+      <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">DevOps or Administrator privileges are required to manage project settings.</p>
+    </div>
+  <% } else { %>
+    <!-- Header Banner -->
+    <div class="page-header" style="margin-bottom:24px;">
+      <div>
+        <div class="page-header-meta">
+          <span class="page-service-badge blue">
+            <i data-lucide="folder-cog" style="width:12px;height:12px;"></i> PROJECT CONFIGURATION
+          </span>
+          <span class="page-header-context">
+            <i data-lucide="chevron-right" style="width:12px;height:12px;"></i>
+            <span id="proj-settings-name-tag" style="font-weight:600;color:var(--color-text-secondary);"></span>
+          </span>
+        </div>
+        <h1 class="page-title">Project Settings</h1>
+        <p class="page-subtitle">Configure Slack private channel provisioning, automated member invites, and CI/CD buildspec overrides for active project <strong id="proj-settings-title-name" style="color:var(--color-text-primary);">--</strong>.</p>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      
+      <!-- ── CARD 1: Project Identity Summary ── -->
+      <div class="settings-card" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:24px;">
+        <h2 style="font-size:16px;font-weight:700;margin-bottom:14px;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;">
+          <i data-lucide="layers" style="width:18px;height:18px;color:var(--color-primary);"></i>
+          Active Project Identity
+        </h2>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(200px, 1fr));gap:16px;">
+          <div style="padding:12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:10px;">
+            <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;">Project Name</div>
+            <div id="ps-proj-name" style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-top:4px;">--</div>
+          </div>
+          <div style="padding:12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:10px;">
+            <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;">AWS Region</div>
+            <div id="ps-proj-region" style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-top:4px;">--</div>
+          </div>
+          <div style="padding:12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:10px;">
+            <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;">Source Provider</div>
+            <div id="ps-proj-provider" style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-top:4px;">--</div>
+          </div>
+          <div style="padding:12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:10px;">
+            <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;">Connected Repository</div>
+            <div id="ps-proj-repo" style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-top:4px;">--</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CARD 2: Slack Private Channel Integration ── -->
+      <div class="settings-card" id="project-slack-card" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:24px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:40px;height:40px;border-radius:12px;background:rgba(74,21,75,0.15);border:1px solid rgba(74,21,75,0.3);display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <i data-lucide="hash" style="width:20px;height:20px;color:#e01e5a;"></i>
+            </div>
+            <div>
+              <h2 style="font-size:16px;font-weight:700;margin:0;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;">
+                Slack Private Channel Integration
+                <span id="proj-slack-badge" style="font-size:11px;padding:2px 8px;border-radius:6px;font-weight:700;background:var(--color-bg);color:var(--color-text-tertiary);">Checking...</span>
+              </h2>
+              <p style="font-size:13px;color:var(--color-text-secondary);margin-top:2px;">
+                Automated private Slack notifications and member auto-invitations for active project <strong id="proj-slack-name-label" style="color:var(--color-text-primary);">--</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Channel Details Row -->
+        <div id="proj-slack-details" style="padding:14px 18px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:12px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <i data-lucide="message-square" style="width:16px;height:16px;color:#6366f1;"></i>
+            <span style="font-size:13px;color:var(--color-text-secondary);font-weight:500;">Slack Channel Status:</span>
+            <code id="proj-slack-channel-name" style="font-size:13px;font-weight:700;color:var(--color-text-primary);background:var(--color-surface);padding:4px 10px;border-radius:6px;border:1px solid var(--color-border);">--</code>
+          </div>
+          <div id="proj-slack-action-container">
+            <button onclick="provisionProjectSlackChannel()" id="btn-provision-slack" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;font-size:13px;padding:8px 16px;">
+              <i data-lucide="plus-circle" style="width:15px;height:15px;"></i> Provision Slack Channel
+            </button>
+          </div>
+        </div>
+
+        <div id="proj-slack-status-msg" style="display:none;" class="msg-box"></div>
+      </div>
+
+      <!-- ── CARD 3: CI/CD Buildspec Override ── -->
+      <div class="settings-card" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;padding:24px;">
+        <h2 style="font-size:16px;font-weight:700;margin-bottom:6px;color:var(--color-text-primary);">CI/CD Buildspec Override</h2>
+        <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;">
+          Define the build instructions (<code>buildspec.yml</code>) for the currently active project. 
+          If your repository already contains a <code>buildspec.yml</code> file at its root, that file will take precedence during the build.
+        </p>
+
+        <div style="margin-bottom:14px;">
+          <label style="display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;margin-bottom:8px;color:var(--color-text-primary);">
+            <span>Buildspec YAML</span>
+            <button type="button" onclick="loadGenericBuildspec()" style="background:transparent;border:none;color:var(--color-primary);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;">
+              <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Reset to Default
+            </button>
+          </label>
+          <textarea id="project-buildspec-input" style="width:100%;height:300px;font-family:monospace;font-size:13px;padding:12px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);resize:vertical;"></textarea>
+        </div>
+
+        <div id="buildspec-msg" style="display:none;" class="msg-box"></div>
+
+        <button onclick="saveProjectBuildspec()" id="buildspec-save-btn" class="btn-primary" style="display:inline-flex;align-items:center;gap:6px;">
+          <i data-lucide="save" style="width:16px;height:16px;"></i> Save Buildspec
+        </button>
+      </div>
+
+    </div>
+  <% } %>
+</div>

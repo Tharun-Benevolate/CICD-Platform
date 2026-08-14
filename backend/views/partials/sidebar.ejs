@@ -121,7 +121,7 @@
       <span class="nav-label">Team Access</span>
     </a>
     <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
-    <a href="/settings/project" class="nav-item <%= activePage === 'settings' && (typeof tab !== 'undefined' && tab === 'project') ? 'active' : '' %>" title="Project Settings">
+    <a href="/project-settings" class="nav-item <%= activePage === 'project-settings' ? 'active' : '' %>" title="Project Settings">
       <i data-lucide="folder-cog" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Project Settings</span>
     </a>

@@ -150,11 +150,15 @@ router.get("/setup/:step", requireAuth, checkPageRole(), (req, res) => renderPag
 router.get("/admin/users", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "admin-users"));
 const credManager = require("../services/credentialManager");
 
+router.get("/project-settings", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "project-settings"));
+router.get("/settings/project", requireAuth, (req, res) => res.redirect("/project-settings"));
+
 router.get("/settings", requireAuth, async (req, res) => {
   const creds = await credManager.listCredentials(req.pageUser.username).catch(() => []);
   renderPage(res, req, "settings", { credentials: creds });
 });
 router.get("/settings/:tab", requireAuth, async (req, res) => {
+  if (req.params.tab === "project") return res.redirect("/project-settings");
   const creds = await credManager.listCredentials(req.pageUser.username).catch(() => []);
   renderPage(res, req, "settings", { credentials: creds });
 });

@@ -196,6 +196,8 @@
       section = 'Source';
     } else if (['approvals', 'build-history', 'scaling', 'beta-environment', 'release'].indexOf(page) !== -1) {
       section = 'Deployment';
+    } else if (['team-access', 'setup-wizard', 'project-settings'].indexOf(page) !== -1) {
+      section = 'Project';
     } else if (['monitoring', 'audit-logs', 'pipelines'].indexOf(page) !== -1) {
       section = 'Overview';
     } else {
@@ -216,6 +218,7 @@
     else if (page === 'pipelines') pageTitle = 'Pipelines';
     else if (page === 'dashboard') pageTitle = 'Dashboard';
     else if (page === 'settings') pageTitle = 'Settings';
+    else if (page === 'project-settings') pageTitle = 'Project Settings';
     else if (page === 'setup-wizard') pageTitle = 'Setup Wizard';
     else if (page === 'team-access') pageTitle = 'Team Access';
 
