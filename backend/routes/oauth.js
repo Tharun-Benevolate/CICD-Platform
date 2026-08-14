@@ -161,8 +161,8 @@ router.get("/oauth/slack", auth.requireAuth, (req, res) => {
   const username = auth.getLoggedInUser(req) || req.user?.username || "admin";
   const params = new URLSearchParams({
     client_id:    clientId,
-    scope:        "chat:write,channels:read,channels:manage,groups:write,users:read,users:read.email",
-    user_scope:   "channels:write,groups:write,channels:read,chat:write",
+    scope:        "chat:write,channels:read,channels:manage,channels:history,groups:read,groups:write,groups:history,users:read,users:read.email",
+    user_scope:   "channels:read,channels:history,groups:read,groups:history,chat:write,channels:write,groups:write",
     redirect_uri: redirectUri,
     state:        username,
   });
