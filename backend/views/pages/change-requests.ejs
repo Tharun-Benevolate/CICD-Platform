@@ -235,14 +235,19 @@
       </div>
       <div id="legacy-cr-list" style="display:flex;flex-direction:column;gap:10px;"></div>
     </div>
-    <div style="padding:14px 16px;border-top:1px solid var(--color-border);background:var(--color-bg);border-radius:0 0 16px 16px;display:flex;align-items:center;justify-content:space-between;">
-      <div style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--color-text-secondary);">
-        <i data-lucide="hash" style="width:14px;height:14px;color:#e01e5a;flex-shrink:0;"></i>
-        <span>Post in Slack using <code>@change</code> or <code>@changerequest</code> to log requests.</span>
+    <div style="padding:14px 16px;border-top:1px solid var(--color-border);background:var(--color-bg);border-radius:0 0 16px 16px;display:flex;flex-direction:column;gap:10px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <button onclick="openCreateCrModal()" class="btn-primary" style="flex:1;display:inline-flex;align-items:center;justify-content:center;gap:6px;">
+          <i data-lucide="plus" style="width:14px;height:14px;"></i> New Change Request
+        </button>
+        <button onclick="syncSlackChangeRequests()" id="btn-sync-slack-cr" class="btn-secondary" style="font-size:12px;padding:8px 14px;display:inline-flex;align-items:center;gap:4px;">
+          <i data-lucide="refresh-cw" style="width:13px;height:13px;"></i> Sync Slack
+        </button>
       </div>
-      <button onclick="syncSlackChangeRequests()" id="btn-sync-slack-cr" class="btn-secondary" style="font-size:11px;padding:5px 12px;display:inline-flex;align-items:center;gap:4px;">
-        <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Sync Slack
-      </button>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--color-text-secondary);">
+        <i data-lucide="hash" style="width:13px;height:13px;color:#e01e5a;flex-shrink:0;"></i>
+        <span>Post in Slack using <code>@change</code>, <code>@channel change</code>, <code>!change</code>, or <code>change:</code> to auto-log requests.</span>
+      </div>
     </div>
   </div>
   <!-- Backdrop for drawer -->

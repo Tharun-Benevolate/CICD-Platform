@@ -28,12 +28,16 @@ if (document.readyState === 'loading') {
 }
 
 
+var _crPollTimer = null;
+
 // ── Initialise ────────────────────────────────────────────────────────────────
 async function initChangeRequestsPage() {
   _crDiffResult = null;
   _crSelectedRepoId = null;
   _crBranches = [];
   _crRepos = [];
+
+  if (_crPollTimer) clearInterval(_crPollTimer);
 
   // Reset UI
   showDiffState('empty');
@@ -51,6 +55,16 @@ async function initChangeRequestsPage() {
 
   fetchCrRepos();
   fetchLegacyCRs();
+
+  // 2-Second Automatic Background Polling for Slack & Change Requests Sync
+  _crPollTimer = setInterval(function() {
+    var panel = document.getElementById('panel-legacy-cr');
+    if (panel && panel.style.display !== 'none') {
+      api.post('/api/change-requests/sync-slack', {}).then(function() {
+        fetchLegacyCRs(true);
+      }).catch(function() {});
+    }
+  }, 2000);
 }
 
 // ── Repository Dropdown ────────────────────────────────────────────────────────
@@ -783,11 +797,10 @@ function closeLegacyCrModal() {
   document.getElementById('panel-legacy-backdrop').style.display = 'none';
 }
 
-async function fetchLegacyCRs() {
+async function fetchLegacyCRs(isSilent) {
   var loadingEl = document.getElementById('legacy-cr-loading');
   var listEl = document.getElementById('legacy-cr-list');
-  if (loadingEl) loadingEl.style.display = 'block';
-  if (listEl) listEl.innerHTML = '';
+  if (!isSilent && loadingEl) loadingEl.style.display = 'block';
 
   try {
     var url = _crActiveProject ? '/api/change-requests?projectId=' + _crActiveProject.id : '/api/change-requests';
@@ -799,6 +812,8 @@ async function fetchLegacyCRs() {
       if (listEl) listEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--color-text-tertiary);font-size:13px;">No change requests yet</div>';
       return;
     }
+
+    if (listEl) listEl.innerHTML = '';
 
     crs.forEach(function(cr) {
       var statusColor = { open: '#6366f1', merged: '#10b981', closed: '#6b7280', draft: '#f59e0b', approved: '#10b981', rejected: '#ef4444', conflict: '#ef4444' };
@@ -821,7 +836,7 @@ async function fetchLegacyCRs() {
     });
   } catch(e) {
     if (loadingEl) loadingEl.style.display = 'none';
-    if (listEl) listEl.innerHTML = '<div style="color:var(--color-danger);font-size:13px;padding:12px;">Failed to load change requests</div>';
+    if (!isSilent && listEl) listEl.innerHTML = '<div style="color:var(--color-danger);font-size:13px;padding:12px;">Failed to load change requests</div>';
   }
 }
 
