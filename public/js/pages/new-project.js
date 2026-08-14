@@ -290,7 +290,8 @@ async function fetchExistingRepos(isTriggered) {
     if (select) {
       select.innerHTML = '';
       _existingRepos.forEach(function(r) {
-        var rName = typeof r === 'string' ? r : (r.full_name || r.name || r.repositoryName);
+        var rName = typeof r === 'string' ? r : (r.repo_name || r.repoName || r.repositoryName || r.full_name || r.name || '');
+        if (!rName) return;
         var opt = document.createElement('option');
         opt.value = rName;
         opt.textContent = rName;

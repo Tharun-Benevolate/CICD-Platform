@@ -47,15 +47,49 @@ router.get("/repos", async (req, res) => {
     const isPrivileged = !username || userType === "super_admin" || userType === "devops" || userType === "admin";
 
     if (isPrivileged) {
-      // Return all connected repos from database first
-      const dbRepos = await repoStore.listRepositories().catch(() => []);
-      if (dbRepos && dbRepos.length > 0) {
-        return res.json({ ok: true, repos: dbRepos, repositories: dbRepos });
-      }
-      // Fallback to AWS CodeCommit repos if database is empty
       const r = region || process.env.AWS_REGION || "us-east-1";
-      const awsRepos = await aws.listRepos(r).catch(() => []);
-      return res.json({ ok: true, repos: awsRepos, repositories: awsRepos });
+      const [dbRepos, awsRepos] = await Promise.all([
+        repoStore.listRepositories().catch(() => []),
+        aws.listRepos(r).catch(() => [])
+      ]);
+
+      const combined = [];
+      const seenNames = new Set();
+
+      // Add AWS CodeCommit repos first
+      if (Array.isArray(awsRepos)) {
+        awsRepos.forEach(ar => {
+          const name = typeof ar === "string" ? ar : (ar.repositoryName || ar.name || "");
+          if (name && !seenNames.has(name.toLowerCase())) {
+            seenNames.add(name.toLowerCase());
+            combined.push({
+              id: ar.repositoryId || name,
+              repo_name: name,
+              repoName: name,
+              repositoryName: name,
+              provider: "codecommit"
+            });
+          }
+        });
+      }
+
+      // Add database repos
+      if (Array.isArray(dbRepos)) {
+        dbRepos.forEach(dr => {
+          const name = dr.repo_name || dr.repoName || dr.repositoryName || dr.name || "";
+          if (name && !seenNames.has(name.toLowerCase())) {
+            seenNames.add(name.toLowerCase());
+            combined.push({
+              ...dr,
+              repo_name: name,
+              repoName: name,
+              repositoryName: name
+            });
+          }
+        });
+      }
+
+      return res.json({ ok: true, repos: combined, repositories: combined });
     }
 
     // Developers/Sales: only show repos from their assigned projects
