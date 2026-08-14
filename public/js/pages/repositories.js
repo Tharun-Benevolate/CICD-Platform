@@ -17,6 +17,34 @@ var _connTab = 'existing'; // 'existing' | 'create'
 var _connProvider = 'codecommit'; // 'codecommit' | 'github'
 var _availableRepos = [];
 
+window.initRepositoriesPage = initRepositoriesPage;
+window.toggleRepoDiagnostics = toggleRepoDiagnostics;
+window.toggleRepoMenu = toggleRepoMenu;
+window.closeAllRepoMenus = closeAllRepoMenus;
+window.toggleTempCliSection = toggleTempCliSection;
+window.openConnectModal = openConnectModal;
+window.closeConnectModal = closeConnectModal;
+window.promptDisconnectRepo = promptDisconnectRepo;
+window.promptDeleteRepo = promptDeleteRepo;
+window.selectDuration = selectDuration;
+window.handleGenerateTempCreds = handleGenerateTempCreds;
+window.handleRevokeTempCreds = handleRevokeTempCreds;
+window.toggleProviderDropdown = toggleProviderDropdown;
+window.selectConnProvider = selectConnProvider;
+window.fetchAvailableRepos = fetchAvailableRepos;
+window.handleConnectExistingSubmit = handleConnectExistingSubmit;
+window.handleCreateNewSubmit = handleCreateNewSubmit;
+window.switchConnTab = switchConnTab;
+
+function checkOAuthConnectCallback() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get('oauth') === 'success') {
+      history.replaceState(null, '', window.location.pathname);
+    }
+  } catch (e) {}
+}
+
 function initRepositoriesPage() {
   loadActiveProjectAndRepos();
   checkOAuthConnectCallback();
