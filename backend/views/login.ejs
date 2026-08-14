@@ -37,7 +37,18 @@
 
     <!-- STAGE 2: Auth Form -->
     <div class="auth-stage" id="auth-stage">
-      <div class="auth-panel">
+      <div class="auth-panel" style="position:relative;">
+        <!-- SSO / Auth Loading Overlay -->
+        <div id="auth-loading-overlay" style="display:none;position:absolute;inset:0;background:rgba(15,23,42,0.92);backdrop-filter:blur(10px);border-radius:20px;z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+          <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+            <div class="animate-spin" style="width:48px;height:48px;border:3px solid rgba(99,102,241,0.2);border-top-color:#6366f1;border-radius:50%;"></div>
+            <img src="/favicon.png" width="24" height="24" style="position:absolute;object-fit:contain;">
+          </div>
+          <div id="auth-loading-text" style="font-size:13px;font-weight:700;color:#e2e8f0;letter-spacing:0.02em;">
+            Authenticating SSO Workspace...
+          </div>
+        </div>
+
         <button class="auth-back" onclick="handleAuthBack()" title="Back">
           <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
         </button>
@@ -244,16 +255,29 @@
           client_id: GOOGLE_CLIENT_ID,
           callback: async function(response) {
             if (response && response.credential) {
-              var res = await auth.loginWithGoogle(response.credential);
-              if (res.ok) {
-                if (res.require2FA) {
-                  pending2FA = { tempToken: res.tempToken, username: res.username };
-                  document.getElementById('login-form-section').style.display = 'none';
-                  document.getElementById('twofa-section').style.display = 'block';
-                  if (window.lucide) lucide.createIcons();
+              var overlay = document.getElementById('auth-loading-overlay');
+              if (overlay) overlay.style.display = 'flex';
+              try {
+                var res = await auth.loginWithGoogle(response.credential);
+                if (res.ok) {
+                  if (res.require2FA) {
+                    if (overlay) overlay.style.display = 'none';
+                    pending2FA = { tempToken: res.tempToken, username: res.username };
+                    document.getElementById('login-form-section').style.display = 'none';
+                    document.getElementById('twofa-section').style.display = 'block';
+                    if (window.lucide) lucide.createIcons();
+                  } else {
+                    var txt = document.getElementById('auth-loading-text');
+                    if (txt) txt.textContent = 'Workspace Verified. Redirecting...';
+                    window.location.href = res.isProfileCompleted === false ? '/settings' : '/';
+                  }
                 } else {
-                  window.location.href = res.isProfileCompleted === false ? '/settings' : '/';
+                  if (overlay) overlay.style.display = 'none';
+                  showError('login-error', res.error || 'Google Sign-In failed');
                 }
+              } catch (err) {
+                if (overlay) overlay.style.display = 'none';
+                showError('login-error', 'Authentication error occurred');
               }
             }
           }
