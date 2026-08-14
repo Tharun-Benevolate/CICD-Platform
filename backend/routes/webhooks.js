@@ -49,4 +49,34 @@ router.post("/deploy", async (req, res) => {
   }
 });
 
+// POST /api/webhooks/slack — Receives incoming Slack events & @change mentions
+router.post("/slack", async (req, res) => {
+  try {
+    const { type, challenge, event } = req.body || {};
+
+    // 1. Slack OAuth URL Verification Challenge
+    if (type === "url_verification" && challenge) {
+      return res.json({ challenge });
+    }
+
+    // 2. Incoming Message Event
+    if (type === "event_callback" && event) {
+      const { text, user, channel } = event;
+      if (text && /@change(request)?\b/i.test(text)) {
+        const slackService = require("../services/slackService");
+        await slackService.ingestSlackMessageAsChangeRequest({
+          slackChannelId: channel,
+          slackUserId: user,
+          text
+        });
+      }
+    }
+
+    res.json({ ok: true });
+  } catch (err) {
+    console.error("Slack Webhook Error:", err.message);
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 module.exports = router;

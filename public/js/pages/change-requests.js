@@ -803,11 +803,14 @@ async function fetchLegacyCRs() {
     crs.forEach(function(cr) {
       var statusColor = { open: '#6366f1', merged: '#10b981', closed: '#6b7280', draft: '#f59e0b', approved: '#10b981', rejected: '#ef4444', conflict: '#ef4444' };
       var sc = statusColor[cr.status] || '#6366f1';
+      var isSlack = (cr.title && cr.title.includes('[Slack]')) || (cr.author && cr.author.startsWith('slack'));
+      var slackBadge = isSlack ? '<span style="padding:2px 6px;border-radius:4px;font-size:10px;font-weight:700;background:rgba(74,21,75,0.15);color:#e01e5a;margin-right:6px;">Slack</span>' : '';
+
       var div = document.createElement('div');
       div.style.cssText = 'padding:12px 14px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-bg);';
       div.innerHTML =
         '<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:6px;">' +
-          '<span style="font-size:13px;font-weight:700;color:var(--color-text-primary);line-height:1.3;">' + (cr.title || 'Untitled') + '</span>' +
+          '<span style="font-size:13px;font-weight:700;color:var(--color-text-primary);line-height:1.3;">' + slackBadge + (cr.title || 'Untitled') + '</span>' +
           '<span style="padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;background:' + sc + '1a;color:' + sc + ';text-transform:uppercase;flex-shrink:0;">' + (cr.status || 'open') + '</span>' +
         '</div>' +
         '<div style="font-size:11px;color:var(--color-text-tertiary);">By <b>' + (cr.author || 'unknown') + '</b>' +
@@ -821,6 +824,34 @@ async function fetchLegacyCRs() {
     if (listEl) listEl.innerHTML = '<div style="color:var(--color-danger);font-size:13px;padding:12px;">Failed to load change requests</div>';
   }
 }
+
+async function syncSlackChangeRequests() {
+  var btn = document.getElementById('btn-sync-slack-cr');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:12px;height:12px;"></i> Syncing...';
+  }
+  try {
+    var res = await api.post('/api/change-requests/sync-slack', {});
+    if (res.ok) {
+      var count = res.count || 0;
+      showToast('✔ Synced Slack channel! ' + count + ' @change request(s) updated.', 'success');
+      fetchLegacyCRs();
+    } else {
+      showToast(res.error || 'Failed to sync Slack messages.', 'error');
+    }
+  } catch (err) {
+    showToast(err.message || 'Server error', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i data-lucide="refresh-cw" style="width:12px;height:12px;"></i> Sync Slack';
+    }
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+window.syncSlackChangeRequests = syncSlackChangeRequests;
 
 // ── Create CR Modal (for legacy panel) ────────────────────────────────────────
 function openCreateCrModal() {

@@ -473,6 +473,120 @@ async function syncUserToAllProjectSlackChannels(username) {
   }
 }
 
+/**
+ * Ingest a Slack message tagged with @change or @changerequest as a Change Request
+ */
+async function ingestSlackMessageAsChangeRequest({ slackChannelId, slackUserId, username, text }) {
+  if (!text || !/@change(request)?\b/i.test(text)) return null;
+
+  try {
+    // 1. Resolve project by slack_channel_id
+    let projectId = null;
+    let projectName = null;
+    const [projRows] = await pool.query(
+      "SELECT id, name FROM projects WHERE slack_channel_id = ? OR slack_channel_name LIKE ?",
+      [slackChannelId, `%${slackChannelId}%`]
+    );
+    if (projRows.length > 0) {
+      projectId = projRows[0].id;
+      projectName = projRows[0].name;
+    } else {
+      const [allProjs] = await pool.query("SELECT id, name FROM projects ORDER BY created_at ASC LIMIT 1");
+      if (allProjs.length > 0) {
+        projectId = allProjs[0].id;
+        projectName = allProjs[0].name;
+      }
+    }
+
+    if (!projectId) return null;
+
+    // 2. Resolve repositoryId for project
+    const repoStore = require("../stores/repositoryStore");
+    const repos = await repoStore.listRepositories(projectId).catch(() => []);
+    const repositoryId = repos.length > 0 ? repos[0].id : projectId;
+
+    // 3. Clean title & description from message
+    const cleanText = text.replace(/<@[A-Z0-9]+>/g, "").replace(/@change(request)?\b/gi, "").trim();
+    if (!cleanText) return null;
+
+    const firstLine = cleanText.split("\n")[0].trim();
+    const title = firstLine.length > 60 ? firstLine.slice(0, 57) + "..." : (firstLine || "Slack Change Request");
+    const description = cleanText;
+
+    const authorName = username || (slackUserId ? `slack-${slackUserId}` : "slack-user");
+
+    // 4. Prevent duplicate ingestion of same message text within recent requests
+    const crStore = require("../stores/changeRequestStore");
+    const existing = await crStore.listChangeRequests({ repositoryId, limit: 10 });
+    const duplicate = existing.find(c => c.title === `[Slack] ${title}` || c.description.includes(description));
+    if (duplicate) return duplicate;
+
+    // 5. Create Change Request
+    const cr = await crStore.createChangeRequest({
+      repositoryId,
+      branchId: null,
+      title: `[Slack] ${title}`,
+      description: `Submitted via Slack (@${authorName}):\n\n${description}`,
+      author: authorName,
+      baseBranch: "main",
+      headBranch: `slack/cr-${Date.now().toString(36)}`,
+      isQuickEdit: false
+    });
+
+    // Auto update status to open
+    await crStore.updateChangeRequest(cr.id, { status: "open" });
+
+    console.log(`✔ Ingested Slack @change request into CR #${cr.id}: "${title}"`);
+    return cr;
+  } catch (err) {
+    console.error("Error ingesting Slack message as Change Request:", err.message);
+    return null;
+  }
+}
+
+/**
+ * Fetch recent messages from project Slack channels and backfill any @change tags
+ */
+async function syncSlackChannelMessages() {
+  const token = await getAnySlackToken();
+  if (!token) return { ok: false, error: "No Slack token available" };
+
+  try {
+    const [projects] = await pool.query(
+      "SELECT id, name, slack_channel_id FROM projects WHERE slack_channel_id IS NOT NULL AND slack_channel_id != ''"
+    );
+
+    let ingestedCount = 0;
+
+    for (const proj of projects) {
+      const channelId = proj.slack_channel_id;
+      const historyRes = await fetch(`https://slack.com/api/conversations.history?channel=${channelId}&limit=30`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const historyData = await historyRes.json();
+
+      if (historyData.ok && Array.isArray(historyData.messages)) {
+        for (const msg of historyData.messages) {
+          if (msg.text && /@change(request)?\b/i.test(msg.text)) {
+            const ingested = await ingestSlackMessageAsChangeRequest({
+              slackChannelId: channelId,
+              slackUserId: msg.user,
+              username: msg.username || msg.user,
+              text: msg.text
+            });
+            if (ingested) ingestedCount++;
+          }
+        }
+      }
+    }
+
+    return { ok: true, count: ingestedCount };
+  } catch (err) {
+    console.error("Error syncing Slack channel messages:", err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
 // ── Event Specific Notification Helpers ─────────────────────────────
 
 async function notifyProjectAssignment({ projectName, creator, assignedMembers = [] }) {
@@ -590,6 +704,8 @@ module.exports = {
   autoProvisionProjectSlackChannel,
   syncProjectMembersToSlackChannel,
   syncUserToAllProjectSlackChannels,
+  ingestSlackMessageAsChangeRequest,
+  syncSlackChannelMessages,
   notifyProjectAssignment,
   notifyCodePush,
   notifyChangeRequestSubmitted,
