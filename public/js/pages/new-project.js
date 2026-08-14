@@ -253,7 +253,7 @@ async function fetchExistingRepos(isTriggered) {
   try {
     var url = _selectedProvider === 'github' ?
       ('/api/github/list-repos' + (_selectedOrg ? ('?org=' + encodeURIComponent(_selectedOrg)) : '')) :
-      ('/api/repos?region=' + _selectedRegion);
+      ('/api/repos?region=' + _selectedRegion + '&provider=' + _selectedProvider);
 
     var res = await api.get(url);
 
@@ -290,6 +290,8 @@ async function fetchExistingRepos(isTriggered) {
     if (select) {
       select.innerHTML = '';
       _existingRepos.forEach(function(r) {
+        if (_selectedProvider === 'codecommit' && r.provider && r.provider.toLowerCase() === 'github') return;
+        if (_selectedProvider === 'github' && r.provider && r.provider.toLowerCase() === 'codecommit') return;
         var rName = typeof r === 'string' ? r : (r.repo_name || r.repoName || r.repositoryName || r.full_name || r.name || '');
         if (!rName) return;
         var opt = document.createElement('option');

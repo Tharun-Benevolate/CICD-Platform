@@ -48,16 +48,17 @@ router.get("/repos", async (req, res) => {
 
     if (isPrivileged) {
       const r = region || process.env.AWS_REGION || "us-east-1";
+      const reqProvider = (req.query.provider || "").toLowerCase();
       const [dbRepos, awsRepos] = await Promise.all([
         repoStore.listRepositories().catch(() => []),
-        aws.listRepos(r).catch(() => [])
+        reqProvider && reqProvider !== "codecommit" ? Promise.resolve([]) : aws.listRepos(r).catch(() => [])
       ]);
 
       const combined = [];
       const seenNames = new Set();
 
-      // Add AWS CodeCommit repos first
-      if (Array.isArray(awsRepos)) {
+      // Add AWS CodeCommit repos first if requesting codecommit or no provider specified
+      if (Array.isArray(awsRepos) && (!reqProvider || reqProvider === "codecommit")) {
         awsRepos.forEach(ar => {
           const name = typeof ar === "string" ? ar : (ar.repositoryName || ar.name || "");
           if (name && !seenNames.has(name.toLowerCase())) {
@@ -73,9 +74,11 @@ router.get("/repos", async (req, res) => {
         });
       }
 
-      // Add database repos
+      // Add database repos matching requested provider
       if (Array.isArray(dbRepos)) {
         dbRepos.forEach(dr => {
+          const drProvider = (dr.provider || "").toLowerCase();
+          if (reqProvider && drProvider && drProvider !== reqProvider) return;
           const name = dr.repo_name || dr.repoName || dr.repositoryName || dr.name || "";
           if (name && !seenNames.has(name.toLowerCase())) {
             seenNames.add(name.toLowerCase());
