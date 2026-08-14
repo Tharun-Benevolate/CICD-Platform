@@ -48,8 +48,9 @@ router.get("/change-requests", async (req, res) => {
 // POST /api/change-requests/sync-slack — Pull & ingest recent @change tagged messages from Slack
 router.post("/change-requests/sync-slack", async (req, res) => {
   try {
+    const username = req.user?.username || null;
     const slackService = require("../services/slackService");
-    const result = await slackService.syncSlackChannelMessages();
+    const result = await slackService.syncSlackChannelMessages(username);
     res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
