@@ -234,6 +234,7 @@ router.post("/codecommit/create-temp-credentials", auth.requireAuth, async (req,
 
     if (provider === "github") {
       credId = "gh-" + crypto.randomUUID();
+      const ephemeralToken = "ghtemp_" + crypto.randomBytes(16).toString("hex");
 
       const reposRouter = require("./repos");
       const { token: githubToken, source: tokenSource } = await reposRouter.resolveGithubTokenForRepo(req, repo);
@@ -243,11 +244,13 @@ router.post("/codecommit/create-temp-credentials", auth.requireAuth, async (req,
       }
 
       gitUsername = "x-access-token";
-      gitPassword = githubToken;
+      gitPassword = ephemeralToken;
 
       const cleanGhRepo = repoName.endsWith(".git") ? repoName : `${repoName}.git`;
       const ghPath = cleanGhRepo.includes("/") ? cleanGhRepo : `${repo.owner || "repo"}/${cleanGhRepo}`;
-      const cloneUrlWithToken = `https://x-access-token:${githubToken}@github.com/${ghPath}`;
+      const hostHeader = req.headers["host"] || "beta.devops.benevolaite.com";
+      const protocol = req.headers["x-forwarded-proto"] || "https";
+      const cloneUrlWithToken = `${protocol}://${gitUsername}:${ephemeralToken}@${hostHeader}/git/${ghPath}`;
       oneClickCmd = `git clone ${cloneUrlWithToken}`;
 
       const sessionObj = {
@@ -262,6 +265,7 @@ router.post("/codecommit/create-temp-credentials", auth.requireAuth, async (req,
         gitUsername,
         gitPassword,
         rawGithubToken: githubToken,
+        cloneUrl: cloneUrlWithToken,
         oneClickCmd,
         durationMinutes: duration,
         createdAt: new Date().toISOString(),
@@ -286,6 +290,7 @@ router.post("/codecommit/create-temp-credentials", auth.requireAuth, async (req,
           region: "github.com",
           gitUsername,
           gitPassword,
+          cloneUrl: cloneUrlWithToken,
           oneClickCmd,
           clientIp: userIp,
           durationMinutes: duration,
@@ -511,6 +516,80 @@ router.delete("/codecommit/temp-credentials/:id", auth.requireAuth, async (req, 
     res.json({ ok: true, message: "Temporary credential destroyed and access revoked." });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ALL /git/* — Ephemeral Git Smart HTTP Proxy for revocable temporary CLI credentials
+router.all("/git/*", async (req, res) => {
+  try {
+    let token = "";
+    const authHeader = req.headers["authorization"] || "";
+    if (authHeader.startsWith("Basic ")) {
+      const creds = Buffer.from(authHeader.split(" ")[1], "base64").toString("utf8");
+      token = creds.split(":")[1] || creds.split(":")[0];
+    } else if (req.query.token) {
+      token = req.query.token;
+    }
+
+    let activeCred = null;
+    if (token) {
+      for (const [id, cred] of activeTempCredentials.entries()) {
+        if (cred.gitPassword === token || cred.id === token) {
+          if (new Date(cred.expiresAt).getTime() > Date.now()) {
+            activeCred = cred;
+          }
+          break;
+        }
+      }
+    }
+
+    if (!activeCred) {
+      const { pool } = require("../config/db");
+      const [rows] = await pool.query(
+        `SELECT meta FROM repo_credentials WHERE label = 'Temp CLI Credential' AND expires_at > NOW()`
+      );
+      for (const row of rows) {
+        try {
+          const meta = JSON.parse(row.meta || "{}");
+          if (meta.gitPassword === token || meta.id === token) {
+            if (new Date(meta.expiresAt).getTime() > Date.now()) {
+              activeCred = meta;
+            }
+            break;
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (!activeCred || !activeCred.rawGithubToken) {
+      return res.status(401).send("401 Unauthorized: Temporary CLI credential has been revoked or expired.");
+    }
+
+    const fetch = require("node-fetch");
+    const subPath = req.url.replace(/^\/git/, "");
+    const targetUrl = `https://github.com${subPath}`;
+
+    const headers = { ...req.headers };
+    delete headers.host;
+    delete headers.authorization;
+    headers["authorization"] = `token ${activeCred.rawGithubToken}`;
+    headers["user-agent"] = headers["user-agent"] || "git/2.40.0";
+
+    const fetchOpts = {
+      method: req.method,
+      headers: headers
+    };
+
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      fetchOpts.body = req;
+    }
+
+    const response = await fetch(targetUrl, fetchOpts);
+    res.status(response.status);
+    response.headers.forEach((val, key) => res.setHeader(key, val));
+    response.body.pipe(res);
+  } catch (err) {
+    res.status(500).send("500 Internal Server Error: " + err.message);
   }
 });
 

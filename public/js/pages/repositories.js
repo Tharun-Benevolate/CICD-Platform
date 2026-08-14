@@ -688,6 +688,15 @@ async function handleRevokeTempCreds() {
 function resetTempCliView() {
   if (_tempTimer) clearInterval(_tempTimer);
   _tempCredential = null;
+  try { localStorage.removeItem('active_temp_cli_session'); } catch(e){}
+
+  var headerBtn = document.getElementById('btn-toggle-temp-cli');
+  if (headerBtn) {
+    headerBtn.innerHTML = '<i data-lucide="terminal" style="width:15px;height:15px;color:#6366f1;"></i> <span style="font-weight:700;">Temp CLI Credentials</span>';
+    headerBtn.style.borderColor = '#6366f1';
+    headerBtn.style.color = '#6366f1';
+    headerBtn.style.background = 'transparent';
+  }
 
   var btnRevoke = document.getElementById('btn-revoke-temp');
   if (btnRevoke) btnRevoke.disabled = false;
@@ -699,6 +708,9 @@ function resetTempCliView() {
   if (stepSelect) stepSelect.style.display = 'flex';
   if (stepGen) stepGen.style.display = 'none';
   if (stepDone) stepDone.style.display = 'none';
+
+  loadTempReposList();
+  if (window.lucide) lucide.createIcons();
 }
 
 function copyText(elementId) {
