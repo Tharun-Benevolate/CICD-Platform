@@ -32,12 +32,12 @@ app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "../public"), {
   index: false,
-  maxAge: 0,
+  maxAge: '1d',
   setHeaders: (res, filePath) => {
-    if (filePath.endsWith(".js") || filePath.endsWith(".css") || filePath.endsWith(".html")) {
-      res.setHeader("Cache-Control", "no-cache, must-revalidate");
-    } else {
+    if (filePath.endsWith(".js") || filePath.endsWith(".css")) {
       res.setHeader("Cache-Control", "public, max-age=86400");
+    } else if (filePath.endsWith(".png") || filePath.endsWith(".svg") || filePath.endsWith(".ico") || filePath.endsWith(".woff2")) {
+      res.setHeader("Cache-Control", "public, max-age=604800, immutable");
     }
   }
 }));

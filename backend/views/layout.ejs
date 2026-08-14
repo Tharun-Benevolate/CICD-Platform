@@ -92,7 +92,7 @@
       display:flex;align-items:center;padding:0 20px;gap:12px;
       z-index:var(--z-topbar);flex-shrink:0}
     .content-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:0;
-      background:var(--color-bg);position:relative}
+      background:var(--color-bg);position:relative;scrollbar-gutter:stable}
 
     /* ── Page Loading Overlay ── */
     #page-loading-overlay {
@@ -105,7 +105,7 @@
       justify-content: center;
       gap: 14px;
       z-index: 50;
-      transition: opacity 0.3s ease, visibility 0.3s ease;
+      transition: opacity 0.15s ease, visibility 0.15s ease;
     }
     #page-loading-overlay.hidden {
       opacity: 0;
@@ -129,17 +129,12 @@
     }
     @keyframes pl-spin { to { transform: rotate(360deg); } }
 
-    /* ── Content reveal: starts invisible, JS adds .revealed to animate in ── */
+    /* ── Content reveal: crisp instant render, subtle entrance ── */
     #page-content-inner {
-      opacity: 0;
-      transform: translateY(6px);
-      transition: opacity 0.38s ease, transform 0.38s ease;
+      opacity: 1;
+      transform: none;
       padding: 24px;
       min-height: 100%;
-    }
-    #page-content-inner.revealed {
-      opacity: 1;
-      transform: translateY(0);
     }
   </style>
 
@@ -200,21 +195,15 @@
         var inner   = document.getElementById('page-content-inner');
         if (!overlay || !inner) return;
         overlay.classList.add('hidden');
-        setTimeout(function () {
-          inner.classList.add('revealed');
-          if (window.lucide) lucide.createIcons();
-        }, 120); // stagger: overlay fades first, content follows
+        inner.classList.add('revealed');
+        if (window.lucide) lucide.createIcons();
       }
       window.__revealPage = revealPage;
 
-      if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(function () {
-          setTimeout(revealPage, 60);
-        });
+      if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        revealPage();
       } else {
-        window.addEventListener('load', function () {
-          setTimeout(revealPage, 80);
-        });
+        document.addEventListener('DOMContentLoaded', revealPage);
       }
     })();
 

@@ -50,9 +50,8 @@
       return;
     }
 
-    // Show loading overlay during transition
-    if (overlay) overlay.classList.remove('hidden');
-    if (innerContainer) innerContainer.classList.remove('revealed');
+    // Keep current content visible while fetching new page HTML for seamless transition
+    if (overlay) overlay.classList.add('hidden');
 
     try {
       var res = await fetch(url, {
