@@ -484,6 +484,7 @@ router.get("/repos/:id/diagnostics", async (req, res) => {
         provider: provider,
         scope: scope,
         createdBy: createdBy,
+        loggedInUser: loggedInUser,
         createdAt: createdAt,
         isPrivate: isPrivate,
         creatorOAuthConnected: creatorOAuthConnected,

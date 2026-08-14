@@ -221,7 +221,7 @@ async function toggleRepoDiagnostics(id, e) {
         '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
           '<span style="color:var(--color-text-tertiary);">Connected By:</span>' +
-          '<span style="font-weight:700;color:var(--color-text-primary);">@' + d.createdBy + '</span>' +
+          '<span style="font-weight:700;color:var(--color-text-primary);">' + ((d.createdBy === 'system' || !d.createdBy) ? '@system (Platform)' : '@' + d.createdBy) + '</span>' +
         '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
           '<span style="color:var(--color-text-tertiary);">Scope / Account:</span>' +
@@ -232,8 +232,10 @@ async function toggleRepoDiagnostics(id, e) {
           '<span style="font-weight:600;color:var(--color-text-primary);">' + (d.isPrivate ? 'Private Repository' : 'Public Repository') + '</span>' +
         '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
-          '<span style="color:var(--color-text-tertiary);">Creator OAuth:</span>' +
-          '<span style="font-weight:600;' + (d.creatorOAuthConnected ? 'color:#10b981;' : 'color:var(--color-warning);') + '">' + (d.creatorOAuthConnected ? 'Connected' : 'Disconnected') + '</span>' +
+          '<span style="color:var(--color-text-tertiary);">Your OAuth Status:</span>' +
+          '<span style="font-weight:700;' + ((d.currentUserOAuthConnected || d.creatorOAuthConnected) ? 'color:#10b981;' : 'color:var(--color-warning);') + '">' +
+            (d.currentUserOAuthConnected ? 'Connected (@' + (d.loggedInUser || 'user') + ')' : (d.creatorOAuthConnected ? 'Connected (@' + d.createdBy + ')' : 'Disconnected')) +
+          '</span>' +
         '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:center;">' +
           '<span style="color:var(--color-text-tertiary);">Effective Token:</span>' +
@@ -381,29 +383,40 @@ async function confirmDeleteRepo() {
 
 async function checkActiveTempCredentials() {
   try {
-    var res = await api.get('/api/codecommit/temp-credentials');
-    if (res && res.ok && res.credentials && res.credentials.length > 0) {
-      var active = res.credentials[0];
-      var expiresMs = new Date(active.expiresAt).getTime();
-      var nowMs = Date.now();
-      
-      if (expiresMs > nowMs) {
-        _tempCredential = active;
-        _tempTimeLeftSec = Math.max(0, Math.floor((expiresMs - nowMs) / 1000));
-        
-        var section = document.getElementById('temp-cli-section');
-        var stepSelect = document.getElementById('temp-step-select');
-        var stepGen = document.getElementById('temp-step-generating');
-        var stepDone = document.getElementById('temp-step-done');
-        
-        if (section) section.style.display = 'block';
-        if (stepSelect) stepSelect.style.display = 'none';
-        if (stepGen) stepGen.style.display = 'none';
-        if (stepDone) stepDone.style.display = 'flex';
+    // 1. Check local storage session
+    var saved = localStorage.getItem('active_temp_cli_session');
+    if (saved) {
+      try {
+        var parsed = JSON.parse(saved);
+        if (parsed && parsed.expiresAt && new Date(parsed.expiresAt).getTime() > Date.now()) {
+          _tempCredential = parsed;
+          _tempTimeLeftSec = Math.max(0, Math.floor((new Date(parsed.expiresAt).getTime() - Date.now()) / 1000));
+        } else {
+          localStorage.removeItem('active_temp_cli_session');
+        }
+      } catch (e) {}
+    }
 
-        displayTempCredential();
-      } else {
-        resetTempCliView();
+    // 2. Fallback to API check
+    if (!_tempCredential) {
+      var res = await api.get('/api/codecommit/temp-credentials');
+      if (res && res.ok && res.credentials && res.credentials.length > 0) {
+        var active = res.credentials[0];
+        var expiresMs = new Date(active.expiresAt).getTime();
+        if (expiresMs > Date.now()) {
+          _tempCredential = active;
+          _tempTimeLeftSec = Math.max(0, Math.floor((expiresMs - Date.now()) / 1000));
+          localStorage.setItem('active_temp_cli_session', JSON.stringify(active));
+        }
+      }
+    }
+
+    // Update header button badge if active session exists
+    if (_tempCredential && _tempTimeLeftSec > 0) {
+      var btn = document.getElementById('btn-toggle-temp-cli');
+      if (btn) {
+        btn.innerHTML = '<i data-lucide="terminal" style="width:15px;height:15px;color:#10b981;"></i> <span style="font-weight:700;color:#10b981;">Temp CLI Credentials (Active)</span>';
+        btn.style.borderColor = '#10b981';
       }
     }
   } catch (e) {}
@@ -419,17 +432,33 @@ function toggleTempCliSection() {
     section.style.display = 'none';
     if (btn) {
       btn.style.background = 'transparent';
-      btn.style.borderColor = '#6366f1';
-      btn.style.color = '#6366f1';
+      btn.style.borderColor = _tempCredential ? '#10b981' : '#6366f1';
+      btn.style.color = _tempCredential ? '#10b981' : '#6366f1';
     }
   } else {
     section.style.display = 'block';
     if (btn) {
       btn.style.background = 'rgba(99,102,241,0.1)';
-      btn.style.borderColor = '#6366f1';
-      btn.style.color = '#6366f1';
+      btn.style.borderColor = _tempCredential ? '#10b981' : '#6366f1';
     }
-    if (_tempCredential && _tempTimeLeftSec > 0) {
+
+    // Check if session exists in memory or local storage
+    if (!_tempCredential) {
+      var saved = localStorage.getItem('active_temp_cli_session');
+      if (saved) {
+        try {
+          var parsed = JSON.parse(saved);
+          if (parsed && parsed.expiresAt && new Date(parsed.expiresAt).getTime() > Date.now()) {
+            _tempCredential = parsed;
+          } else {
+            localStorage.removeItem('active_temp_cli_session');
+          }
+        } catch(e) {}
+      }
+    }
+
+    if (_tempCredential && _tempCredential.expiresAt && new Date(_tempCredential.expiresAt).getTime() > Date.now()) {
+      _tempTimeLeftSec = Math.max(0, Math.floor((new Date(_tempCredential.expiresAt).getTime() - Date.now()) / 1000));
       var stepSelect = document.getElementById('temp-step-select');
       var stepGen = document.getElementById('temp-step-generating');
       var stepDone = document.getElementById('temp-step-done');
@@ -549,6 +578,7 @@ async function handleGenerateTempCreds() {
 
     if (res.ok && res.credential) {
       _tempCredential = res.credential;
+      try { localStorage.setItem('active_temp_cli_session', JSON.stringify(res.credential)); } catch(e){}
       displayTempCredential();
       if (stepGen) stepGen.style.display = 'none';
       if (stepDone) stepDone.style.display = 'flex';
@@ -610,6 +640,7 @@ function updateTempCountdownDisplay() {
 
 async function handleRevokeTempCreds() {
   if (_tempTimer) clearInterval(_tempTimer);
+  try { localStorage.removeItem('active_temp_cli_session'); } catch(e){}
   var targetId = _tempCredential ? _tempCredential.id : null;
   _tempCredential = null;
   _tempTimeLeftSec = 0;
