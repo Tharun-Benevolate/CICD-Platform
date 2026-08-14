@@ -41,10 +41,22 @@
     <span>Loading team members...</span>
   </div>
 
+  <style>
+    .invisible-scroll {
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+    }
+    .invisible-scroll::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+  </style>
+
   <!-- Two Column Layout -->
-  <div id="team-main-layout" style="display:none;gap:20px;">
+  <div id="team-main-layout" style="display:none;gap:20px;align-items:flex-start;">
     <!-- Left: Project Members List -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;padding:20px;flex:2;">
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;padding:20px;flex:2;min-width:0;">
       <h3 id="team-members-title" style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 16px 0;">Project Members (0)</h3>
       <div id="team-members-list" style="display:flex;flex-direction:column;gap:2px;"></div>
       <div id="team-empty" style="display:none;padding:24px;text-align:center;color:var(--color-text-tertiary);font-size:13px;">
@@ -53,11 +65,11 @@
     </div>
 
     <!-- Right: Team Activity -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;padding:20px;flex:1;min-width:260px;">
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;padding:20px;flex:1;min-width:280px;display:flex;flex-direction:column;max-height:430px;">
       <h3 style="font-size:15px;font-weight:700;color:var(--color-text-primary);margin:0 0 16px 0;display:flex;align-items:center;gap:8px;">
         <i data-lucide="activity" style="width:16px;height:16px;color:#6366f1;"></i> Team Activity
       </h3>
-      <div id="team-activity-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div id="team-activity-list" class="invisible-scroll" style="display:flex;flex-direction:column;gap:8px;overflow-y:auto;max-height:360px;padding-right:2px;"></div>
       <div id="team-activity-empty" style="color:var(--color-text-tertiary);font-size:12px;text-align:center;line-height:1.6;padding:12px 0;">
         No recent activity recorded for members of this team.
       </div>

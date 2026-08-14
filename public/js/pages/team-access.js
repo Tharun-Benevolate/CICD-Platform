@@ -219,7 +219,7 @@ async function renderTeamActivity() {
     actEl.style.display = 'flex';
     actEl.innerHTML = '';
 
-    logs.slice(0, 8).forEach(function(log) {
+    logs.slice(0, 20).forEach(function(log) {
       var actText = log.action || 'Action';
       var userText = log.username || log.user || 'Team Member';
       var timeText = (window.TimeUtil && typeof TimeUtil.formatDateTime === 'function')

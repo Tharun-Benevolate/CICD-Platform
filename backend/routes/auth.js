@@ -15,7 +15,7 @@ router.post("/register", async (req, res) => {
     const allowedToSetRole = callerType === "super_admin" || callerType === "devops";
     const result = await auth.registerUser(username, password, allowedToSetRole ? userType : null, email);
     if (result.ok) {
-      auditStore.logAction(result.username, "User registered", "System", "Success");
+      auditStore.logAction(result.username, "User registered", "System", "Success", "User Management", req);
       res.json({ ok: true, username: result.username, userType: result.userType });
     } else {
       res.status(400).json(result);
@@ -41,7 +41,7 @@ router.post("/login", async (req, res) => {
       }
       res.cookie("auth_token", result.token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
       res.cookie("token", result.token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
-      auditStore.logAction(result.username, "User logged in", "System", "Success");
+      auditStore.logAction(result.username, "User logged in", "System", "Success", "Login", req);
       res.json({
         ok: true,
         username: result.username,
@@ -52,7 +52,7 @@ router.post("/login", async (req, res) => {
         totpEnabled: result.totpEnabled
       });
     } else {
-      auditStore.logAction(username, "Failed login attempt", "System", "Failed");
+      auditStore.logAction(username, "Failed login attempt", "System", "Failed", "Login", req);
       res.status(401).json(result);
     }
   } catch (err) {
@@ -75,7 +75,7 @@ router.post("/auth/google", async (req, res) => {
         });
       }
       res.cookie("auth_token", result.token, { httpOnly: true, maxAge: 24 * 60 * 60 * 1000 });
-      auditStore.logAction(result.username, "User logged in via Google SSO", "System", "Success");
+      auditStore.logAction(result.username, "User logged in via Google SSO", "System", "Success", "Login", req);
       res.json({
         ok: true,
         username: result.username,
@@ -86,7 +86,7 @@ router.post("/auth/google", async (req, res) => {
         totpEnabled: result.totpEnabled
       });
     } else {
-      auditStore.logAction("google-user", "Failed Google SSO login", "System", "Failed");
+      auditStore.logAction("google-user", "Failed Google SSO login", "System", "Failed", "Login", req);
       res.status(401).json(result);
     }
   } catch (err) {
@@ -326,7 +326,14 @@ router.get("/admin/users/:username/details", auth.requireRole(...auth.ADMIN_ROLE
   try {
     const user = await userStore.getUser(target);
     if (!user) return res.status(404).json({ ok: false, error: "User not found" });
-    const userLogs = await auditStore.getAuditLogs({ username: user.username, limit: 15 });
+    const clientIp = auditStore.extractClientIp(req);
+    const rawLogs = await auditStore.getAuditLogs({ username: user.username, limit: 15 });
+    const userLogs = rawLogs.map(log => {
+      if (!log.ipAddress || log.ipAddress === "127.0.0.1" || log.ipAddress === "::1") {
+        return { ...log, ipAddress: clientIp !== "127.0.0.1" ? clientIp : (log.ipAddress || "127.0.0.1") };
+      }
+      return log;
+    });
     
     res.json({
       ok: true,
