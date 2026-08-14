@@ -11,8 +11,6 @@ window.initBetaPage = async function() {
   const urlParams = new URLSearchParams(window.location.search);
   const projectId = urlParams.get('project');
 
-  const loader = document.getElementById('beta-page-loader');
-
   try {
     const res = await api.get('/api/projects');
     if (res.projects && res.projects.length > 0) {
@@ -35,8 +33,6 @@ window.initBetaPage = async function() {
       const content = document.getElementById('content');
       if (content) content.innerHTML = `<div style="padding:40px;text-align:center;color:var(--color-text-tertiary);">Failed to load project: ${escapeHTML(err.message)}</div>`;
     }
-  } finally {
-    if (loader) loader.style.display = 'none';
   }
 };
 

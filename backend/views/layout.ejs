@@ -94,22 +94,18 @@
     .content-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:0;
       background:var(--color-bg);position:relative;scrollbar-gutter:stable}
 
-    /* ── Page Loading Overlay (Translucent with Ready Page Behind) ── */
+    /* ── Page Loading Overlay (Solid Background — Hides page during async load) ── */
     #page-loading-overlay {
       position: absolute;
       inset: 0;
-      background: rgba(248, 250, 252, 0.75);
-      backdrop-filter: blur(2px);
+      background: var(--color-bg);
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       gap: 14px;
       z-index: 50;
-      transition: opacity 0.2s ease, visibility 0.2s ease;
-    }
-    [data-theme="dark"] #page-loading-overlay {
-      background: rgba(11, 15, 26, 0.75);
+      transition: opacity 0.15s ease, visibility 0.15s ease;
     }
     #page-loading-overlay.hidden {
       opacity: 0;

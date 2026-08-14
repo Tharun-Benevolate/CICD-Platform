@@ -88,10 +88,10 @@
         // 4. Update Topbar Breadcrumb
         updateBreadcrumb(data.activePage || data.page);
 
-        // 5. Load & Run Page JS
+        // 5. Load & Run Page JS behind the solid overlay
         if (data.pageJS) {
           var jsPath = '/js/pages/' + data.pageJS + '.js';
-          loadJS(jsPath, function() {
+          loadJS(jsPath, async function() {
             var fnName = 'init' + capitalize(data.pageJS) + 'Page';
             var aliases = {
               'team-access':      'initTeamPage',
@@ -110,21 +110,30 @@
             };
             var fn = window[fnName] || window[aliases[data.pageJS]];
             if (typeof fn === 'function') {
-              try { fn(); } catch (e) { console.warn('Page init notice:', e); }
+              try {
+                await fn();
+              } catch (e) {
+                console.warn('Page init notice:', e);
+              }
+            }
+            if (window.lucide) lucide.createIcons();
+            contentArea.scrollTop = 0;
+
+            // Reveal 100% ready page ONLY after JS initialization and async requests complete
+            if (typeof window.__revealPage === 'function') {
+              window.__revealPage();
+            } else {
+              if (overlay) overlay.classList.add('hidden');
             }
           });
-        }
-
-        // 6. Refresh Lucide Icons & Scroll content area to top
-        if (window.lucide) lucide.createIcons();
-        contentArea.scrollTop = 0;
-
-        // 7. Smoothly reveal content once loaded
-        if (typeof window.__revealPage === 'function') {
-          window.__revealPage();
         } else {
-          if (overlay) overlay.classList.add('hidden');
-          if (innerContainer) innerContainer.classList.add('revealed');
+          if (window.lucide) lucide.createIcons();
+          contentArea.scrollTop = 0;
+          if (typeof window.__revealPage === 'function') {
+            window.__revealPage();
+          } else {
+            if (overlay) overlay.classList.add('hidden');
+          }
         }
       } else {
         window.location.href = url;
