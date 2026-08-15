@@ -18,7 +18,7 @@ window.initBetaPage = async function() {
         _activeProject = res.projects.find(p => String(p.id) === String(projectId));
       }
       if (!_activeProject) {
-        _activeProject = res.projects[0];
+        _activeProject = res.projects.find(p => p.isActive) || res.projects[0];
       }
     }
 
