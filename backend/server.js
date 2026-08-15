@@ -24,6 +24,8 @@ const userStore   = require("./stores/userStore");
 const betaOrgStore= require("./stores/betaOrgStore");
 const releaseStore= require("./stores/releasePromotionStore");
 
+const { ipContextMiddleware } = require("./middleware/ipContext");
+
 const app  = express();
 const PORT = process.env.PORT || 3000;
 
@@ -31,6 +33,7 @@ const PORT = process.env.PORT || 3000;
 app.set("trust proxy", true);
 
 // ── Core middleware ───────────────────────────────────────────────────────
+app.use(ipContextMiddleware);
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "../public"), {

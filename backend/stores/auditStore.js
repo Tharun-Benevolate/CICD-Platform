@@ -1,5 +1,5 @@
-// Aurora MySQL-backed audit log (replaces the DynamoDB "cicd-audit-log" table).
 const { pool } = require("../config/db");
+const { getStoreReq } = require("../middleware/ipContext");
 
 async function ensureAuditTableExists() {
   // Table creation is handled by schema.sql against the Aurora cluster.
@@ -22,18 +22,20 @@ function inferCategory(action) {
 }
 
 function extractClientIp(reqOrIp) {
-  if (!reqOrIp) return "127.0.0.1";
+  let target = reqOrIp || getStoreReq();
+  if (!target) return "127.0.0.1";
   let raw = "";
-  if (typeof reqOrIp === "string") {
-    raw = reqOrIp;
-  } else if (typeof reqOrIp === "object") {
-    const headers = reqOrIp.headers || {};
-    raw = headers["x-forwarded-for"] || headers["x-real-ip"] || reqOrIp.ip || reqOrIp.socket?.remoteAddress || "";
+  if (typeof target === "string") {
+    raw = target;
+  } else if (typeof target === "object") {
+    const headers = target.headers || {};
+    raw = headers["cf-connecting-ip"] || headers["x-forwarded-for"] || headers["x-real-ip"] || target.ip || target.socket?.remoteAddress || "";
   }
   if (raw.includes(",")) {
-    raw = raw.split(",")[0];
+    const parts = raw.split(",").map(p => p.trim());
+    raw = parts.find(p => p && p !== "127.0.0.1" && !p.startsWith("10.") && !p.startsWith("172.16.") && !p.startsWith("192.168.")) || parts[0];
   }
-  raw = raw.trim();
+  raw = (raw || "").trim();
   if (raw.startsWith("::ffff:")) raw = raw.replace("::ffff:", "");
   if (raw === "::1" || raw === "127.0.0.1" || !raw) return "127.0.0.1";
   return raw;
@@ -57,6 +59,8 @@ async function logAction(user, action, projectName, result, category, reqOrIp) {
       if (typeof category === "object" && category !== null && (category.headers || category.ip || category.socket)) {
         reqObj = category;
         actualCategory = undefined;
+      } else {
+        reqObj = getStoreReq();
       }
     }
 

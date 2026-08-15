@@ -85,6 +85,25 @@
           </div>
         </div>
 
+        <div style="margin-bottom:16px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+            Timezone Preference
+          </label>
+          <select id="profile-timezone" onchange="handleTimezoneChange(event)" style="width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;">
+            <option value="Auto">Auto (Browser Default)</option>
+            <option value="CST">CST — US Central Time (UTC-6 / UTC-5)</option>
+            <option value="EST">EST — US Eastern Time (UTC-5 / UTC-4)</option>
+            <option value="PST">PST — US Pacific Time (UTC-8 / UTC-7)</option>
+            <option value="MST">MST — US Mountain Time (UTC-7 / UTC-6)</option>
+            <option value="IST">IST — India Standard Time (UTC+5:30)</option>
+            <option value="UTC">UTC — Coordinated Universal Time</option>
+            <option value="GMT">GMT / BST — London</option>
+          </select>
+          <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">
+            Controls how timestamps across Audit Logs, Change Requests, and Modals are formatted.
+          </div>
+        </div>
+
         <!-- Password Setup Fields (If Locked) -->
         <div id="locked-pwd-fields" style="<%= user && user.isProfileCompleted ? 'display:none;' : '' %>">
           <div style="margin-bottom:10px;">

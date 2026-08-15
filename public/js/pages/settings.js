@@ -48,10 +48,29 @@ function initSettingsPage() {
   // Load connections & notifications if needed
   checkOAuthConnections();
   loadNotificationSettings();
+
+  var tzSelect = document.getElementById('profile-timezone');
+  if (tzSelect) {
+    tzSelect.value = localStorage.getItem('user_timezone_pref') || 'Auto';
+  }
+}
+
+function handleTimezoneChange(e) {
+  var val = e.target.value;
+  if (window.TimeUtil && typeof TimeUtil.setTimezonePref === 'function') {
+    TimeUtil.setTimezonePref(val);
+  } else {
+    localStorage.setItem('user_timezone_pref', val);
+  }
+  var alertEl = document.getElementById('profile-alert-msg');
+  if (alertEl) {
+    showMsg(alertEl, '✔ Timezone preference updated to ' + val + '. All platform timestamps will now render in ' + val + '.', false);
+  }
 }
 
 window.initSettingsPage = initSettingsPage;
 window.switchSettingsTab = switchSettingsTab;
+window.handleTimezoneChange = handleTimezoneChange;
 window.checkPasswordStrength = checkPasswordStrength;
 window.updateSetupPwdStrength = updateSetupPwdStrength;
 window.updateChangePwdStrength = updateChangePwdStrength;

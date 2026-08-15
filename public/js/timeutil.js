@@ -1,16 +1,43 @@
 /**
  * timeutil.js — Client-side timezone utility
- * Detects the user's local timezone automatically via Intl API
- * and formats all timestamps in local time with a timezone label.
+ * Detects the user's local timezone automatically via Intl API or
+ * respects user's explicit timezone preference (CST, IST, EST, PST, UTC).
  */
 (function() {
-  // Detect the client's IANA timezone
-  var _tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-  var _tzAbbrev = '';
+  var _customTz = localStorage.getItem('user_timezone_pref') || 'Auto';
 
-  // Compute clean timezone abbreviation (e.g. "IST", "CST", "EST", "PST", "UTC")
+  var tzMap = {
+    'Asia/Kolkata': 'IST',
+    'Asia/Calcutta': 'IST',
+    'America/Chicago': 'CST',
+    'America/Indiana/Knox': 'CST',
+    'America/New_York': 'EST',
+    'America/Los_Angeles': 'PST',
+    'America/Denver': 'MST',
+    'Europe/London': 'GMT',
+    'UTC': 'UTC',
+    'CST': 'America/Chicago',
+    'EST': 'America/New_York',
+    'PST': 'America/Los_Angeles',
+    'MST': 'America/Denver',
+    'IST': 'Asia/Kolkata'
+  };
+
+  function getEffectiveTz() {
+    var pref = localStorage.getItem('user_timezone_pref') || _customTz || 'Auto';
+    if (pref && pref !== 'Auto') {
+      return tzMap[pref] || pref;
+    }
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  }
+
   function getCleanTzAbbrev(tz) {
-    var tzMap = {
+    var pref = localStorage.getItem('user_timezone_pref') || 'Auto';
+    if (pref && pref !== 'Auto' && ['CST', 'EST', 'PST', 'MST', 'IST', 'UTC', 'GMT'].indexOf(pref) !== -1) {
+      return pref;
+    }
+
+    var abbrevs = {
       'Asia/Kolkata': 'IST',
       'Asia/Calcutta': 'IST',
       'America/Chicago': 'CST',
@@ -21,7 +48,7 @@
       'Europe/London': 'GMT',
       'UTC': 'UTC'
     };
-    if (tzMap[tz]) return tzMap[tz];
+    if (abbrevs[tz]) return abbrevs[tz];
 
     try {
       var raw = new Intl.DateTimeFormat('en-US', {
@@ -43,41 +70,35 @@
     }
   }
 
-  var _tzAbbrev = getCleanTzAbbrev(_tz);
-
-  /**
-   * Format a timestamp (string or Date) as a full local datetime string
-   * e.g. "Aug 7, 2026, 2:43 PM IST"
-   */
   function formatDateTime(ts) {
     if (!ts) return '';
     try {
       var d = new Date(ts);
       if (isNaN(d.getTime())) return String(ts);
-      return d.toLocaleString(undefined, {
-        timeZone: _tz,
+      var effTz = getEffectiveTz();
+      var abbrev = getCleanTzAbbrev(effTz);
+      return d.toLocaleString('en-US', {
+        timeZone: effTz,
         year: 'numeric',
         month: 'short',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
         hour12: true
-      }) + ' ' + _tzAbbrev;
+      }) + ' ' + abbrev;
     } catch(e) {
       return String(ts);
     }
   }
 
-  /**
-   * Format a timestamp as date only e.g. "Aug 7, 2026"
-   */
   function formatDate(ts) {
     if (!ts) return '';
     try {
       var d = new Date(ts);
       if (isNaN(d.getTime())) return String(ts);
-      return d.toLocaleDateString(undefined, {
-        timeZone: _tz,
+      var effTz = getEffectiveTz();
+      return d.toLocaleDateString('en-US', {
+        timeZone: effTz,
         year: 'numeric',
         month: 'short',
         day: 'numeric'
@@ -87,29 +108,24 @@
     }
   }
 
-  /**
-   * Format a timestamp as time only e.g. "2:43 PM IST"
-   */
   function formatTime(ts) {
     if (!ts) return '';
     try {
       var d = new Date(ts);
       if (isNaN(d.getTime())) return '';
-      return d.toLocaleTimeString(undefined, {
-        timeZone: _tz,
+      var effTz = getEffectiveTz();
+      var abbrev = getCleanTzAbbrev(effTz);
+      return d.toLocaleTimeString('en-US', {
+        timeZone: effTz,
         hour: '2-digit',
         minute: '2-digit',
         hour12: true
-      }) + ' ' + _tzAbbrev;
+      }) + ' ' + abbrev;
     } catch(e) {
       return '';
     }
   }
 
-  /**
-   * Relative time: "2m ago", "3h ago", "2d ago" etc
-   * Falls back to formatDateTime for older timestamps
-   */
   function relTime(ts) {
     if (!ts) return '';
     try {
@@ -128,13 +144,17 @@
     }
   }
 
-  // Expose globally
+  function setTimezonePref(pref) {
+    localStorage.setItem('user_timezone_pref', pref || 'Auto');
+    _customTz = pref || 'Auto';
+  }
+
   window.TimeUtil = {
-    tz: _tz,
-    tzAbbrev: _tzAbbrev,
+    getEffectiveTz: getEffectiveTz,
     formatDateTime: formatDateTime,
     formatDate: formatDate,
     formatTime: formatTime,
-    relTime: relTime
+    relTime: relTime,
+    setTimezonePref: setTimezonePref
   };
 })();
