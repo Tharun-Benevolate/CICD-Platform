@@ -19,7 +19,7 @@ const { CloudWatchLogsClient, GetLogEventsCommand } = require("@aws-sdk/client-c
 const { STSClient, GetCallerIdentityCommand } = require("@aws-sdk/client-sts");
 const {
   IAMClient,
-  CreateServiceSpecificGitCredentialCommand,
+  CreateServiceSpecificCredentialCommand,
   ListServiceSpecificCredentialsCommand,
   DeleteServiceSpecificCredentialCommand
 } = require("@aws-sdk/client-iam");
@@ -1219,7 +1219,7 @@ async function createServiceSpecificGitCredential(region, userName) {
   const iam = new IAMClient(config);
 
   try {
-    const res = await iam.send(new CreateServiceSpecificGitCredentialCommand({
+    const res = await iam.send(new CreateServiceSpecificCredentialCommand({
       UserName: userName,
       ServiceName: "codecommit.amazonaws.com"
     }));
@@ -1242,7 +1242,7 @@ async function createServiceSpecificGitCredential(region, userName) {
           UserName: userName,
           ServiceSpecificCredentialId: sorted[0].ServiceSpecificCredentialId
         }));
-        const retryRes = await iam.send(new CreateServiceSpecificGitCredentialCommand({
+        const retryRes = await iam.send(new CreateServiceSpecificCredentialCommand({
           UserName: userName,
           ServiceName: "codecommit.amazonaws.com"
         }));
