@@ -17,6 +17,12 @@ const {
 
 const { CloudWatchLogsClient, GetLogEventsCommand } = require("@aws-sdk/client-cloudwatch-logs");
 const { STSClient, GetCallerIdentityCommand } = require("@aws-sdk/client-sts");
+const {
+  IAMClient,
+  CreateServiceSpecificGitCredentialCommand,
+  ListServiceSpecificCredentialsCommand,
+  DeleteServiceSpecificCredentialCommand
+} = require("@aws-sdk/client-iam");
 
 const {
   ECRClient, DescribeImagesCommand, CreateRepositoryCommand: CreateEcrRepoCommand
@@ -1202,7 +1208,59 @@ async function getAlbListenerArn(region, albDnsOrArn) {
   const l = (lisRes.Listeners || []).find(l => l.Port === 80) || lisRes.Listeners?.[0];
   return l?.ListenerArn || null;
 }
+async function createServiceSpecificGitCredential(region, userName) {
+  const config = { region: region || process.env.AWS_REGION || "us-east-1" };
+  if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    config.credentials = {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID.trim(),
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY.trim()
+    };
+  }
+  const iam = new IAMClient(config);
+
+  try {
+    const res = await iam.send(new CreateServiceSpecificGitCredentialCommand({
+      UserName: userName,
+      ServiceName: "codecommit.amazonaws.com"
+    }));
+    const cred = res.ServiceSpecificCredential;
+    return {
+      gitUsername: cred.ServiceUserName,
+      gitPassword: cred.ServicePassword,
+      credentialId: cred.ServiceSpecificCredentialId,
+      status: cred.Status
+    };
+  } catch (err) {
+    if (err.name === "LimitExceededException" || err.Code === "LimitExceeded") {
+      const list = await iam.send(new ListServiceSpecificCredentialsCommand({
+        UserName: userName,
+        ServiceName: "codecommit.amazonaws.com"
+      }));
+      const sorted = (list.ServiceSpecificCredentials || []).sort((a, b) => new Date(a.CreateDate) - new Date(b.CreateDate));
+      if (sorted.length > 0) {
+        await iam.send(new DeleteServiceSpecificCredentialCommand({
+          UserName: userName,
+          ServiceSpecificCredentialId: sorted[0].ServiceSpecificCredentialId
+        }));
+        const retryRes = await iam.send(new CreateServiceSpecificGitCredentialCommand({
+          UserName: userName,
+          ServiceName: "codecommit.amazonaws.com"
+        }));
+        const retryCred = retryRes.ServiceSpecificCredential;
+        return {
+          gitUsername: retryCred.ServiceUserName,
+          gitPassword: retryCred.ServicePassword,
+          credentialId: retryCred.ServiceSpecificCredentialId,
+          status: retryCred.Status
+        };
+      }
+    }
+    throw err;
+  }
+}
+
 module.exports = {
+  createServiceSpecificGitCredential,
   createBetaTargetGroup,
   getNextListenerRulePriority,
   ensureBetaRulePriorityBelowCatchAll,

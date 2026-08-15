@@ -29,7 +29,7 @@
 
   <!-- Repositories Grid (Pre-Hydrated Server-Side or Client Hydrated) -->
   <% if (typeof repos !== 'undefined' && repos && repos.length > 0) { %>
-    <div id="repos-grid" class="repos-grid" style="display:grid;">
+    <div id="repos-grid" class="repos-grid" style="display:grid;align-items:start;">
       <% repos.forEach(function(repo) { 
         var repoName = repo.repo_name || repo.repositoryName || repo.name;
         var provider = repo.provider || 'codecommit';
