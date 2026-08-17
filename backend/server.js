@@ -56,6 +56,7 @@ app.set("views", path.join(__dirname, "views"));
 app.use("/api", require("./routes/auth"));
 app.use("/api/webhooks", require("./routes/webhooks"));
 app.use("/api", require("./routes/oauth")); // GitHub + Slack OAuth callbacks (needs auth cookie from redirect)
+app.use("/", require("./routes/credentials")); // Ephemeral Git Smart HTTP Proxy for /git/* CLI clone/push
 
 // ── Public beta routing helpers (called by deployed apps at login) ────────
 // These are intentionally unauthenticated — the deployed golf app calls these
