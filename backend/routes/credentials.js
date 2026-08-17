@@ -235,7 +235,6 @@ router.post("/codecommit/create-temp-credentials", auth.requireAuth, async (req,
 
     if (provider === "github") {
       credId = "gh-" + crypto.randomUUID();
-      const ephemeralToken = "ghtemp_" + crypto.randomBytes(16).toString("hex");
 
       const reposRouter = require("./repos");
       const { token: githubToken, source: tokenSource } = await reposRouter.resolveGithubTokenForRepo(req, repo);
@@ -245,14 +244,13 @@ router.post("/codecommit/create-temp-credentials", auth.requireAuth, async (req,
       }
 
       gitUsername = "x-access-token";
-      gitPassword = ephemeralToken;
+      gitPassword = githubToken;
 
-      const cleanGhRepo = repoName.endsWith(".git") ? repoName : `${repoName}.git`;
-      const ghPath = cleanGhRepo.includes("/") ? cleanGhRepo : `${repo.owner || "repo"}/${cleanGhRepo}`;
-      const hostHeader = req.headers["host"] || "beta.devops.benevolaite.com";
-      const protocol = req.headers["x-forwarded-proto"] || "https";
-      const cloneUrlWithToken = `${protocol}://${gitUsername}:${ephemeralToken}@${hostHeader}/git/${ghPath}`;
-      oneClickCmd = `git clone ${cloneUrlWithToken}`;
+      const ghOwner = repo.owner || (repoName.includes("/") ? repoName.split("/")[0] : "Benevolate");
+      const pureRepo = repoName.includes("/") ? repoName.split("/")[1] : repoName;
+      const cleanGhRepo = pureRepo.endsWith(".git") ? pureRepo : `${pureRepo}.git`;
+      const directCloneUrl = `https://${gitUsername}:${githubToken}@github.com/${ghOwner}/${cleanGhRepo}`;
+      oneClickCmd = `git clone ${directCloneUrl}`;
 
       const sessionObj = {
         id: credId,
@@ -260,13 +258,13 @@ router.post("/codecommit/create-temp-credentials", auth.requireAuth, async (req,
         provider: "github",
         repositoryId,
         repoName,
-        repoOwner: repo.owner || ghPath.split("/")[0],
+        repoOwner: ghOwner,
         region: "github.com",
         clientIp: userIp,
         gitUsername,
         gitPassword,
         rawGithubToken: githubToken,
-        cloneUrl: cloneUrlWithToken,
+        cloneUrl: directCloneUrl,
         oneClickCmd,
         durationMinutes: duration,
         createdAt: new Date().toISOString(),
@@ -291,7 +289,7 @@ router.post("/codecommit/create-temp-credentials", auth.requireAuth, async (req,
           region: "github.com",
           gitUsername,
           gitPassword,
-          cloneUrl: cloneUrlWithToken,
+          cloneUrl: directCloneUrl,
           oneClickCmd,
           clientIp: userIp,
           durationMinutes: duration,
