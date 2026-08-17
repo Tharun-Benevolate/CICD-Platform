@@ -77,8 +77,8 @@ router.get("/repos", async (req, res) => {
       // Add database repos matching requested provider
       if (Array.isArray(dbRepos)) {
         dbRepos.forEach(dr => {
-          const drProvider = (dr.provider || "").toLowerCase();
-          if (reqProvider && drProvider && drProvider !== reqProvider) return;
+          const drProvider = (dr.provider || (dr.repo_name && dr.repo_name.includes('/') ? 'github' : 'codecommit')).toLowerCase();
+          if (reqProvider && drProvider !== reqProvider) return;
           const name = dr.repo_name || dr.repoName || dr.repositoryName || dr.name || "";
           if (name && !seenNames.has(name.toLowerCase())) {
             seenNames.add(name.toLowerCase());

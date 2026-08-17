@@ -167,7 +167,7 @@ async function listUserRepos(token, org = null) {
   if (org) {
     return await gh(`/orgs/${encodeURIComponent(org)}/repos?per_page=100&sort=updated`, { token });
   }
-  return await gh("/user/repos?per_page=100&sort=updated&affiliation=owner", { token });
+  return await gh("/user/repos?per_page=100&sort=updated&affiliation=owner,collaborator,organization_member", { token });
 }
 
 async function listUserOrgs(token) {

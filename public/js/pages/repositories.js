@@ -801,7 +801,7 @@ async function fetchAvailableRepos() {
   try {
     if (_connProvider === 'codecommit') {
       var region = _activeProject ? _activeProject.region : 'us-east-1';
-      var res = await api.get('/api/repos?region=' + region);
+      var res = await api.get('/api/repos?provider=codecommit&region=' + region);
       if (res && res.ok && res.repos) {
         selectEl.innerHTML = '';
         res.repos.forEach(function(r) {
