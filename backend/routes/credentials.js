@@ -584,6 +584,7 @@ router.all("/git/*", async (req, res) => {
     const headers = { ...req.headers };
     delete headers.host;
     delete headers.authorization;
+    delete headers["accept-encoding"];
 
     const tok = activeCred.rawGithubToken;
     const initialAuth = tok.startsWith("gho_")
@@ -595,7 +596,8 @@ router.all("/git/*", async (req, res) => {
 
     const fetchOpts = {
       method: req.method,
-      headers: headers
+      headers: headers,
+      redirect: "manual"
     };
 
     if (req.method !== "GET" && req.method !== "HEAD") {
@@ -603,6 +605,14 @@ router.all("/git/*", async (req, res) => {
     }
 
     let response = await fetch(targetUrl, fetchOpts);
+
+    // If GitHub returns 301/302 redirect, follow it manually while keeping Authorization header intact
+    if (response.status === 301 || response.status === 302 || response.status === 307 || response.status === 308) {
+      const redirectUrl = response.headers.get("location");
+      if (redirectUrl) {
+        response = await fetch(redirectUrl, fetchOpts);
+      }
+    }
 
     // Fallback retry if upstream GitHub rejects initial Auth format
     if (response.status === 401) {
@@ -614,8 +624,21 @@ router.all("/git/*", async (req, res) => {
       response = await fetch(targetUrl, {
         method: req.method,
         headers: headers,
+        redirect: "manual",
         body: (req.method !== "GET" && req.method !== "HEAD") ? req : undefined
       });
+
+      if (response.status === 301 || response.status === 302 || response.status === 307 || response.status === 308) {
+        const redirectUrl = response.headers.get("location");
+        if (redirectUrl) {
+          response = await fetch(redirectUrl, {
+            method: req.method,
+            headers: headers,
+            redirect: "manual",
+            body: (req.method !== "GET" && req.method !== "HEAD") ? req : undefined
+          });
+        }
+      }
     }
 
     res.status(response.status);
