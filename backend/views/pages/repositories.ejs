@@ -369,6 +369,28 @@
         </div>
       </div>
 
+      <!-- OWNER / WORKSPACE DROPDOWN (Shown when GitHub is selected) -->
+      <div id="modal-owner-workspace-container" style="display:none;margin-bottom:18px;position:relative;">
+        <label style="display:block;font-size:11px;font-weight:800;letter-spacing:0.6px;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:6px;">
+          OWNER / WORKSPACE
+        </label>
+        <div onclick="toggleModalOrgDropdown()" class="modal-provider-trigger">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span id="modal-org-selected-label" style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;color:var(--color-text-primary);">
+              <i data-lucide="user" style="width:15px;height:15px;color:#6366f1;"></i> Personal Account (Default)
+            </span>
+          </div>
+          <i data-lucide="chevron-down" id="modal-org-chevron" style="width:14px;height:14px;color:var(--color-text-tertiary);transition:transform 0.15s ease;"></i>
+        </div>
+
+        <div id="modal-org-dropdown-menu" class="modal-provider-dropdown" style="display:none;padding:6px;flex-direction:column;gap:2px;">
+          <div onclick="selectModalOrg('')" id="opt-modal-org-personal" class="modal-provider-option active" style="display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;">
+            <i data-lucide="user" style="width:15px;height:15px;color:#6366f1;"></i> Personal Account (Default)
+          </div>
+          <div id="modal-org-list-items" style="display:flex;flex-direction:column;gap:2px;"></div>
+        </div>
+      </div>
+
       <div id="conn-oauth-warning" style="display:none;padding:12px;background:rgba(245,158,11,0.1);border:1px solid var(--color-warning);border-radius:10px;margin-bottom:16px;font-size:12px;color:var(--color-text-primary);">
         GitHub OAuth connection required. Please authorize your GitHub account in <a href="/settings/integrations" style="color:#6366f1;font-weight:700;">Settings &gt; Integrations</a>.
       </div>

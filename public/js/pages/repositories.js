@@ -15,6 +15,8 @@ var _tempTimeLeftSec = 0;
 // Connect Modal state
 var _connTab = 'existing'; // 'existing' | 'create'
 var _connProvider = 'codecommit'; // 'codecommit' | 'github'
+var _connSelectedOrg = ''; // '' = personal account, or org login
+var _connGitHubOrgs = [];
 var _availableRepos = [];
 
 window.initRepositoriesPage = initRepositoriesPage;
@@ -305,6 +307,10 @@ function toggleTempCliSection() {
 function openConnectModal() {
   var modal = document.getElementById('modal-connect-repo');
   if (modal) modal.style.display = 'flex';
+  var orgContainer = document.getElementById('modal-owner-workspace-container');
+  if (orgContainer) orgContainer.style.display = _connProvider === 'github' ? 'block' : 'none';
+  if (_connProvider === 'github') fetchModalGitHubOrgs();
+  fetchAvailableRepos();
   if (window.lucide) lucide.createIcons();
 }
 
@@ -758,11 +764,67 @@ function switchConnTab(tab) {
   }
 }
 
-function toggleProviderDropdown() {
-  var dropdown = document.getElementById('modal-provider-dropdown');
-  if (dropdown) {
-    dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+function toggleModalOrgDropdown() {
+  var menu = document.getElementById('modal-org-dropdown-menu');
+  var chev = document.getElementById('modal-org-chevron');
+  var pMenu = document.getElementById('modal-provider-dropdown');
+  if (pMenu) pMenu.style.display = 'none';
+
+  if (menu) {
+    var isHidden = menu.style.display === 'none' || !menu.style.display;
+    menu.style.display = isHidden ? 'flex' : 'none';
+    if (chev) chev.style.transform = isHidden ? 'rotate(180deg)' : 'none';
   }
+}
+
+function selectModalOrg(orgLogin) {
+  _connSelectedOrg = orgLogin;
+  var label = document.getElementById('modal-org-selected-label');
+  if (label) {
+    label.innerHTML = orgLogin ?
+      '<i data-lucide="building-2" style="width:15px;height:15px;color:#6366f1;"></i> Organization: ' + orgLogin :
+      '<i data-lucide="user" style="width:15px;height:15px;color:#6366f1;"></i> Personal Account (Default)';
+  }
+
+  var optPersonal = document.getElementById('opt-modal-org-personal');
+  if (optPersonal) optPersonal.className = orgLogin === '' ? 'modal-provider-option active' : 'modal-provider-option';
+
+  _connGitHubOrgs.forEach(function(o) {
+    var opt = document.getElementById('opt-modal-org-' + o.login);
+    if (opt) opt.className = o.login === orgLogin ? 'modal-provider-option active' : 'modal-provider-option';
+  });
+
+  var menu = document.getElementById('modal-org-dropdown-menu');
+  var chev = document.getElementById('modal-org-chevron');
+  if (menu) menu.style.display = 'none';
+  if (chev) chev.style.transform = 'none';
+
+  if (window.lucide) lucide.createIcons();
+  fetchAvailableRepos();
+}
+
+async function fetchModalGitHubOrgs() {
+  try {
+    var res = await api.get('/api/github/orgs');
+    _connGitHubOrgs = (res && res.ok && res.orgs) ? res.orgs : [];
+  } catch (e) {
+    _connGitHubOrgs = [];
+  }
+
+  var listContainer = document.getElementById('modal-org-list-items');
+  if (listContainer) {
+    listContainer.innerHTML = '';
+    _connGitHubOrgs.forEach(function(o) {
+      var div = document.createElement('div');
+      div.id = 'opt-modal-org-' + o.login;
+      div.className = _connSelectedOrg === o.login ? 'modal-provider-option active' : 'modal-provider-option';
+      div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:8px;cursor:pointer;';
+      div.onclick = function() { selectModalOrg(o.login); };
+      div.innerHTML = '<i data-lucide="building-2" style="width:15px;height:15px;color:#6366f1;"></i> Organization: ' + o.login;
+      listContainer.appendChild(div);
+    });
+  }
+  if (window.lucide) lucide.createIcons();
 }
 
 function selectConnProvider(provider) {
@@ -784,6 +846,10 @@ function selectConnProvider(provider) {
     if (iconWrapper) iconWrapper.innerHTML = awsSvg;
   }
 
+  var orgContainer = document.getElementById('modal-owner-workspace-container');
+  if (orgContainer) orgContainer.style.display = provider === 'github' ? 'block' : 'none';
+
+  if (provider === 'github') fetchModalGitHubOrgs();
   fetchAvailableRepos();
 }
 
@@ -813,7 +879,8 @@ async function fetchAvailableRepos() {
         });
       }
     } else if (_connProvider === 'github') {
-      var res = await api.get('/api/github/list-repos');
+      var url = '/api/github/list-repos' + (_connSelectedOrg ? ('?org=' + encodeURIComponent(_connSelectedOrg)) : '');
+      var res = await api.get(url);
       if (res && res.ok && res.repos) {
         selectEl.innerHTML = '';
         res.repos.forEach(function(r) {
@@ -917,6 +984,7 @@ async function handleCreateNewSubmit() {
     } else if (_connProvider === 'github') {
       var res = await api.post('/api/github/create-repo', {
         repoName: repoName,
+        org: _connSelectedOrg || null,
         description: repoDesc
       });
 
@@ -955,6 +1023,8 @@ window.promptDeleteRepo = promptDeleteRepo;
 window.selectDuration = selectDuration;
 window.handleGenerateTempCreds = handleGenerateTempCreds;
 window.toggleProviderDropdown = toggleProviderDropdown;
+window.toggleModalOrgDropdown = toggleModalOrgDropdown;
+window.selectModalOrg = selectModalOrg;
 window.selectConnProvider = selectConnProvider;
 window.fetchAvailableRepos = fetchAvailableRepos;
 window.handleConnectExistingSubmit = handleConnectExistingSubmit;
