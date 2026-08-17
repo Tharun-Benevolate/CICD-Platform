@@ -562,6 +562,17 @@ router.all("/git/*", async (req, res) => {
       }
     }
 
+    // Self-healing fallback: if activeCred exists but rawGithubToken was omitted from DB payload
+    if (activeCred && !activeCred.rawGithubToken) {
+      try {
+        const reposRouter = require("./repos");
+        const resolved = await reposRouter.resolveGithubTokenForRepo(null, { repo_name: activeCred.repoName, owner: activeCred.repoOwner });
+        if (resolved && resolved.token) {
+          activeCred.rawGithubToken = resolved.token;
+        }
+      } catch (_) {}
+    }
+
     if (!activeCred || !activeCred.rawGithubToken) {
       return res.status(401).send("401 Unauthorized: Temporary CLI credential has been revoked or expired.");
     }
@@ -573,8 +584,13 @@ router.all("/git/*", async (req, res) => {
     const headers = { ...req.headers };
     delete headers.host;
     delete headers.authorization;
-    const ghAuth = Buffer.from(`x-access-token:${activeCred.rawGithubToken}`).toString("base64");
-    headers["authorization"] = `Basic ${ghAuth}`;
+
+    const tok = activeCred.rawGithubToken;
+    const initialAuth = tok.startsWith("gho_")
+      ? Buffer.from(`${tok}:x-oauth-basic`).toString("base64")
+      : Buffer.from(`x-access-token:${tok}`).toString("base64");
+
+    headers["authorization"] = `Basic ${initialAuth}`;
     headers["user-agent"] = headers["user-agent"] || "git/2.40.0";
 
     const fetchOpts = {
@@ -586,7 +602,22 @@ router.all("/git/*", async (req, res) => {
       fetchOpts.body = req;
     }
 
-    const response = await fetch(targetUrl, fetchOpts);
+    let response = await fetch(targetUrl, fetchOpts);
+
+    // Fallback retry if upstream GitHub rejects initial Auth format
+    if (response.status === 401) {
+      const altAuth = tok.startsWith("gho_")
+        ? Buffer.from(`x-access-token:${tok}`).toString("base64")
+        : Buffer.from(`${tok}:x-oauth-basic`).toString("base64");
+      
+      headers["authorization"] = `Basic ${altAuth}`;
+      response = await fetch(targetUrl, {
+        method: req.method,
+        headers: headers,
+        body: (req.method !== "GET" && req.method !== "HEAD") ? req : undefined
+      });
+    }
+
     res.status(response.status);
     response.headers.forEach((val, key) => res.setHeader(key, val));
     response.body.pipe(res);
