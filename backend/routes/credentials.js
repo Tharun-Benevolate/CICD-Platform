@@ -136,6 +136,7 @@ async function persistTempCredToDb(username, credObj) {
       region: credObj.region,
       gitUsername: credObj.gitUsername,
       gitPassword: credObj.gitPassword,
+      rawGithubToken: credObj.rawGithubToken || null,
       oneClickCmd: credObj.oneClickCmd,
       iamUsername: credObj.iamUsername || null,
       clientIp: credObj.clientIp,
@@ -551,7 +552,7 @@ router.all("/git/*", async (req, res) => {
       for (const row of rows) {
         try {
           const meta = JSON.parse(row.meta || "{}");
-          if (meta.gitPassword === token || meta.id === token) {
+          if (meta.gitPassword === token || meta.credId === token || meta.id === token) {
             if (new Date(meta.expiresAt).getTime() > Date.now()) {
               activeCred = meta;
             }
@@ -572,7 +573,8 @@ router.all("/git/*", async (req, res) => {
     const headers = { ...req.headers };
     delete headers.host;
     delete headers.authorization;
-    headers["authorization"] = `token ${activeCred.rawGithubToken}`;
+    const ghAuth = Buffer.from(`x-access-token:${activeCred.rawGithubToken}`).toString("base64");
+    headers["authorization"] = `Basic ${ghAuth}`;
     headers["user-agent"] = headers["user-agent"] || "git/2.40.0";
 
     const fetchOpts = {
