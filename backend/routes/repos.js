@@ -385,16 +385,18 @@ async function resolveGithubTokenForRepo(req, repo = null) {
   try {
     const { pool } = require("../config/db");
     const [allGhCreds] = await pool.query(
-      `SELECT username, encrypted_token, token_iv, token_tag FROM repo_credentials WHERE LOWER(provider) = 'github' ORDER BY created_at DESC`
+      `SELECT username, encrypted_token, token_iv, token_tag FROM repo_credentials 
+       WHERE LOWER(provider) = 'github' AND (label IS NULL OR label != 'Temp CLI Credential') AND (credential_type IS NULL OR credential_type != 'temp_cli')
+       ORDER BY created_at DESC`
     );
     for (const row of allGhCreds) {
       const tok = credManager.decrypt(row.encrypted_token, row.token_iv, row.token_tag);
-      if (tok && ghOwner && ghRepo) {
+      if (tok && !tok.startsWith("ghtemp_") && ghOwner && ghRepo) {
         const access = await gh.testRepoAccess(ghOwner, ghRepo, tok);
         if (access.ok) {
           return { token: tok, source: `Team Admin Token (@${row.username})`, username: row.username };
         }
-      } else if (tok && (!ghOwner || !ghRepo)) {
+      } else if (tok && !tok.startsWith("ghtemp_") && (!ghOwner || !ghRepo)) {
         return { token: tok, source: `Team Admin Token (@${row.username})`, username: row.username };
       }
     }

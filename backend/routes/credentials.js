@@ -149,7 +149,7 @@ async function persistTempCredToDb(username, credObj) {
 
     await pool.query(
       `INSERT INTO repo_credentials (id, username, provider, credential_type, encrypted_token, token_iv, token_tag, label, meta, expires_at)
-       VALUES (?, ?, ?, 'pat', ?, ?, ?, 'Temp CLI Credential', ?, ?)`,
+       VALUES (?, ?, ?, 'temp_cli', ?, ?, ?, 'Temp CLI Credential', ?, ?)`,
       [credObj.id, normUser, credObj.provider === 'github' ? 'github' : 'codecommit', encrypted, iv, tag, metaStr, new Date(credObj.expiresAt)]
     );
   } catch (e) {
@@ -585,59 +585,43 @@ router.all("/git/*", async (req, res) => {
     delete headers.host;
     delete headers.authorization;
     delete headers["accept-encoding"];
-
-    const tok = activeCred.rawGithubToken;
-    const initialAuth = tok.startsWith("gho_")
-      ? Buffer.from(`${tok}:x-oauth-basic`).toString("base64")
-      : Buffer.from(`x-access-token:${tok}`).toString("base64");
-
-    headers["authorization"] = `Basic ${initialAuth}`;
     headers["user-agent"] = headers["user-agent"] || "git/2.40.0";
 
-    const fetchOpts = {
-      method: req.method,
-      headers: headers,
-      redirect: "manual"
-    };
+    const tok = activeCred.rawGithubToken;
+    const authFormats = [
+      "Basic " + Buffer.from(`${tok}:x-oauth-basic`).toString("base64"),
+      "Basic " + Buffer.from(`x-access-token:${tok}`).toString("base64"),
+      "Basic " + Buffer.from(`${tok}:`).toString("base64"),
+      `Bearer ${tok}`
+    ];
 
-    if (req.method !== "GET" && req.method !== "HEAD") {
-      fetchOpts.body = req;
-    }
+    let response = null;
 
-    let response = await fetch(targetUrl, fetchOpts);
-
-    // If GitHub returns 301/302 redirect, follow it manually while keeping Authorization header intact
-    if (response.status === 301 || response.status === 302 || response.status === 307 || response.status === 308) {
-      const redirectUrl = response.headers.get("location");
-      if (redirectUrl) {
-        response = await fetch(redirectUrl, fetchOpts);
-      }
-    }
-
-    // Fallback retry if upstream GitHub rejects initial Auth format
-    if (response.status === 401) {
-      const altAuth = tok.startsWith("gho_")
-        ? Buffer.from(`x-access-token:${tok}`).toString("base64")
-        : Buffer.from(`${tok}:x-oauth-basic`).toString("base64");
-      
-      headers["authorization"] = `Basic ${altAuth}`;
-      response = await fetch(targetUrl, {
+    for (const authVal of authFormats) {
+      const currentHeaders = { ...headers, "authorization": authVal };
+      const fetchOpts = {
         method: req.method,
-        headers: headers,
-        redirect: "manual",
-        body: (req.method !== "GET" && req.method !== "HEAD") ? req : undefined
-      });
+        headers: currentHeaders,
+        redirect: "manual"
+      };
 
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        fetchOpts.body = req;
+      }
+
+      response = await fetch(targetUrl, fetchOpts);
+
+      // Handle HTTP redirects while preserving authorization header
       if (response.status === 301 || response.status === 302 || response.status === 307 || response.status === 308) {
         const redirectUrl = response.headers.get("location");
         if (redirectUrl) {
-          response = await fetch(redirectUrl, {
-            method: req.method,
-            headers: headers,
-            redirect: "manual",
-            body: (req.method !== "GET" && req.method !== "HEAD") ? req : undefined
-          });
+          response = await fetch(redirectUrl, fetchOpts);
         }
+      }
+
+      // If GitHub accepts the token format (non-401), stop testing formats!
+      if (response.status !== 401) {
+        break;
       }
     }
 
