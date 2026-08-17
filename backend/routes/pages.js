@@ -42,7 +42,12 @@ const BUILD_VERSION = Date.now();
 
 // ── Helper: render a page inside the layout shell (or JSON fragment for SPA router) ──
 function renderPage(res, req, pageName, extra = {}) {
-  const isXhr = req.headers["x-requested-with"] === "XMLHttpRequest";
+  // Prevent browser & proxy caches from serving SPA JSON fragments to full-page browser navigations!
+  res.setHeader("Vary", "X-Requested-With, Accept");
+
+  const isSecFetchDocument = req.headers["sec-fetch-dest"] === "document";
+  const acceptsHtml = req.headers["accept"] && req.headers["accept"].includes("text/html");
+  const isXhr = req.headers["x-requested-with"] === "XMLHttpRequest" && !isSecFetchDocument && !acceptsHtml;
 
   if (isXhr) {
     res.render(`pages/${pageName}`, {
