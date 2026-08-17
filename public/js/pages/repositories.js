@@ -764,6 +764,17 @@ function switchConnTab(tab) {
   }
 }
 
+function toggleProviderDropdown() {
+  var dropdown = document.getElementById('modal-provider-dropdown');
+  var oMenu = document.getElementById('modal-org-dropdown-menu');
+  if (oMenu) oMenu.style.display = 'none';
+
+  if (dropdown) {
+    var isHidden = dropdown.style.display === 'none' || !dropdown.style.display;
+    dropdown.style.display = isHidden ? 'flex' : 'none';
+  }
+}
+
 function toggleModalOrgDropdown() {
   var menu = document.getElementById('modal-org-dropdown-menu');
   var chev = document.getElementById('modal-org-chevron');
