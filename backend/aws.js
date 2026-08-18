@@ -56,6 +56,12 @@ const { SecretsManagerClient, CreateSecretCommand, PutSecretValueCommand, Descri
 
 function clients(region) {
   const config = { region };
+  if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    config.credentials = {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID.trim(),
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY.trim()
+    };
+  }
   return {
     pipeline:    new CodePipelineClient(config),
     codecommit:  new CodeCommitClient(config),
