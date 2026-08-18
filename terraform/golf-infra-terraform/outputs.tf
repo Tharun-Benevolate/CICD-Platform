@@ -49,3 +49,4 @@ output "cost_estimate_monthly" {
 # Needed by the platform for on-demand beta provisioning
 output "vpc_id" { value = var.vpc_id }
 output "alb_listener_arn" { value = var.alb_listener_arn }
+output "secret_arn" { value = var.secret_arn }

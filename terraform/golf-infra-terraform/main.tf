@@ -242,6 +242,12 @@ resource "aws_ecs_task_definition" "dev" {
         "awslogs-stream-prefix" = "dev"
       }
     }
+    secrets = var.secret_arn != "" ? [
+      for key in var.secret_keys : {
+        name      = key
+        valueFrom = "${var.secret_arn}:${key}::"
+      }
+    ] : []
   }])
 
   # CodePipeline's plain "ECS" deploy action registers a new task-def
@@ -280,6 +286,12 @@ resource "aws_ecs_task_definition" "uat" {
         "awslogs-stream-prefix" = "uat"
       }
     }
+    secrets = var.secret_arn != "" ? [
+      for key in var.secret_keys : {
+        name      = key
+        valueFrom = "${var.secret_arn}:${key}::"
+      }
+    ] : []
   }])
 
   # Same reasoning as the dev task definition above: prevent Terraform from
@@ -314,6 +326,12 @@ resource "aws_ecs_task_definition" "prod" {
         "awslogs-stream-prefix" = "prod"
       }
     }
+    secrets = var.secret_arn != "" ? [
+      for key in var.secret_keys : {
+        name      = key
+        valueFrom = "${var.secret_arn}:${key}::"
+      }
+    ] : []
   }])
 
   # CRITICAL: unlike dev/uat, prod's live task revision is entirely owned by

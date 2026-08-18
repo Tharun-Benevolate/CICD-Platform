@@ -128,6 +128,7 @@ app.use("/api", require("./routes/setup"));
 app.use("/api", require("./routes/pipeline"));
 app.use("/api", require("./routes/build"));
 app.use("/api", require("./routes/deploy"));
+app.use("/api/secrets", require("./routes/secrets"));
 
 // Source control
 app.use("/api", require("./routes/repos"));

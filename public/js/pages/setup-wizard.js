@@ -33,6 +33,7 @@ async function loadProjectsAndSetup() {
     updateSetupUI();
     checkFoundationStatus();
     checkActiveRun();
+    loadSecrets();
   } catch (e) {
     console.error('Failed to load projects for setup wizard:', e);
   }
@@ -393,6 +394,173 @@ async function executeDestroyProject() {
   }
   btn.disabled = false;
   btn.textContent = 'Completely Destroy Project';
+}
+
+// ─── SECRETS MANAGEMENT ─────────────────────────────────────────────
+
+var _secretKeys = [];
+
+async function loadSecrets() {
+  if (!_activeProject) return;
+  var container = document.getElementById('secrets-table-container');
+  if (!container) return;
+  
+  try {
+    container.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);"><i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> Loading secrets...</div>';
+    if (window.lucide) lucide.createIcons();
+    
+    var res = await api.get('/api/secrets/' + _activeProject.id);
+    if (res && res.ok) {
+      _secretKeys = res.keys || [];
+      renderSecretsTable();
+    }
+  } catch (e) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--color-danger);">Failed to load secrets.</div>';
+  }
+}
+
+function renderSecretsTable() {
+  var container = document.getElementById('secrets-table-container');
+  if (!container) return;
+
+  if (_secretKeys.length === 0) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--color-text-tertiary);padding:16px;border:1px dashed var(--color-border);border-radius:8px;text-align:center;">No secrets configured yet.</div>';
+    return;
+  }
+
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+             '<thead><tr style="border-bottom:1px solid var(--color-border);text-align:left;color:var(--color-text-tertiary);">' +
+             '<th style="padding:8px;font-weight:600;">Key (e.g. DB_HOST)</th>' +
+             '<th style="padding:8px;font-weight:600;">Value</th>' +
+             '<th style="padding:8px;width:40px;"></th>' +
+             '</tr></thead><tbody>';
+             
+  _secretKeys.forEach(function(key, index) {
+    html += '<tr style="border-bottom:1px solid var(--color-border);">' +
+            '<td style="padding:8px;"><input type="text" class="secret-key-input" value="' + key + '" readonly style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-secondary);color:var(--color-text-secondary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+            '<td style="padding:8px;"><input type="text" value="••••••••" readonly style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-secondary);color:var(--color-text-tertiary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+            '<td style="padding:8px;text-align:center;"><button type="button" onclick="handleDeleteSecret(\'' + key + '\')" style="color:var(--color-danger);background:transparent;border:none;cursor:pointer;padding:4px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button></td>' +
+            '</tr>';
+  });
+  
+  html += '</tbody></table>';
+  container.innerHTML = html;
+  if (window.lucide) lucide.createIcons();
+}
+
+function handleAddSecretRow() {
+  var container = document.getElementById('secrets-table-container');
+  if (!container) return;
+  
+  var isFirst = _secretKeys.length === 0;
+  var table = container.querySelector('table');
+  
+  if (isFirst) {
+    container.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+             '<thead><tr style="border-bottom:1px solid var(--color-border);text-align:left;color:var(--color-text-tertiary);">' +
+             '<th style="padding:8px;font-weight:600;">Key (e.g. DB_HOST)</th>' +
+             '<th style="padding:8px;font-weight:600;">Value</th>' +
+             '<th style="padding:8px;width:40px;"></th>' +
+             '</tr></thead><tbody></tbody></table>';
+    table = container.querySelector('table');
+  }
+
+  var tbody = table.querySelector('tbody');
+  var tr = document.createElement('tr');
+  tr.style.borderBottom = '1px solid var(--color-border)';
+  tr.innerHTML = 
+    '<td style="padding:8px;"><input type="text" class="new-secret-key" placeholder="DB_HOST" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+    '<td style="padding:8px;"><input type="password" class="new-secret-val" placeholder="Value (write-only)" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+    '<td style="padding:8px;text-align:center;"><button type="button" onclick="this.closest(\'tr\').remove(); if(document.querySelectorAll(\'.new-secret-key\').length===0 && _secretKeys.length===0) renderSecretsTable();" style="color:var(--color-danger);background:transparent;border:none;cursor:pointer;padding:4px;"><i data-lucide="x" style="width:14px;height:14px;"></i></button></td>';
+  
+  tbody.appendChild(tr);
+  if (window.lucide) lucide.createIcons();
+  
+  var keyInput = tr.querySelector('.new-secret-key');
+  if (keyInput) keyInput.focus();
+}
+
+async function handleSaveSecrets() {
+  if (!_activeProject) return;
+  var btn = document.getElementById('btn-save-secrets');
+  var msg = document.getElementById('secrets-save-msg');
+  
+  var newKeyInputs = document.querySelectorAll('.new-secret-key');
+  var newValInputs = document.querySelectorAll('.new-secret-val');
+  
+  var secretsObj = {};
+  var hasNew = false;
+  
+  for (var i = 0; i < newKeyInputs.length; i++) {
+    var key = newKeyInputs[i].value.trim();
+    var val = newValInputs[i].value;
+    if (key && val) {
+      secretsObj[key] = val;
+      hasNew = true;
+    }
+  }
+  
+  if (!hasNew) {
+    if (msg) {
+      msg.textContent = 'No new secrets to save.';
+      msg.style.color = 'var(--color-text-tertiary)';
+      msg.style.display = 'block';
+      setTimeout(function() { msg.style.display = 'none'; }, 3000);
+    }
+    return;
+  }
+  
+  try {
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> Saving...';
+    if (window.lucide) lucide.createIcons();
+    
+    var res = await api.post('/api/secrets/' + _activeProject.id, { secrets: secretsObj });
+    if (res && res.ok) {
+      _secretKeys = res.keys;
+      renderSecretsTable();
+      if (msg) {
+        msg.innerHTML = '<span style="color:var(--color-success);"><i data-lucide="check-circle-2" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;"></i> Secrets saved successfully. Please Re-apply Deployment Infra below to update running containers.</span>';
+        msg.style.display = 'block';
+        if (window.lucide) lucide.createIcons();
+        setTimeout(function() { msg.style.display = 'none'; }, 8000);
+      }
+    } else {
+      throw new Error(res.error || 'Failed to save secrets');
+    }
+  } catch (e) {
+    if (msg) {
+      msg.textContent = 'Error: ' + e.message;
+      msg.style.color = 'var(--color-danger)';
+      msg.style.display = 'block';
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save to AWS Secrets Manager';
+  }
+}
+
+async function handleDeleteSecret(key) {
+  if (!confirm('Are you sure you want to delete the secret key "' + key + '"? This will remove it from AWS Secrets Manager immediately.')) return;
+  
+  try {
+    var res = await api.delete('/api/secrets/' + _activeProject.id + '/' + key);
+    if (res && res.ok) {
+      _secretKeys = res.keys;
+      renderSecretsTable();
+      var msg = document.getElementById('secrets-save-msg');
+      if (msg) {
+        msg.innerHTML = '<span style="color:var(--color-warning);"><i data-lucide="info" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;"></i> Secret deleted. Please Re-apply Deployment Infra to update running containers.</span>';
+        msg.style.display = 'block';
+        if (window.lucide) lucide.createIcons();
+        setTimeout(function() { msg.style.display = 'none'; }, 8000);
+      }
+    } else {
+      alert('Failed to delete secret: ' + (res.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
 }
 
 // ── Custom Modal Confirmation Helpers ─────────────────────────────────────

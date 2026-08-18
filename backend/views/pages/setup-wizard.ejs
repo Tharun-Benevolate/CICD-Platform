@@ -151,10 +151,38 @@
       </div>
     </div>
 
-    <!-- SECTION 3: DANGER ZONE — DESTROY ENTIRE PROJECT -->
+    <!-- SECTION 3: SECRETS MANAGEMENT -->
+    <div class="setup-section-box">
+      <h2 style="font-size:17px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">
+        3. Environment Secrets Management
+      </h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:14px;">
+        Store sensitive configuration (e.g. <code>DB_HOST</code>, <code>DB_PASSWORD</code>) directly in AWS Secrets Manager. These are injected securely as environment variables to containers in Dev, UAT, Prod, and Beta.
+      </p>
+
+      <div style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:20px;">
+        <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:text-bottom;"></i> Values are write-only. Once saved, they are never exposed back to this interface. Re-apply Deployment Infra after saving to update running containers.
+      </div>
+
+      <div id="secrets-table-container" style="margin-bottom:16px;">
+        <!-- Filled by JS -->
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <button id="btn-add-secret-row" onclick="handleAddSecretRow()" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
+          <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
+        </button>
+        <button id="btn-save-secrets" onclick="handleSaveSecrets()" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;margin-left:auto;">
+          Save to AWS Secrets Manager
+        </button>
+      </div>
+      <div id="secrets-save-msg" style="margin-top:12px;font-size:12px;display:none;"></div>
+    </div>
+
+    <!-- SECTION 4: DANGER ZONE — DESTROY ENTIRE PROJECT -->
     <div class="setup-danger-box">
       <h2 style="font-size:17px;font-weight:700;color:var(--color-danger);margin-bottom:6px;">
-        3. Danger Zone: Destroy Entire Project
+        4. Danger Zone: Destroy Entire Project
       </h2>
       <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:20px;">
         Deletes all infrastructure and settings saved for this project. This action is permanent.

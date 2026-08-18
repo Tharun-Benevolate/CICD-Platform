@@ -9,6 +9,9 @@ const auditStore = require("../stores/auditStore");
 const { namesForProject } = require("../utils/projectNaming");
 const { requireProject } = require("./projects");
 
+const { resolveBuildspecForTerraform } = require("../buildspec");
+const { listProjectSecretKeys } = require("../aws");
+
 // ─── Fix: strip owner prefix from githubRepo if stored as "owner/repo" full path ───
 // Terraform uses github_owner + "/" + github_repo to form FullRepositoryName.
 // If githubRepo is already stored as "amruthkumartj/deploy-watch-new" (full path),
@@ -345,6 +348,12 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
 
     // Fetch Shared Foundation outputs dynamically for active AWS account
     const sfOutputs = (await tf.readFoundationOutputs(true)) || {};
+    
+    // Fetch secret keys if secretArn exists
+    let secretKeys = [];
+    if (project.secretArn) {
+      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", names.dnsHostPrefix || "");
+    }
 
     if (!sfOutputs.vpc_id) {
       return res.status(400).json({
@@ -382,7 +391,9 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
       alb_dns_name: sfOutputs.alb_dns_name,
       alb_zone_id: sfOutputs.alb_zone_id,
       alb_listener_arn: sfOutputs.alb_listener_arn,
-      manage_route53: true
+      manage_route53: true,
+      secret_arn: project.secretArn || "",
+      secret_keys: secretKeys
     };
 
     const runId = tf.startRun(tf.DEPLOYMENT_DIR, tfvars, { projectId: project.id, moduleLabel: "deployment" });
@@ -436,7 +447,9 @@ router.post("/terraform/deployment/destroy", auth.requireRole(...auth.ADMIN_ROLE
       alb_dns_name: sfOutputs.alb_dns_name || "shared-foundation-alb-737213570.us-east-1.elb.amazonaws.com",
       alb_zone_id: sfOutputs.alb_zone_id || "Z35SXDOTRQ7X7K",
       alb_listener_arn: sfOutputs.alb_listener_arn || "arn:aws:elasticloadbalancing:us-east-1:511974512004:listener/app/shared-foundation-alb/a36126009c7b192e/0eacc50cd4bf7e49",
-      manage_route53: true
+      manage_route53: true,
+      secret_arn: project.secretArn || "",
+      secret_keys: []
     };
 
     const runId = tf.startDestroy(tf.DEPLOYMENT_DIR, tfvars, { projectId: project.id, moduleLabel: "deployment-destroy" });
@@ -496,6 +509,11 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
     });
     const sfOutputs = (await tf.readFoundationOutputs()) || {};
 
+    let secretKeys = [];
+    if (project.secretArn) {
+      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", names.dnsHostPrefix || "");
+    }
+
     const tfvars = {
       aws_region:             project.region || "us-east-1",
       ecs_execution_role_arn: project.ecsExecutionRoleArn,
@@ -524,7 +542,9 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
       alb_dns_name:           sfOutputs.alb_dns_name || "shared-foundation-alb-737213570.us-east-1.elb.amazonaws.com",
       alb_zone_id:            sfOutputs.alb_zone_id || "Z35SXDOTRQ7X7K",
       alb_listener_arn:       sfOutputs.alb_listener_arn || "arn:aws:elasticloadbalancing:us-east-1:511974512004:listener/app/shared-foundation-alb/a36126009c7b192e/0eacc50cd4bf7e49",
-      manage_route53:         true
+      manage_route53:         true,
+      secret_arn:             project.secretArn || "",
+      secret_keys:            secretKeys
     };
     const runId = tf.startRun(tf.DEPLOYMENT_DIR, tfvars, { projectId: project.id, moduleLabel: "deployment" });
     auditStore.logAction(auth.getLoggedInUser(req), "Re-apply Deployment Infrastructure", project.name, "Started");

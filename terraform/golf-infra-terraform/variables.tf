@@ -152,3 +152,14 @@ variable "manage_route53" {
   default     = false
 }
 
+variable "secret_arn" {
+  description = "ARN of the AWS Secrets Manager secret for this project (shared across dev/uat/prod/beta). When set, all keys in the secret are injected as environment variables into ECS containers."
+  type        = string
+  default     = ""
+}
+
+variable "secret_keys" {
+  description = "List of key names stored in the secret (used to build ECS secrets references). Must match the keys in the Secrets Manager secret JSON."
+  type        = list(string)
+  default     = []
+}
