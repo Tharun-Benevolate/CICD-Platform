@@ -1131,7 +1131,7 @@ async function createBetaTargetGroup(region, { vpcId, name, port = 3000 }) {
       VpcId: vpcId,
       TargetType: "ip",
       HealthCheckPath: "/health",
-      HealthCheckIntervalSeconds: 30,
+      HealthCheckIntervalSeconds: 15,
       HealthyThresholdCount: 2,
       UnhealthyThresholdCount: 3
     }));

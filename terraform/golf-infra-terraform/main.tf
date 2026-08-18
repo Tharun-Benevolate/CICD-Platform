@@ -43,10 +43,13 @@ resource "aws_lb_target_group" "dev" {
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
+  deregistration_delay = 30
   health_check {
     path                = "/health"
     healthy_threshold   = 2
     unhealthy_threshold = 10
+    interval            = 15
+    timeout             = 5
   }
 }
 
@@ -57,10 +60,13 @@ resource "aws_lb_target_group" "uat" {
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
+  deregistration_delay = 30
   health_check {
     path                = "/health"
     healthy_threshold   = 2
     unhealthy_threshold = 10
+    interval            = 15
+    timeout             = 5
   }
 }
 
@@ -78,10 +84,13 @@ resource "aws_lb_target_group" "prod_blue" {
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
+  deregistration_delay = 30
   health_check {
     path                = "/health"
     healthy_threshold   = 2
     unhealthy_threshold = 10
+    interval            = 15
+    timeout             = 5
   }
 }
 
