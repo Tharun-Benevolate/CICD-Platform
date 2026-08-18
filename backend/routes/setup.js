@@ -72,13 +72,16 @@ router.get("/github/connections", async (req, res) => {
 router.post("/setup/ecs", async (req, res) => {
   try {
     const project = await requireProject(req, res); if (!project) return;
-    const { ecsClusterName, ecrRepoName, devServiceName, uatServiceName, prodServiceName, subnetIds, securityGroupId, containerPort } = req.body;
+    const { ecsClusterNameNonProd, ecsClusterNameProd, ecrRepoName, devServiceName, uatServiceName, prodServiceName, subnetIds, securityGroupId, containerPort } = req.body;
+    // Support legacy single-cluster callers sending ecsClusterName
+    const effectiveNonProd = ecsClusterNameNonProd || (req.body.ecsClusterName ? `${req.body.ecsClusterName}` : null);
+    const effectiveProd = ecsClusterNameProd || (req.body.ecsClusterName ? `${req.body.ecsClusterName}` : null);
 
     if (!project.ecsExecutionRoleArn) {
       return res.status(400).json({ ok: false, error: "Project is missing an ECS task execution role ARN. Add it in project settings first." });
     }
-    if (!ecsClusterName || !ecrRepoName || !devServiceName || !uatServiceName || !prodServiceName || !subnetIds || !securityGroupId) {
-      return res.status(400).json({ ok: false, error: "All ECS fields (cluster, ECR repo, three service names, subnets, security group) are required." });
+    if (!effectiveNonProd || !effectiveProd || !ecrRepoName || !devServiceName || !uatServiceName || !prodServiceName || !subnetIds || !securityGroupId) {
+      return res.status(400).json({ ok: false, error: "All ECS fields (non-prod cluster, prod cluster, ECR repo, three service names, subnets, security group) are required." });
     }
 
     // 1. ECR repo to hold build images (Ignores "already exists" errors)
@@ -86,22 +89,23 @@ router.post("/setup/ecs", async (req, res) => {
       if (!String(e.message).includes("already exists") && !String(e.message).includes("RepositoryAlreadyExistsException")) throw e;
     });
 
-    // 2. ECS cluster (AWS treats this as an upsert, perfectly safe if it exists)
-    await aws.createEcsCluster(project.region, ecsClusterName);
+    // 2. ECS clusters — non-prod for dev/uat, prod for prod
+    await aws.createEcsCluster(project.region, effectiveNonProd);
+    await aws.createEcsCluster(project.region, effectiveProd);
 
-    // 3. Placeholder task def + one service per environment (dev/uat/prod)
+    // 3. Placeholder task def + one service per environment (dev/uat on non-prod, prod on prod-cluster)
     const placeholderImage = "public.ecr.aws/docker/library/httpd:latest";
     const envs = [
-      { family: `${ecsClusterName}-dev`, service: devServiceName },
-      { family: `${ecsClusterName}-uat`, service: uatServiceName },
-      { family: `${ecsClusterName}-prod`, service: prodServiceName }
+      { family: `${effectiveNonProd}-dev`, service: devServiceName, cluster: effectiveNonProd },
+      { family: `${effectiveNonProd}-uat`, service: uatServiceName, cluster: effectiveNonProd },
+      { family: `${effectiveProd}-prod`,   service: prodServiceName, cluster: effectiveProd }
     ];
 
     for (const env of envs) {
       // Step A: Check if the Terraform service is already there
       let existingService = null;
       try {
-        existingService = await aws.describeEcsService(project.region, ecsClusterName, env.service);
+        existingService = await aws.describeEcsService(project.region, env.cluster, env.service);
       } catch (e) {
         console.log(`Service ${env.service} check returned: ${e.message}`);
       }
@@ -121,16 +125,18 @@ router.post("/setup/ecs", async (req, res) => {
         containerPort: containerPort || 3000
       });
       await aws.createEcsService(project.region, {
-        clusterName: ecsClusterName,
+        clusterName: env.cluster,
         serviceName: env.service,
         taskDefinitionArn: taskDef.taskDefinitionArn,
         subnetIds, securityGroupId
       });
     }
 
-    // Save the imported names into project state
     store.updateProject(project.id, {
-      ecsClusterName, ecrRepoName, devServiceName, uatServiceName, prodServiceName,
+      ecsClusterName: effectiveNonProd,   // legacy fallback
+      ecsClusterNameNonProd: effectiveNonProd,
+      ecsClusterNameProd: effectiveProd,
+      ecrRepoName, devServiceName, uatServiceName, prodServiceName,
       subnetIds, securityGroupId
     });
     res.json({ ok: true });
@@ -157,7 +163,7 @@ router.post("/setup/pipeline", async (req, res) => {
     if (project.sourceType === "codecommit" && !project.repoName) {
       return res.status(400).json({ ok: false, error: "Create the CodeCommit repo first." });
     }
-    if (mode === "dev-uat-prod" && (!project.ecsClusterName || !project.devServiceName || !project.uatServiceName || !project.prodServiceName)) {
+    if (mode === "dev-uat-prod" && (!project.ecsClusterNameNonProd || !project.ecsClusterNameProd || !project.devServiceName || !project.uatServiceName || !project.prodServiceName)) {
       return res.status(400).json({ ok: false, error: "Complete the ECS setup step first." });
     }
 
@@ -174,7 +180,8 @@ router.post("/setup/pipeline", async (req, res) => {
       githubOwner: project.githubOwner,
       githubRepo: project.githubRepo,
       githubBranch: project.githubBranch,
-      ecsClusterName: project.ecsClusterName,
+      ecsClusterNameNonProd: project.ecsClusterNameNonProd || project.ecsClusterName,
+      ecsClusterNameProd: project.ecsClusterNameProd || project.ecsClusterName,
       devServiceName: project.devServiceName,
       uatServiceName: project.uatServiceName,
       prodServiceName: project.prodServiceName

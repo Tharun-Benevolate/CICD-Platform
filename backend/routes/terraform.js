@@ -355,6 +355,7 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
 
     const tfvars = {
       aws_region: project.region || "us-east-1",
+      project_name: project.buildProjectName || names.projectName,
       ecs_execution_role_arn: project.ecsExecutionRoleArn,
       pipeline_role_arn: project.pipelineRoleArn,
       s3_bucket_name: project.artifactBucket || names.s3BucketName,
@@ -409,6 +410,7 @@ router.post("/terraform/deployment/destroy", auth.requireRole(...auth.ADMIN_ROLE
 
     const tfvars = {
       aws_region: project.region || "us-east-1",
+      project_name: project.buildProjectName || names.projectName,
       ecs_execution_role_arn: project.ecsExecutionRoleArn,
       pipeline_role_arn: project.pipelineRoleArn,
       s3_bucket_name: project.artifactBucket || names.s3BucketName,

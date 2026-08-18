@@ -52,7 +52,7 @@
           <span style="font-weight:700;font-size:13px;color:var(--color-text-primary);">Deployment Infra</span>
         </div>
         <span style="font-size:11px;color:var(--color-text-tertiary);">
-          VPC &bull; ALB &bull; ECS &bull; Pipeline
+          ECR &bull; Non-Prod ECS Cluster &bull; Prod ECS Cluster &bull; Pipeline
         </span>
       </div>
     </div>
@@ -130,7 +130,7 @@
         2. Deployment Infrastructure
       </h2>
       <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:14px;">
-        Creates: VPC &bull; Private subnets &bull; NAT Gateway &bull; ALB (Dev, UAT, Prod Blue &amp; Green Target Groups) &bull; ECS Cluster &bull; Fargate services (Dev, UAT, Prod with CODE_DEPLOY controller) &bull; CodeDeploy application &amp; deployment group &bull; Auto-scaling &bull; Route53 DNS &bull; 7-stage CodePipeline.
+        Creates: ECR repository &bull; <strong>Non-Prod ECS Cluster</strong> (Dev &amp; UAT Fargate services) &bull; <strong>Prod ECS Cluster</strong> (Prod Fargate service) &bull; ALB target groups (Dev, UAT, Prod Blue) &bull; Listener rules &bull; CloudWatch log groups &bull; Auto-scaling &bull; Route53 DNS &bull; 7-stage CodePipeline.
       </p>
 
       <div style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:20px;">

@@ -31,7 +31,7 @@ function namesForProject({ githubRepo, projectName, buildProjectName } = {}) {
     prodServiceName: `${prefix}-prod`,
     prodBetaServiceName: `${prefix}-prod-beta`,
     codebuildProjectName: prefix,
-    pipelineName: `${prefix}-cluster-pipeline`,
+    pipelineName: `${prefix}-prod-cluster-pipeline`,
     dnsHostPrefix: prefix,
     githubConnectionName: `${connPrefix}-github`
   };
