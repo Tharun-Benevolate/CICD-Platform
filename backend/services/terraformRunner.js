@@ -174,7 +174,13 @@ terraform {
     // Write terraform.auto.tfvars so terraform picks them up automatically
     const tfvarsContent = Object.entries(tfvars)
       .filter(([, v]) => v !== undefined && v !== null && v !== "")
-      .map(([k, v]) => `${k} = ${JSON.stringify(String(v))}`)
+      .map(([k, v]) => {
+        // Escape ${...} → $${...} so Terraform HCL does not try to interpret shell
+        // variable expressions (e.g. ${VAR:-default} in buildspec YAML) as its own
+        // template interpolation syntax. $${} is the HCL escape for a literal ${}.
+        const safe = String(v).replace(/\$\{/g, () => "$${");
+        return `${k} = ${JSON.stringify(safe)}`;
+      })
       .join("\n");
     fs.writeFileSync(path.join(folder, "panel.auto.tfvars"), tfvarsContent + "\n");
 
