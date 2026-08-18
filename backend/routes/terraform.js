@@ -9,7 +9,6 @@ const auditStore = require("../stores/auditStore");
 const { namesForProject } = require("../utils/projectNaming");
 const { requireProject } = require("./projects");
 
-const { resolveBuildspecForTerraform } = require("../buildspec");
 const { listProjectSecretKeys } = require("../aws");
 
 // ─── Fix: strip owner prefix from githubRepo if stored as "owner/repo" full path ───
