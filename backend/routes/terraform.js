@@ -371,7 +371,7 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
       uat_service_name: project.uatServiceName || names.uatServiceName,
       prod_service_name: project.prodServiceName || names.prodServiceName,
       prod_beta_service_name: project.prodBetaServiceName || names.prodBetaServiceName,
-      dns_host_prefix: project.deploymentTfApplied ? "" : names.dnsHostPrefix,
+      dns_host_prefix: names.dnsHostPrefix || "",
       project_prefix: names.dnsHostPrefix || "",
       domain_name: req.body.domainName || "benevolaite.com",
 
@@ -426,7 +426,7 @@ router.post("/terraform/deployment/destroy", auth.requireRole(...auth.ADMIN_ROLE
       uat_service_name: project.uatServiceName || names.uatServiceName,
       prod_service_name: project.prodServiceName || names.prodServiceName,
       prod_beta_service_name: project.prodBetaServiceName || names.prodBetaServiceName,
-      dns_host_prefix: project.deploymentTfApplied ? "" : names.dnsHostPrefix,
+      dns_host_prefix: names.dnsHostPrefix || "",
       project_prefix: names.dnsHostPrefix || "",
       domain_name: req.body.domainName || "benevolaite.com",
 
@@ -513,7 +513,7 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
       uat_service_name:       project.uatServiceName || names.uatServiceName,
       prod_service_name:      project.prodServiceName || names.prodServiceName,
       prod_beta_service_name: project.prodBetaServiceName || names.prodBetaServiceName,
-      dns_host_prefix:        project.deploymentTfApplied ? "" : names.dnsHostPrefix,
+      dns_host_prefix:        names.dnsHostPrefix || "",
       project_prefix:         names.dnsHostPrefix || "",
       domain_name:            req.body.domainName || "benevolaite.com",
 
