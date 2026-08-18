@@ -14,7 +14,7 @@ locals {
   aws_name_prefix   = substr(var.project_prefix != "" ? var.project_prefix : replace(var.ecs_cluster_name_non_prod, "-non-prod-cluster", ""), 0, 19)
   dev_host          = var.dns_host_prefix != "" ? "dev-${var.dns_host_prefix}.${var.domain_name}" : "dev.${var.domain_name}"
   uat_host          = var.dns_host_prefix != "" ? "uat-${var.dns_host_prefix}.${var.domain_name}" : "uat.${var.domain_name}"
-  prod_host         = var.dns_host_prefix != "" ? "prod-${var.dns_host_prefix}.${var.domain_name}" : "prod.${var.domain_name}"
+  prod_host         = var.dns_host_prefix != "" ? "${var.dns_host_prefix}.${var.domain_name}" : "${var.domain_name}"
 }
 
 # ─── 1-4. VPC, NAT GATEWAY, SECURITY GROUPS, ALB ──────────────────────
