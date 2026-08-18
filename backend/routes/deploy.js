@@ -15,7 +15,8 @@ router.get("/ecs/service", async (req, res) => {
     const env = req.query.env; // "dev" | "uat" | "prod"
     const serviceName = { dev: project.devServiceName, uat: project.uatServiceName, prod: project.prodServiceName }[env];
     if (!serviceName) return res.status(400).json({ ok: false, error: "Invalid or unconfigured environment" });
-    const service = await aws.describeEcsService(project.region, project.ecsClusterName, serviceName);
+    const clusterName = env === 'prod' ? (project.ecsClusterNameProd || project.ecsClusterName) : (project.ecsClusterNameNonProd || project.ecsClusterName);
+    const service = await aws.describeEcsService(project.region, clusterName, serviceName);
     let imageUri = "";
     if (service && service.taskDefinition) {
       const taskDef = await aws.describeTaskDefinition(project.region, service.taskDefinition);
@@ -44,10 +45,11 @@ router.post("/ecs/deploy", async (req, res) => {
     if (!serviceName) return res.status(400).json({ ok: false, error: "Invalid or unconfigured environment" });
     if (!imageUri) return res.status(400).json({ ok: false, error: "imageUri is required" });
 
+    const clusterName = env === 'prod' ? (project.ecsClusterNameProd || project.ecsClusterName) : (project.ecsClusterNameNonProd || project.ecsClusterName);
     const result = await aws.deployImageToService(project.region, {
-      clusterName: project.ecsClusterName,
+      clusterName: clusterName,
       serviceName,
-      family: `${project.ecsClusterName}-${env}`,
+      family: `${clusterName}-${env}`,
       image: imageUri,
       executionRoleArn: project.ecsExecutionRoleArn,
       taskRoleArn: project.ecsTaskRoleArn
@@ -114,7 +116,7 @@ router.post("/ecs/deploy", async (req, res) => {
 // Helper: Dynamically find live ECS cluster & service name across possible naming candidates
 async function findLiveEcsService(region, project, env) {
   const name = project.name;
-  const storedCluster = project.ecsClusterName;
+  const storedCluster = env === 'prod' ? (project.ecsClusterNameProd || project.ecsClusterName) : (project.ecsClusterNameNonProd || project.ecsClusterName);
   const storedSvc = { dev: project.devServiceName, uat: project.uatServiceName, prod: project.prodServiceName }[env];
 
   const clusterCandidates = [
@@ -138,7 +140,8 @@ async function findLiveEcsService(region, project, env) {
         if (svc && (svc.status === "ACTIVE" || svc.status === "DRAINING")) {
           // Persist correct names to project store if they differ
           const updates = {};
-          if (project.ecsClusterName !== cluster) updates.ecsClusterName = cluster;
+          if (env === 'prod' && project.ecsClusterNameProd !== cluster) updates.ecsClusterNameProd = cluster;
+          if (env !== 'prod' && project.ecsClusterNameNonProd !== cluster) updates.ecsClusterNameNonProd = cluster;
           const svcKey = `${env}ServiceName`;
           if (project[svcKey] !== serviceName) updates[svcKey] = serviceName;
           if (Object.keys(updates).length > 0) {
@@ -361,10 +364,11 @@ router.post("/bluegreen/deploy-green", auth.requireRole(...auth.ADMIN_ROLES), as
     }
     if (!imageUri) return res.status(400).json({ ok: false, error: "imageUri is required" });
 
+    const clusterName = project.ecsClusterNameProd || project.ecsClusterName;
     const result = await aws.deployImageToService(project.region, {
-      clusterName: project.ecsClusterName,
+      clusterName: clusterName,
       serviceName: project.prodGreenServiceName,
-      family: `${project.ecsClusterName}-prod-green`,
+      family: `${clusterName}-prod-green`,
       image: imageUri,
       executionRoleArn: project.ecsExecutionRoleArn,
       taskRoleArn: project.ecsTaskRoleArn
@@ -469,14 +473,15 @@ router.post("/bluegreen/deploy-from-image", auth.requireRole(...auth.ADMIN_ROLES
     const deployConfig = project.bgDeployConfig || "CodeDeployDefault.ECSAllAtOnce";
 
     // ── Step 1: Read current PROD task def to clone its settings ──────────
-    let family        = `${project.ecsClusterName || "app"}-prod`;
+    const clusterName = project.ecsClusterNameProd || project.ecsClusterName || "app";
+    let family        = `${clusterName}-prod`;
     let containerName = family;
     let containerPort = 3000;
     let cpu           = "256";
     let memory        = "512";
 
     try {
-      const prodService = await aws.describeEcsService(region, project.ecsClusterName, project.prodServiceName);
+      const prodService = await aws.describeEcsService(region, clusterName, project.prodServiceName);
       if (prodService && prodService.taskDefinition) {
         const td = await aws.describeTaskDefinition(region, prodService.taskDefinition);
         if (td) {

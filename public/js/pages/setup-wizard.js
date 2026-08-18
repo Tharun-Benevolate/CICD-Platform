@@ -308,7 +308,7 @@ function handlePromptDestroyDeployment() {
   if (!_activeProject) return;
   openConfirmModal(
     'Destroy Deployment Infrastructure?',
-    'This will destroy ECS cluster, ECR repository, target groups, CodePipeline, and Fargate services for project "' + _activeProject.name + '".',
+    'This will destroy the ECS clusters, ECR repository, target groups, CodePipeline, and Fargate services for project "' + _activeProject.name + '".',
     'Yes, Destroy Deployment Infra',
     async function() {
       clearErrorMsg();

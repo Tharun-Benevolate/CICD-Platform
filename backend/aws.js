@@ -354,7 +354,7 @@ async function createPipeline(region, opts) {
     // single mode deploy (kept for non-EC2 future use, e.g. could point at an ECS deploy action too)
     deployActionConfig,
     // dev-uat-prod mode
-    ecsClusterName, devServiceName, uatServiceName, prodServiceName
+    ecsClusterNameNonProd, ecsClusterNameProd, devServiceName, uatServiceName, prodServiceName
   } = opts;
 
   const sourceAction = buildSourceAction(opts);
@@ -380,7 +380,7 @@ async function createPipeline(region, opts) {
           name: "DeployDev",
           actionTypeId: { category: "Deploy", owner: "AWS", provider: "ECS", version: "1" },
           inputArtifacts: [{ name: "BuildOutput" }],
-          configuration: { ClusterName: ecsClusterName, ServiceName: devServiceName }
+          configuration: { ClusterName: ecsClusterNameNonProd, ServiceName: devServiceName }
         }]
       },
       {
@@ -397,7 +397,7 @@ async function createPipeline(region, opts) {
           name: "DeployUAT",
           actionTypeId: { category: "Deploy", owner: "AWS", provider: "ECS", version: "1" },
           inputArtifacts: [{ name: "BuildOutput" }],
-          configuration: { ClusterName: ecsClusterName, ServiceName: uatServiceName }
+          configuration: { ClusterName: ecsClusterNameNonProd, ServiceName: uatServiceName }
         }]
       },
       {
@@ -414,7 +414,7 @@ async function createPipeline(region, opts) {
           name: "DeployProd",
           actionTypeId: { category: "Deploy", owner: "AWS", provider: "ECS", version: "1" },
           inputArtifacts: [{ name: "BuildOutput" }],
-          configuration: { ClusterName: ecsClusterName, ServiceName: prodServiceName }
+          configuration: { ClusterName: ecsClusterNameProd, ServiceName: prodServiceName }
         }]
       }
     ];

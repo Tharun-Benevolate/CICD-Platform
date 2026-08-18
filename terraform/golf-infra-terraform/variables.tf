@@ -10,9 +10,14 @@ variable "domain_name" {
   default     = "benevolaite.com"
 }
 
-variable "ecs_cluster_name" {
+variable "ecs_cluster_name_non_prod" {
   type    = string
-  default = "golf-demo-cluster"
+  default = "golf-demo-non-prod-cluster"
+}
+
+variable "ecs_cluster_name_prod" {
+  type    = string
+  default = "golf-demo-prod-cluster"
 }
 
 variable "ecr_repo_name" {

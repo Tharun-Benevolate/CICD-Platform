@@ -22,7 +22,9 @@ function namesForProject({ githubRepo, projectName, buildProjectName } = {}) {
     prefix,
     projectName: prefix,
     s3BucketName: `${prefix}-artifacts-bucket`,
-    ecsClusterName: `${prefix}-cluster`,
+    ecsClusterName: `${prefix}-cluster`, // Legacy fallback
+    ecsClusterNameNonProd: `${prefix}-non-prod-cluster`,
+    ecsClusterNameProd: `${prefix}-prod-cluster`,
     ecrRepoName: prefix,
     devServiceName: `${prefix}-dev`,
     uatServiceName: `${prefix}-uat`,

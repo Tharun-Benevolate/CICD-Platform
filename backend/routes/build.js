@@ -121,7 +121,8 @@ router.get("/pipeline/stage-logs", async (req, res) => {
         return res.json({ ok: true, logs: [{ message: `No ECS service configured for environment: ${env.toUpperCase()}` }] });
       }
 
-      const service = await aws.describeEcsService(project.region, project.ecsClusterName, serviceName);
+      const clusterName = env === 'prod' ? (project.ecsClusterNameProd || project.ecsClusterName) : (project.ecsClusterNameNonProd || project.ecsClusterName);
+      const service = await aws.describeEcsService(project.region, clusterName, serviceName);
       if (!service || !service.events) {
         return res.json({ ok: true, logs: [{ message: `Could not fetch ECS service events for ${serviceName}` }] });
       }

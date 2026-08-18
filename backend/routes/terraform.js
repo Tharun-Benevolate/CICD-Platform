@@ -68,7 +68,9 @@ async function _saveRunOutputs(runId) {
   } else if (meta.type === "deployment") {
     const o = run.outputs || {};
     await store.updateProject(meta.projectId, {
-      ecsClusterName: o.ecs_cluster_name,
+      ecsClusterName: o.ecs_cluster_name_non_prod, // Keep for legacy usage where needed
+      ecsClusterNameNonProd: o.ecs_cluster_name_non_prod,
+      ecsClusterNameProd: o.ecs_cluster_name_prod,
       ecrRepoUrl: o.ecr_repository_url,
       devServiceName: o.dev_service_name,
       uatServiceName: o.uat_service_name,
@@ -105,6 +107,8 @@ async function _saveRunOutputs(runId) {
   } else if (meta.type === "deployment-destroy") {
     await store.updateProject(meta.projectId, {
       ecsClusterName: null,
+      ecsClusterNameNonProd: null,
+      ecsClusterNameProd: null,
       ecrRepoUrl: null,
       devServiceName: null,
       uatServiceName: null,
@@ -359,7 +363,8 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
       github_repo:  resolveGithubRepo(project.githubOwner, project.githubRepo).repo,
       github_branch: project.githubBranch || "main",
       codebuild_project_name: project.buildProjectName || names.codebuildProjectName,
-      ecs_cluster_name: project.ecsClusterName || names.ecsClusterName,
+      ecs_cluster_name_non_prod: project.ecsClusterNameNonProd || names.ecsClusterNameNonProd,
+      ecs_cluster_name_prod: project.ecsClusterNameProd || names.ecsClusterNameProd,
       ecr_repo_name: names.ecrRepoName,
       dev_service_name: project.devServiceName || names.devServiceName,
       uat_service_name: project.uatServiceName || names.uatServiceName,
@@ -412,7 +417,8 @@ router.post("/terraform/deployment/destroy", auth.requireRole(...auth.ADMIN_ROLE
       github_repo:  resolveGithubRepo(project.githubOwner, project.githubRepo).repo,
       github_branch: project.githubBranch || "main",
       codebuild_project_name: project.buildProjectName || names.codebuildProjectName,
-      ecs_cluster_name: project.ecsClusterName || names.ecsClusterName,
+      ecs_cluster_name_non_prod: project.ecsClusterNameNonProd || names.ecsClusterNameNonProd,
+      ecs_cluster_name_prod: project.ecsClusterNameProd || names.ecsClusterNameProd,
       ecr_repo_name: names.ecrRepoName,
       dev_service_name: project.devServiceName || names.devServiceName,
       uat_service_name: project.uatServiceName || names.uatServiceName,
@@ -498,7 +504,8 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
       github_repo:            resolveGithubRepo(project.githubOwner, project.githubRepo).repo,
       github_branch:          project.githubBranch || "main",
       codebuild_project_name: project.buildProjectName || names.codebuildProjectName,
-      ecs_cluster_name:       project.ecsClusterName || names.ecsClusterName,
+      ecs_cluster_name_non_prod: project.ecsClusterNameNonProd || names.ecsClusterNameNonProd,
+      ecs_cluster_name_prod: project.ecsClusterNameProd || names.ecsClusterNameProd,
       ecr_repo_name:          names.ecrRepoName,
       dev_service_name:       project.devServiceName || names.devServiceName,
       uat_service_name:       project.uatServiceName || names.uatServiceName,
