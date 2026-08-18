@@ -164,8 +164,20 @@ terraform {
 
     // Write terraform.auto.tfvars so terraform picks them up automatically
     const tfvarsContent = Object.entries(tfvars)
-      .filter(([, v]) => v !== undefined && v !== null && v !== "")
+      .filter(([, v]) => {
+        // Always keep arrays (even empty ones) — dropping [] would cause Terraform to
+        // read a stale string value from a prior run file and fail with a type error.
+        if (Array.isArray(v)) return true;
+        return v !== undefined && v !== null && v !== "";
+      })
       .map(([k, v]) => {
+        // Arrays → HCL list syntax e.g. ["a","b"] or []
+        if (Array.isArray(v)) {
+          const items = v.map(item => JSON.stringify(String(item))).join(", ");
+          return `${k} = [${items}]`;
+        }
+        // Booleans → HCL bare true/false (not quoted strings)
+        if (typeof v === "boolean") return `${k} = ${v}`;
         // Escape ${...} → $${...} so Terraform HCL does not try to interpret shell
         // variable expressions (e.g. ${VAR:-default} in buildspec YAML) as its own
         // template interpolation syntax. $${} is the HCL escape for a literal ${}.
