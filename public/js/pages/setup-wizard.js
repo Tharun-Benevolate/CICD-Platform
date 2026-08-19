@@ -563,7 +563,137 @@ async function handleDeleteSecret(key) {
   }
 }
 
-// ── Custom Modal Confirmation Helpers ─────────────────────────────────────
+// ─── SECRETS APPLY ACTIONS ───────────────────────────────────────────────────
+
+// Helper: open the inline status panel with a given label and state
+function setSecretsActionStatus(label, state /* 'running'|'success'|'failed' */, logLines) {
+  var panel  = document.getElementById('secrets-action-status');
+  var badge  = document.getElementById('secrets-action-badge');
+  var lbl    = document.getElementById('secrets-action-label');
+  var logEl  = document.getElementById('secrets-action-log');
+
+  if (!panel) return;
+  panel.style.display = 'block';
+  if (lbl) lbl.textContent = label;
+
+  var stateMap = {
+    running: { html: '<i data-lucide="loader-2" class="animate-spin" style="width:10px;height:10px;"></i> RUNNING',  bg: 'rgba(56,189,248,0.15)', color: '#38bdf8' },
+    success: { html: '✔ COMPLETED', bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
+    failed:  { html: '✖ FAILED',    bg: 'rgba(239,68,68,0.15)',  color: '#ef4444' },
+  };
+  var s = stateMap[state] || stateMap.running;
+  if (badge) {
+    badge.innerHTML = s.html;
+    badge.style.background = s.bg;
+    badge.style.color = s.color;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  if (logEl && logLines && logLines.length) {
+    logLines.forEach(function(line) {
+      var div = document.createElement('div');
+      div.style.color = (line.includes('ERROR') || line.includes('error') || line.includes('failed')) ? '#f87171'
+                       : (line.includes('✔') || line.includes('success') || line.includes('completed')) ? '#4ade80'
+                       : '#cbd5e1';
+      div.textContent = line;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+    });
+  }
+
+  // Scroll panel into view
+  setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 80);
+}
+
+// Restart ECS — fast path, no Terraform needed. Picks up updated secret VALUES.
+async function handleRestartEcs() {
+  if (!_activeProject) return;
+  var btn = document.getElementById('btn-restart-ecs');
+  var logEl = document.getElementById('secrets-action-log');
+
+  // Reset log
+  if (logEl) logEl.innerHTML = '';
+  setSecretsActionStatus('RESTART ECS', 'running', ['Sending force-restart to ECS services...']);
+
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
+  try {
+    var res = await api.post('/api/secrets/' + _activeProject.id + '/restart', {});
+    if (res && res.ok) {
+      var lines = [];
+      if (res.restarted && res.restarted.length) lines.push('✔ Restarted: ' + res.restarted.join(', '));
+      if (res.failed && res.failed.length)    lines.push('⚠ Skipped/Failed: ' + res.failed.join(' | '));
+      lines.push('\n✔ ECS rolling restart triggered. New tasks will pull fresh secret values.');
+      setSecretsActionStatus('RESTART ECS', 'success', lines);
+    } else {
+      throw new Error(res.error || 'Restart failed');
+    }
+  } catch (e) {
+    setSecretsActionStatus('RESTART ECS', 'failed', ['✖ Error: ' + e.message]);
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  }
+}
+
+// Re-apply Deployment Infra — needed when a NEW secret key was added.
+// Streams Terraform logs into the inline panel (same SSE as the wizard).
+async function handleReapplyDeployment() {
+  if (!_activeProject) return;
+  var logEl = document.getElementById('secrets-action-log');
+  var btn   = document.getElementById('btn-reapply-deploy');
+
+  // Reset
+  if (logEl) logEl.innerHTML = '';
+  setSecretsActionStatus('RE-APPLY INFRA', 'running', ['Starting Terraform deployment apply...']);
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
+  try {
+    var res = await api.post('/api/terraform/deployment/run', { projectId: _activeProject.id });
+    if (!res || !res.ok) throw new Error(res.error || 'Failed to start Terraform run');
+
+    var runId = res.runId;
+    setSecretsActionStatus('RE-APPLY INFRA', 'running', ['Run ID: ' + runId, 'Streaming live logs...']);
+
+    // Wire up SSE into our inline log panel (mirror — does NOT steal the main terminal)
+    var es = new EventSource('/api/terraform/' + runId + '/logs');
+    es.onmessage = function(event) {
+      try {
+        var data = JSON.parse(event.data);
+        if (data.line && logEl) {
+          var div = document.createElement('div');
+          div.style.color = (data.line.includes('ERROR') || data.line.includes('Error:')) ? '#f87171'
+                           : (data.line.includes('✔') || data.line.includes('Apply complete!')) ? '#4ade80'
+                           : '#cbd5e1';
+          div.textContent = data.line;
+          logEl.appendChild(div);
+          logEl.scrollTop = logEl.scrollHeight;
+        }
+      } catch (e) {}
+    };
+    es.addEventListener('done', function(event) {
+      try {
+        var result = JSON.parse(event.data);
+        var ok = result.status === 'done' || result.status === 'success';
+        setSecretsActionStatus('RE-APPLY INFRA', ok ? 'success' : 'failed',
+          [ok ? '\n✔ Terraform apply completed successfully.' : '\n✖ Terraform apply failed — check logs above.']);
+        loadProjectsAndSetup(); // refresh badges
+      } catch (e) {}
+      es.close();
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    });
+    es.addEventListener('error', function() {
+      setSecretsActionStatus('RE-APPLY INFRA', 'failed', ['✖ Lost connection to log stream.']);
+      es.close();
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    });
+
+  } catch (e) {
+    setSecretsActionStatus('RE-APPLY INFRA', 'failed', ['✖ ' + e.message]);
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  }
+}
+
+
 function openConfirmModal(title, description, actionLabel, onConfirm, isWarningOnly) {
   var modal = document.getElementById('custom-confirm-modal');
   var titleText = document.getElementById('modal-title-text');
