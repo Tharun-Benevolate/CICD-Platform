@@ -4,6 +4,7 @@ const auth = require("../auth");
 const store = require("../projectStore");
 const { upsertProjectSecret, listProjectSecretKeys, deleteProjectSecret } = require("../aws");
 const auditStore = require("../auditStore");
+const { secretPrefixForProject } = require("../utils/projectNaming");
 
 async function requireProject(req, res) {
   const proj = await store.getProject(req.params.projectId);
@@ -14,15 +15,18 @@ async function requireProject(req, res) {
   return proj;
 }
 
-function getProjectPrefix(project) {
-  const name = project.githubRepo || project.buildProjectName || project.name || "app";
-  return String(name)
-    .toLowerCase()
-    .replace(/[^a-z0-9-]/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, 40) || "app";
-}
+// GET /api/secrets/:projectId/name — returns the auto-generated AWS secret name for this project
+// This lets the UI show users exactly where their secrets are stored without them typing anything.
+router.get("/:projectId/name", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+  try {
+    const project = await requireProject(req, res);
+    if (!project) return;
+    const prefix = secretPrefixForProject(project);
+    res.json({ ok: true, secretName: `${prefix}/secrets`, prefix, arn: project.secretArn || null });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
 
 // GET /api/secrets/:projectId — list key names (no values)
 router.get("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
@@ -42,7 +46,7 @@ router.post("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, re
   try {
     const project = await requireProject(req, res);
     if (!project) return;
-    const prefix = getProjectPrefix(project);
+    const prefix = secretPrefixForProject(project);
     
     // We expect a flat object of secrets: { "DB_HOST": "...", "DB_PASSWORD": "..." }
     const newSecrets = req.body.secrets || {};
@@ -89,7 +93,7 @@ router.delete("/:projectId/:key", auth.requireRole(...auth.ADMIN_ROLES), async (
   try {
     const project = await requireProject(req, res);
     if (!project) return;
-    const prefix = getProjectPrefix(project);
+    const prefix = secretPrefixForProject(project);
     const keyToDelete = req.params.key;
 
     const region = project.region || "us-east-1";
@@ -112,6 +116,53 @@ router.delete("/:projectId/:key", auth.requireRole(...auth.ADMIN_ROLES), async (
     
     auditStore.logAction(auth.getLoggedInUser(req), `Delete Secret Key (${keyToDelete})`, project.name, "Completed");
     res.json({ ok: true, keys: Object.keys(existingSecrets) });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/secrets/:projectId/restart — force-restarts ECS services so they pick up updated secret values.
+// This avoids a full Terraform re-apply just for a secret value change.
+// It does a zero-downtime rolling update: ECS stops old tasks and starts new ones which pull fresh secrets.
+router.post("/:projectId/restart", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+  try {
+    const project = await requireProject(req, res);
+    if (!project) return;
+
+    if (!project.secretArn) {
+      return res.status(400).json({ ok: false, error: "No secrets configured for this project yet." });
+    }
+
+    const { ECSClient, UpdateServiceCommand } = require("@aws-sdk/client-ecs");
+    const region = project.region || "us-east-1";
+    const ecsClient = new ECSClient({ region });
+
+    const restarted = [];
+    const failed = [];
+
+    // Restart across all 3 environment clusters — only if the service name is known
+    const services = [
+      { cluster: project.ecsClusterNameNonProd, service: project.devServiceName,  env: "dev" },
+      { cluster: project.ecsClusterNameNonProd, service: project.uatServiceName,  env: "uat" },
+      { cluster: project.ecsClusterNameProd,    service: project.prodServiceName, env: "prod" },
+    ];
+
+    for (const { cluster, service, env } of services) {
+      if (!cluster || !service) { failed.push(`${env} (not provisioned)`); continue; }
+      try {
+        await ecsClient.send(new UpdateServiceCommand({
+          cluster,
+          service,
+          forceNewDeployment: true   // triggers rolling restart without changing task definition
+        }));
+        restarted.push(env);
+      } catch (err) {
+        failed.push(`${env}: ${err.message}`);
+      }
+    }
+
+    auditStore.logAction(auth.getLoggedInUser(req), "Force Restart ECS (secret update)", project.name, "Completed");
+    res.json({ ok: true, restarted, failed });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

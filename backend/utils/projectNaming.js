@@ -37,4 +37,14 @@ function namesForProject({ githubRepo, projectName, buildProjectName } = {}) {
   };
 }
 
-module.exports = { sanitizeProjectPrefix, namesForProject, betaTgNameFor };
+/**
+ * Returns the canonical AWS Secrets Manager prefix for a project.
+ * Secret is stored as: `{prefix}/secrets`
+ * This is the single source of truth — used by both secrets.js and terraform.js.
+ */
+function secretPrefixForProject(project) {
+  const name = project.githubRepo || project.buildProjectName || project.name || "app";
+  return sanitizeProjectPrefix(name);
+}
+
+module.exports = { sanitizeProjectPrefix, namesForProject, betaTgNameFor, secretPrefixForProject };

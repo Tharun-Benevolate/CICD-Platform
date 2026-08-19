@@ -6,7 +6,8 @@ const tf = require("../services/terraformRunner");
 const auth = require("../middleware/auth");
 const store = require("../stores/projectStore");
 const auditStore = require("../stores/auditStore");
-const { namesForProject } = require("../utils/projectNaming");
+const { namesForProject, secretPrefixForProject } = require("../utils/projectNaming");
+
 const { requireProject } = require("./projects");
 
 const { listProjectSecretKeys } = require("../aws");
@@ -348,10 +349,10 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
     // Fetch Shared Foundation outputs dynamically for active AWS account
     const sfOutputs = (await tf.readFoundationOutputs(true)) || {};
     
-    // Fetch secret keys if secretArn exists
+    // Fetch secret keys if secretArn exists, using canonical project prefix
     let secretKeys = [];
     if (project.secretArn) {
-      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", names.dnsHostPrefix || "");
+      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", secretPrefixForProject(project));
     }
 
     if (!sfOutputs.vpc_id) {
@@ -510,7 +511,7 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
 
     let secretKeys = [];
     if (project.secretArn) {
-      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", names.dnsHostPrefix || "");
+      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", secretPrefixForProject(project));
     }
 
     const tfvars = {
