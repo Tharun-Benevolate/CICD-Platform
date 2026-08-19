@@ -462,6 +462,33 @@ async function readFoundationOutputs(forceRefresh = false) {
     try {
       const fileData = JSON.parse(fs.readFileSync(FOUNDATION_CACHE_FILE, "utf8"));
       if (fileData && fileData._aws_account_id === activeAccountId && fileData.vpc_id) {
+        // ── Stale-cache guard ──────────────────────────────────────────────
+        // Disk cache survives destroy + server restart, causing a false "Provisioned"
+        // badge. Do a single S3 GetObject to check if the state file still has
+        // resources. This is ~1 S3 call and requires no terraform binary.
+        try {
+          const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
+          const bucketName = process.env.TF_STATE_BUCKET || `benevolate-tf-state-${activeAccountId}`;
+          const stackName = path.basename(SHARED_FOUNDATION_DIR);
+          const stateKey = `${stackName}/${stackName}/terraform.tfstate`;
+          const s3 = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
+          const resp = await s3.send(new GetObjectCommand({ Bucket: bucketName, Key: stateKey }));
+          const body = await resp.Body.transformToString();
+          const stateJson = JSON.parse(body || "{}");
+          if ((stateJson.resources || []).length === 0) {
+            // State file exists but is empty — destroy ran successfully
+            clearFoundationCache();
+            return {};
+          }
+        } catch (s3Err) {
+          // State file not found → not provisioned
+          if (s3Err.name === "NoSuchKey" || (s3Err.$metadata && s3Err.$metadata.httpStatusCode === 404)) {
+            clearFoundationCache();
+            return {};
+          }
+          // Any other S3/network error → trust disk cache to avoid false negatives
+        }
+        // S3 confirms resources exist — accept the disk cache
         cachedFoundationOutputs = fileData;
         lastFoundationFetch = Date.now();
         return cachedFoundationOutputs;
