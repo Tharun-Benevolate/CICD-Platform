@@ -452,10 +452,9 @@ function handleAddSecretRow() {
   var container = document.getElementById('secrets-table-container');
   if (!container) return;
   
-  var isFirst = _secretKeys.length === 0;
   var table = container.querySelector('table');
   
-  if (isFirst) {
+  if (!table) {
     container.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
              '<thead><tr style="border-bottom:1px solid var(--color-border);text-align:left;color:var(--color-text-tertiary);">' +
              '<th style="padding:8px;font-weight:600;">Key (e.g. DB_HOST)</th>' +
