@@ -469,8 +469,8 @@ function handleAddSecretRow() {
   var tr = document.createElement('tr');
   tr.style.borderBottom = '1px solid var(--color-border)';
   tr.innerHTML = 
-    '<td style="padding:8px;"><input type="text" class="new-secret-key" placeholder="DB_HOST" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
-    '<td style="padding:8px;"><input type="password" class="new-secret-val" placeholder="Value (write-only)" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+    '<td style="padding:8px;"><input type="text" class="new-secret-key" placeholder="DB_HOST" autocomplete="off" data-lpignore="true" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+    '<td style="padding:8px;"><input type="password" class="new-secret-val" placeholder="Value (write-only)" autocomplete="new-password" data-lpignore="true" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
     '<td style="padding:8px;text-align:center;"><button type="button" onclick="this.closest(\'tr\').remove(); if(document.querySelectorAll(\'.new-secret-key\').length===0 && _secretKeys.length===0) renderSecretsTable();" style="color:var(--color-danger);background:transparent;border:none;cursor:pointer;padding:4px;"><i data-lucide="x" style="width:14px;height:14px;"></i></button></td>';
   
   tbody.appendChild(tr);
