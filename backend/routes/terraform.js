@@ -6,7 +6,7 @@ const tf = require("../services/terraformRunner");
 const auth = require("../middleware/auth");
 const store = require("../stores/projectStore");
 const auditStore = require("../stores/auditStore");
-const { namesForProject, secretPrefixForProject } = require("../utils/projectNaming");
+const { namesForProject, resolveSecretName } = require("../utils/projectNaming");
 
 const { requireProject } = require("./projects");
 
@@ -352,7 +352,7 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
     // Fetch secret keys if secretArn exists, using canonical project prefix
     let secretKeys = [];
     if (project.secretArn) {
-      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", secretPrefixForProject(project));
+      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project));
     }
 
     if (!sfOutputs.vpc_id) {
@@ -511,7 +511,7 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
 
     let secretKeys = [];
     if (project.secretArn) {
-      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", secretPrefixForProject(project));
+      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project));
     }
 
     const tfvars = {

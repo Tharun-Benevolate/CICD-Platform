@@ -164,6 +164,17 @@
         <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:text-bottom;"></i> Values are write-only. Once saved, they are never exposed back to this interface.
       </div>
 
+      <div style="margin-bottom:18px;">
+        <label for="secret-name-input" style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+          AWS Secrets Manager secret name
+        </label>
+        <input type="text" id="secret-name-input" placeholder="e.g. my-project/secrets" autocomplete="off" data-lpignore="true"
+               style="width:100%;max-width:420px;padding:8px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:13px;" />
+        <div id="secret-name-hint" style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px;">
+          Choose the exact name to create in AWS Secrets Manager. This is set once — after the first save it can't be changed here (delete the secret in AWS first if you need to reuse a different name).
+        </div>
+      </div>
+
       <div id="secrets-table-container" style="margin-bottom:16px;">
         <!-- Filled by JS -->
       </div>

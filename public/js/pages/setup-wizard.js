@@ -399,13 +399,30 @@ async function executeDestroyProject() {
 // ─── SECRETS MANAGEMENT ─────────────────────────────────────────────
 
 var _secretKeys = [];
+var _secretNameLocked = false;
 
 async function loadSecrets() {
   if (!_activeProject) return;
   var container = document.getElementById('secrets-table-container');
   if (!container) return;
-  
+
   try {
+    var nameInput = document.getElementById('secret-name-input');
+    var nameHint = document.getElementById('secret-name-hint');
+    var nameRes = await api.get('/api/secrets/' + _activeProject.id + '/name');
+    if (nameRes && nameRes.ok && nameInput) {
+      nameInput.value = nameRes.secretName || '';
+      _secretNameLocked = !!nameRes.locked;
+      nameInput.readOnly = _secretNameLocked;
+      nameInput.style.opacity = _secretNameLocked ? '0.7' : '1';
+      nameInput.style.cursor = _secretNameLocked ? 'not-allowed' : 'text';
+      if (nameHint) {
+        nameHint.textContent = _secretNameLocked
+          ? 'This secret already exists in AWS Secrets Manager under this name — it\'s locked in for this project.'
+          : 'Choose the exact name to create in AWS Secrets Manager. This is set once — after the first save it can\'t be changed here (delete the secret in AWS first if you need to reuse a different name).';
+      }
+    }
+
     container.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);"><i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> Loading secrets...</div>';
     if (window.lucide) lucide.createIcons();
     
@@ -508,16 +525,40 @@ async function handleSaveSecrets() {
     }
     return;
   }
-  
+
+  var nameInput = document.getElementById('secret-name-input');
+  var typedName = nameInput ? nameInput.value.trim() : '';
+  if (!_secretNameLocked && !typedName) {
+    if (msg) {
+      msg.textContent = 'Enter a secret name before saving.';
+      msg.style.color = 'var(--color-danger)';
+      msg.style.display = 'block';
+    }
+    if (nameInput) nameInput.focus();
+    return;
+  }
+
   try {
     btn.disabled = true;
     btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> Saving...';
     if (window.lucide) lucide.createIcons();
-    
-    var res = await api.post('/api/secrets/' + _activeProject.id, { secrets: secretsObj });
+
+    var payload = { secrets: secretsObj };
+    if (!_secretNameLocked) payload.secretName = typedName;
+
+    var res = await api.post('/api/secrets/' + _activeProject.id, payload);
     if (res && res.ok) {
       _secretKeys = res.keys;
       renderSecretsTable();
+      if (res.secretName && nameInput) {
+        nameInput.value = res.secretName;
+        nameInput.readOnly = true;
+        nameInput.style.opacity = '0.7';
+        nameInput.style.cursor = 'not-allowed';
+        _secretNameLocked = true;
+        var nameHint = document.getElementById('secret-name-hint');
+        if (nameHint) nameHint.textContent = 'This secret already exists in AWS Secrets Manager under this name — it\'s locked in for this project.';
+      }
       if (msg) {
         msg.innerHTML = '<span style="color:var(--color-success);"><i data-lucide="check-circle-2" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;"></i> Secrets saved successfully. Please Re-apply Deployment Infra below to update running containers.</span>';
         msg.style.display = 'block';

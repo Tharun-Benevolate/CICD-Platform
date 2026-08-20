@@ -1311,9 +1311,12 @@ async function getAlbListenerArn(region, albDnsOrArn) {
 // --- Secrets Manager Helpers ---
 const { GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
 
-async function upsertProjectSecret(region, projectPrefix, kvObject) {
+// `secretName` is the FULL AWS Secrets Manager name to use (e.g. "my-app/secrets"
+// or whatever custom name the user typed in the setup wizard). Callers are
+// responsible for resolving it via utils/projectNaming.resolveSecretName(project) —
+// this function never derives or guesses a name on its own.
+async function upsertProjectSecret(region, secretName, kvObject) {
   const { secrets } = clients(region);
-  const secretName = `${projectPrefix}/secrets`;
   const secretString = JSON.stringify(kvObject);
   try {
     const res = await secrets.send(new DescribeSecretCommand({ SecretId: secretName }));
@@ -1325,7 +1328,7 @@ async function upsertProjectSecret(region, projectPrefix, kvObject) {
       const res = await secrets.send(new CreateSecretCommand({
         Name: secretName,
         SecretString: secretString,
-        Description: `Secrets for project ${projectPrefix}`
+        Description: `Secrets for project (${secretName})`
       }));
       return res.ARN;
     }
@@ -1333,9 +1336,8 @@ async function upsertProjectSecret(region, projectPrefix, kvObject) {
   }
 }
 
-async function listProjectSecretKeys(region, projectPrefix) {
+async function listProjectSecretKeys(region, secretName) {
   const { secrets } = clients(region);
-  const secretName = `${projectPrefix}/secrets`;
   try {
     const res = await secrets.send(new GetSecretValueCommand({ SecretId: secretName }));
     const parsed = JSON.parse(res.SecretString || "{}");
@@ -1346,9 +1348,8 @@ async function listProjectSecretKeys(region, projectPrefix) {
   }
 }
 
-async function deleteProjectSecret(region, projectPrefix) {
+async function deleteProjectSecret(region, secretName) {
   const { secrets } = clients(region);
-  const secretName = `${projectPrefix}/secrets`;
   try {
     await secrets.send(new DeleteSecretCommand({ SecretId: secretName, ForceDeleteWithoutRecovery: true }));
   } catch (err) {
