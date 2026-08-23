@@ -52,6 +52,8 @@ async function createProject(data) {
     githubBranch:        data.githubBranch         || "main",
     buildProjectName:    data.buildProjectName     || "",
     ecsClusterName:      data.ecsClusterName       || "",
+    ecsClusterNameNonProd: data.ecsClusterNameNonProd || data.ecsClusterName || "",
+    ecsClusterNameProd:  data.ecsClusterNameProd   || data.ecsClusterName || "",
     ecrRepoName:         data.ecrRepoName          || "",
     ecrRepoUrl:          data.ecrRepoUrl           || "",
     devServiceName:      data.devServiceName       || "",

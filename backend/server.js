@@ -71,9 +71,10 @@ app.get("/api/public/is-beta-org", async (req, res) => {
     const projects   = await store.listProjects().catch(() => []);
     let betaFleetUp  = false;
     for (const p of projects) {
-      if (!p.prodBetaServiceName || !p.ecsClusterName) continue;
+      const clusterName = p.ecsClusterNameProd || p.ecsClusterName;
+      if (!p.prodBetaServiceName || !clusterName) continue;
       try {
-        const svc = await aws.describeEcsService(p.region || "us-east-1", p.ecsClusterName, p.prodBetaServiceName);
+        const svc = await aws.describeEcsService(p.region || "us-east-1", clusterName, p.prodBetaServiceName);
         if ((svc?.desiredCount || 0) > 0 && (svc?.runningCount || 0) > 0) { betaFleetUp = true; break; }
       } catch { /* ignore */ }
     }
@@ -127,6 +128,7 @@ app.use("/api", require("./routes/setup"));
 app.use("/api", require("./routes/pipeline"));
 app.use("/api", require("./routes/build"));
 app.use("/api", require("./routes/deploy"));
+app.use("/api/secrets", require("./routes/secrets"));
 
 // Source control
 app.use("/api", require("./routes/repos"));

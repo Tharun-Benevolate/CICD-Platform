@@ -6,8 +6,11 @@ const tf = require("../services/terraformRunner");
 const auth = require("../middleware/auth");
 const store = require("../stores/projectStore");
 const auditStore = require("../stores/auditStore");
-const { namesForProject } = require("../utils/projectNaming");
+const { namesForProject, resolveSecretName } = require("../utils/projectNaming");
+
 const { requireProject } = require("./projects");
+
+const { listProjectSecretKeys } = require("../aws");
 
 // ─── Fix: strip owner prefix from githubRepo if stored as "owner/repo" full path ───
 // Terraform uses github_owner + "/" + github_repo to form FullRepositoryName.
@@ -68,7 +71,9 @@ async function _saveRunOutputs(runId) {
   } else if (meta.type === "deployment") {
     const o = run.outputs || {};
     await store.updateProject(meta.projectId, {
-      ecsClusterName: o.ecs_cluster_name,
+      ecsClusterName: o.ecs_cluster_name_non_prod, // Keep for legacy usage where needed
+      ecsClusterNameNonProd: o.ecs_cluster_name_non_prod,
+      ecsClusterNameProd: o.ecs_cluster_name_prod,
       ecrRepoUrl: o.ecr_repository_url,
       devServiceName: o.dev_service_name,
       uatServiceName: o.uat_service_name,
@@ -105,6 +110,8 @@ async function _saveRunOutputs(runId) {
   } else if (meta.type === "deployment-destroy") {
     await store.updateProject(meta.projectId, {
       ecsClusterName: null,
+      ecsClusterNameNonProd: null,
+      ecsClusterNameProd: null,
       ecrRepoUrl: null,
       devServiceName: null,
       uatServiceName: null,
@@ -341,6 +348,12 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
 
     // Fetch Shared Foundation outputs dynamically for active AWS account
     const sfOutputs = (await tf.readFoundationOutputs(true)) || {};
+    
+    // Fetch secret keys if secretArn exists, using canonical project prefix
+    let secretKeys = [];
+    if (project.secretArn) {
+      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project));
+    }
 
     if (!sfOutputs.vpc_id) {
       return res.status(400).json({
@@ -351,6 +364,7 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
 
     const tfvars = {
       aws_region: project.region || "us-east-1",
+      project_name: project.buildProjectName || names.projectName,
       ecs_execution_role_arn: project.ecsExecutionRoleArn,
       pipeline_role_arn: project.pipelineRoleArn,
       s3_bucket_name: project.artifactBucket || names.s3BucketName,
@@ -359,13 +373,14 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
       github_repo:  resolveGithubRepo(project.githubOwner, project.githubRepo).repo,
       github_branch: project.githubBranch || "main",
       codebuild_project_name: project.buildProjectName || names.codebuildProjectName,
-      ecs_cluster_name: project.ecsClusterName || names.ecsClusterName,
+      ecs_cluster_name_non_prod: project.ecsClusterNameNonProd || names.ecsClusterNameNonProd,
+      ecs_cluster_name_prod: project.ecsClusterNameProd || names.ecsClusterNameProd,
       ecr_repo_name: names.ecrRepoName,
       dev_service_name: project.devServiceName || names.devServiceName,
       uat_service_name: project.uatServiceName || names.uatServiceName,
       prod_service_name: project.prodServiceName || names.prodServiceName,
       prod_beta_service_name: project.prodBetaServiceName || names.prodBetaServiceName,
-      dns_host_prefix: project.deploymentTfApplied ? "" : names.dnsHostPrefix,
+      dns_host_prefix: names.dnsHostPrefix || "",
       project_prefix: names.dnsHostPrefix || "",
       domain_name: req.body.domainName || "benevolaite.com",
 
@@ -376,7 +391,9 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
       alb_dns_name: sfOutputs.alb_dns_name,
       alb_zone_id: sfOutputs.alb_zone_id,
       alb_listener_arn: sfOutputs.alb_listener_arn,
-      manage_route53: false
+      manage_route53: true,
+      secret_arn: project.secretArn || "",
+      secret_keys: secretKeys
     };
 
     const runId = tf.startRun(tf.DEPLOYMENT_DIR, tfvars, { projectId: project.id, moduleLabel: "deployment" });
@@ -404,6 +421,7 @@ router.post("/terraform/deployment/destroy", auth.requireRole(...auth.ADMIN_ROLE
 
     const tfvars = {
       aws_region: project.region || "us-east-1",
+      project_name: project.buildProjectName || names.projectName,
       ecs_execution_role_arn: project.ecsExecutionRoleArn,
       pipeline_role_arn: project.pipelineRoleArn,
       s3_bucket_name: project.artifactBucket || names.s3BucketName,
@@ -412,13 +430,14 @@ router.post("/terraform/deployment/destroy", auth.requireRole(...auth.ADMIN_ROLE
       github_repo:  resolveGithubRepo(project.githubOwner, project.githubRepo).repo,
       github_branch: project.githubBranch || "main",
       codebuild_project_name: project.buildProjectName || names.codebuildProjectName,
-      ecs_cluster_name: project.ecsClusterName || names.ecsClusterName,
+      ecs_cluster_name_non_prod: project.ecsClusterNameNonProd || names.ecsClusterNameNonProd,
+      ecs_cluster_name_prod: project.ecsClusterNameProd || names.ecsClusterNameProd,
       ecr_repo_name: names.ecrRepoName,
       dev_service_name: project.devServiceName || names.devServiceName,
       uat_service_name: project.uatServiceName || names.uatServiceName,
       prod_service_name: project.prodServiceName || names.prodServiceName,
       prod_beta_service_name: project.prodBetaServiceName || names.prodBetaServiceName,
-      dns_host_prefix: project.deploymentTfApplied ? "" : names.dnsHostPrefix,
+      dns_host_prefix: names.dnsHostPrefix || "",
       project_prefix: names.dnsHostPrefix || "",
       domain_name: req.body.domainName || "benevolaite.com",
 
@@ -428,7 +447,9 @@ router.post("/terraform/deployment/destroy", auth.requireRole(...auth.ADMIN_ROLE
       alb_dns_name: sfOutputs.alb_dns_name || "shared-foundation-alb-737213570.us-east-1.elb.amazonaws.com",
       alb_zone_id: sfOutputs.alb_zone_id || "Z35SXDOTRQ7X7K",
       alb_listener_arn: sfOutputs.alb_listener_arn || "arn:aws:elasticloadbalancing:us-east-1:511974512004:listener/app/shared-foundation-alb/a36126009c7b192e/0eacc50cd4bf7e49",
-      manage_route53: false
+      manage_route53: true,
+      secret_arn: project.secretArn || "",
+      secret_keys: []
     };
 
     const runId = tf.startDestroy(tf.DEPLOYMENT_DIR, tfvars, { projectId: project.id, moduleLabel: "deployment-destroy" });
@@ -488,6 +509,11 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
     });
     const sfOutputs = (await tf.readFoundationOutputs()) || {};
 
+    let secretKeys = [];
+    if (project.secretArn) {
+      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project));
+    }
+
     const tfvars = {
       aws_region:             project.region || "us-east-1",
       ecs_execution_role_arn: project.ecsExecutionRoleArn,
@@ -498,13 +524,14 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
       github_repo:            resolveGithubRepo(project.githubOwner, project.githubRepo).repo,
       github_branch:          project.githubBranch || "main",
       codebuild_project_name: project.buildProjectName || names.codebuildProjectName,
-      ecs_cluster_name:       project.ecsClusterName || names.ecsClusterName,
+      ecs_cluster_name_non_prod: project.ecsClusterNameNonProd || names.ecsClusterNameNonProd,
+      ecs_cluster_name_prod: project.ecsClusterNameProd || names.ecsClusterNameProd,
       ecr_repo_name:          names.ecrRepoName,
       dev_service_name:       project.devServiceName || names.devServiceName,
       uat_service_name:       project.uatServiceName || names.uatServiceName,
       prod_service_name:      project.prodServiceName || names.prodServiceName,
       prod_beta_service_name: project.prodBetaServiceName || names.prodBetaServiceName,
-      dns_host_prefix:        project.deploymentTfApplied ? "" : names.dnsHostPrefix,
+      dns_host_prefix:        names.dnsHostPrefix || "",
       project_prefix:         names.dnsHostPrefix || "",
       domain_name:            req.body.domainName || "benevolaite.com",
 
@@ -515,7 +542,9 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
       alb_dns_name:           sfOutputs.alb_dns_name || "shared-foundation-alb-737213570.us-east-1.elb.amazonaws.com",
       alb_zone_id:            sfOutputs.alb_zone_id || "Z35SXDOTRQ7X7K",
       alb_listener_arn:       sfOutputs.alb_listener_arn || "arn:aws:elasticloadbalancing:us-east-1:511974512004:listener/app/shared-foundation-alb/a36126009c7b192e/0eacc50cd4bf7e49",
-      manage_route53:         false
+      manage_route53:         true,
+      secret_arn:             project.secretArn || "",
+      secret_keys:            secretKeys
     };
     const runId = tf.startRun(tf.DEPLOYMENT_DIR, tfvars, { projectId: project.id, moduleLabel: "deployment" });
     auditStore.logAction(auth.getLoggedInUser(req), "Re-apply Deployment Infrastructure", project.name, "Started");

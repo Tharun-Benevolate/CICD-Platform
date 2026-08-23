@@ -52,9 +52,16 @@ const {
 
 const { S3Client, CreateBucketCommand, HeadBucketCommand } = require("@aws-sdk/client-s3");
 const { DynamoDBClient, CreateTableCommand, DescribeTableCommand } = require("@aws-sdk/client-dynamodb");
+const { SecretsManagerClient, CreateSecretCommand, PutSecretValueCommand, DescribeSecretCommand, DeleteSecretCommand } = require("@aws-sdk/client-secrets-manager");
 
 function clients(region) {
   const config = { region };
+  if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
+    config.credentials = {
+      accessKeyId: process.env.AWS_ACCESS_KEY_ID.trim(),
+      secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY.trim()
+    };
+  }
   return {
     pipeline:    new CodePipelineClient(config),
     codecommit:  new CodeCommitClient(config),
@@ -66,7 +73,8 @@ function clients(region) {
     codestar:    new CodeStarConnectionsClient(config),
     appscaling:  new ApplicationAutoScalingClient(config),
     elbv2:       new ElasticLoadBalancingV2Client(config),
-    codedeploy:  new CodeDeployClient(config)
+    codedeploy:  new CodeDeployClient(config),
+    secrets:     new SecretsManagerClient(config)
   };
 }
 
@@ -354,7 +362,7 @@ async function createPipeline(region, opts) {
     // single mode deploy (kept for non-EC2 future use, e.g. could point at an ECS deploy action too)
     deployActionConfig,
     // dev-uat-prod mode
-    ecsClusterName, devServiceName, uatServiceName, prodServiceName
+    ecsClusterNameNonProd, ecsClusterNameProd, devServiceName, uatServiceName, prodServiceName
   } = opts;
 
   const sourceAction = buildSourceAction(opts);
@@ -380,7 +388,7 @@ async function createPipeline(region, opts) {
           name: "DeployDev",
           actionTypeId: { category: "Deploy", owner: "AWS", provider: "ECS", version: "1" },
           inputArtifacts: [{ name: "BuildOutput" }],
-          configuration: { ClusterName: ecsClusterName, ServiceName: devServiceName }
+          configuration: { ClusterName: ecsClusterNameNonProd, ServiceName: devServiceName }
         }]
       },
       {
@@ -397,7 +405,7 @@ async function createPipeline(region, opts) {
           name: "DeployUAT",
           actionTypeId: { category: "Deploy", owner: "AWS", provider: "ECS", version: "1" },
           inputArtifacts: [{ name: "BuildOutput" }],
-          configuration: { ClusterName: ecsClusterName, ServiceName: uatServiceName }
+          configuration: { ClusterName: ecsClusterNameNonProd, ServiceName: uatServiceName }
         }]
       },
       {
@@ -414,7 +422,7 @@ async function createPipeline(region, opts) {
           name: "DeployProd",
           actionTypeId: { category: "Deploy", owner: "AWS", provider: "ECS", version: "1" },
           inputArtifacts: [{ name: "BuildOutput" }],
-          configuration: { ClusterName: ecsClusterName, ServiceName: prodServiceName }
+          configuration: { ClusterName: ecsClusterNameProd, ServiceName: prodServiceName }
         }]
       }
     ];
@@ -1131,7 +1139,7 @@ async function createBetaTargetGroup(region, { vpcId, name, port = 3000 }) {
       VpcId: vpcId,
       TargetType: "ip",
       HealthCheckPath: "/health",
-      HealthCheckIntervalSeconds: 30,
+      HealthCheckIntervalSeconds: 15,
       HealthyThresholdCount: 2,
       UnhealthyThresholdCount: 3
     }));
@@ -1300,6 +1308,56 @@ async function getAlbListenerArn(region, albDnsOrArn) {
   const l = (lisRes.Listeners || []).find(l => l.Port === 80) || lisRes.Listeners?.[0];
   return l?.ListenerArn || null;
 }
+// --- Secrets Manager Helpers ---
+const { GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
+
+// `secretName` is the FULL AWS Secrets Manager name to use (e.g. "my-app/secrets"
+// or whatever custom name the user typed in the setup wizard). Callers are
+// responsible for resolving it via utils/projectNaming.resolveSecretName(project) —
+// this function never derives or guesses a name on its own.
+async function upsertProjectSecret(region, secretName, kvObject) {
+  const { secrets } = clients(region);
+  const secretString = JSON.stringify(kvObject);
+  try {
+    const res = await secrets.send(new DescribeSecretCommand({ SecretId: secretName }));
+    const arn = res.ARN;
+    await secrets.send(new PutSecretValueCommand({ SecretId: secretName, SecretString: secretString }));
+    return arn;
+  } catch (err) {
+    if (err.name === "ResourceNotFoundException") {
+      const res = await secrets.send(new CreateSecretCommand({
+        Name: secretName,
+        SecretString: secretString,
+        Description: `Secrets for project (${secretName})`
+      }));
+      return res.ARN;
+    }
+    throw err;
+  }
+}
+
+async function listProjectSecretKeys(region, secretName) {
+  const { secrets } = clients(region);
+  try {
+    const res = await secrets.send(new GetSecretValueCommand({ SecretId: secretName }));
+    const parsed = JSON.parse(res.SecretString || "{}");
+    return Object.keys(parsed);
+  } catch (err) {
+    if (err.name === "ResourceNotFoundException") return [];
+    throw err;
+  }
+}
+
+async function deleteProjectSecret(region, secretName) {
+  const { secrets } = clients(region);
+  try {
+    await secrets.send(new DeleteSecretCommand({ SecretId: secretName, ForceDeleteWithoutRecovery: true }));
+  } catch (err) {
+    if (err.name === "ResourceNotFoundException") return;
+    throw err;
+  }
+}
+
 module.exports = {
   getCallerAccountId,
   ensureTerraformBackendInfra,
@@ -1331,4 +1389,7 @@ module.exports = {
   getBetaListenerRule,
   updateBetaListenerRule,
   setBetaRoutingEnabled,
+  upsertProjectSecret,
+  listProjectSecretKeys,
+  deleteProjectSecret
 };

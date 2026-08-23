@@ -33,6 +33,7 @@ async function loadProjectsAndSetup() {
     updateSetupUI();
     checkFoundationStatus();
     checkActiveRun();
+    loadSecrets();
   } catch (e) {
     console.error('Failed to load projects for setup wizard:', e);
   }
@@ -308,7 +309,7 @@ function handlePromptDestroyDeployment() {
   if (!_activeProject) return;
   openConfirmModal(
     'Destroy Deployment Infrastructure?',
-    'This will destroy ECS cluster, ECR repository, target groups, CodePipeline, and Fargate services for project "' + _activeProject.name + '".',
+    'This will destroy the ECS clusters, ECR repository, target groups, CodePipeline, and Fargate services for project "' + _activeProject.name + '".',
     'Yes, Destroy Deployment Infra',
     async function() {
       clearErrorMsg();
@@ -395,7 +396,344 @@ async function executeDestroyProject() {
   btn.textContent = 'Completely Destroy Project';
 }
 
-// ── Custom Modal Confirmation Helpers ─────────────────────────────────────
+// ─── SECRETS MANAGEMENT ─────────────────────────────────────────────
+
+var _secretKeys = [];
+var _secretNameLocked = false;
+
+async function loadSecrets() {
+  if (!_activeProject) return;
+  var container = document.getElementById('secrets-table-container');
+  if (!container) return;
+
+  try {
+    var nameInput = document.getElementById('secret-name-input');
+    var nameHint = document.getElementById('secret-name-hint');
+    var nameRes = await api.get('/api/secrets/' + _activeProject.id + '/name');
+    if (nameRes && nameRes.ok && nameInput) {
+      nameInput.value = nameRes.secretName || '';
+      _secretNameLocked = !!nameRes.locked;
+      nameInput.readOnly = _secretNameLocked;
+      nameInput.style.opacity = _secretNameLocked ? '0.7' : '1';
+      nameInput.style.cursor = _secretNameLocked ? 'not-allowed' : 'text';
+      if (nameHint) {
+        nameHint.textContent = _secretNameLocked
+          ? 'This secret already exists in AWS Secrets Manager under this name — it\'s locked in for this project.'
+          : 'Choose the exact name to create in AWS Secrets Manager. This is set once — after the first save it can\'t be changed here (delete the secret in AWS first if you need to reuse a different name).';
+      }
+    }
+
+    container.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);"><i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> Loading secrets...</div>';
+    if (window.lucide) lucide.createIcons();
+    
+    var res = await api.get('/api/secrets/' + _activeProject.id);
+    if (res && res.ok) {
+      _secretKeys = res.keys || [];
+      renderSecretsTable();
+    }
+  } catch (e) {
+    container.innerHTML = '<div style="font-size:12px;color:var(--color-danger);">Failed to load secrets.</div>';
+  }
+}
+
+function renderSecretsTable() {
+  var container = document.getElementById('secrets-table-container');
+  if (!container) return;
+
+  if (_secretKeys.length === 0) {
+    container.innerHTML = '<div style="font-size:13px;color:var(--color-text-tertiary);padding:16px;border:1px dashed var(--color-border);border-radius:8px;text-align:center;">No secrets configured yet.</div>';
+    return;
+  }
+
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+             '<thead><tr style="border-bottom:1px solid var(--color-border);text-align:left;color:var(--color-text-tertiary);">' +
+             '<th style="padding:8px;font-weight:600;">Key (e.g. DB_HOST)</th>' +
+             '<th style="padding:8px;font-weight:600;">Value</th>' +
+             '<th style="padding:8px;width:40px;"></th>' +
+             '</tr></thead><tbody>';
+             
+  _secretKeys.forEach(function(key, index) {
+    html += '<tr style="border-bottom:1px solid var(--color-border);">' +
+            '<td style="padding:8px;"><input type="text" class="secret-key-input" value="' + key + '" readonly style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-secondary);color:var(--color-text-secondary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+            '<td style="padding:8px;"><input type="text" value="••••••••" readonly style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-secondary);color:var(--color-text-tertiary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+            '<td style="padding:8px;text-align:center;"><button type="button" onclick="handleDeleteSecret(\'' + key + '\')" style="color:var(--color-danger);background:transparent;border:none;cursor:pointer;padding:4px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button></td>' +
+            '</tr>';
+  });
+  
+  html += '</tbody></table>';
+  container.innerHTML = html;
+  if (window.lucide) lucide.createIcons();
+}
+
+function handleAddSecretRow() {
+  var container = document.getElementById('secrets-table-container');
+  if (!container) return;
+  
+  var table = container.querySelector('table');
+  
+  if (!table) {
+    container.innerHTML = '<table style="width:100%;border-collapse:collapse;font-size:13px;">' +
+             '<thead><tr style="border-bottom:1px solid var(--color-border);text-align:left;color:var(--color-text-tertiary);">' +
+             '<th style="padding:8px;font-weight:600;">Key (e.g. DB_HOST)</th>' +
+             '<th style="padding:8px;font-weight:600;">Value</th>' +
+             '<th style="padding:8px;width:40px;"></th>' +
+             '</tr></thead><tbody></tbody></table>';
+    table = container.querySelector('table');
+  }
+
+  var tbody = table.querySelector('tbody');
+  var tr = document.createElement('tr');
+  tr.style.borderBottom = '1px solid var(--color-border)';
+  tr.innerHTML = 
+    '<td style="padding:8px;"><input type="text" class="new-secret-key" placeholder="DB_HOST" autocomplete="off" data-lpignore="true" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+    '<td style="padding:8px;"><input type="password" class="new-secret-val" placeholder="Value (write-only)" autocomplete="new-password" data-lpignore="true" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+    '<td style="padding:8px;text-align:center;"><button type="button" onclick="this.closest(\'tr\').remove(); if(document.querySelectorAll(\'.new-secret-key\').length===0 && _secretKeys.length===0) renderSecretsTable();" style="color:var(--color-danger);background:transparent;border:none;cursor:pointer;padding:4px;"><i data-lucide="x" style="width:14px;height:14px;"></i></button></td>';
+  
+  tbody.appendChild(tr);
+  if (window.lucide) lucide.createIcons();
+  
+  var keyInput = tr.querySelector('.new-secret-key');
+  if (keyInput) keyInput.focus();
+}
+
+async function handleSaveSecrets() {
+  if (!_activeProject) return;
+  var btn = document.getElementById('btn-save-secrets');
+  var msg = document.getElementById('secrets-save-msg');
+  
+  var newKeyInputs = document.querySelectorAll('.new-secret-key');
+  var newValInputs = document.querySelectorAll('.new-secret-val');
+  
+  var secretsObj = {};
+  var hasNew = false;
+  
+  for (var i = 0; i < newKeyInputs.length; i++) {
+    var key = newKeyInputs[i].value.trim();
+    var val = newValInputs[i].value;
+    if (key && val) {
+      secretsObj[key] = val;
+      hasNew = true;
+    }
+  }
+  
+  if (!hasNew) {
+    if (msg) {
+      msg.textContent = 'No new secrets to save.';
+      msg.style.color = 'var(--color-text-tertiary)';
+      msg.style.display = 'block';
+      setTimeout(function() { msg.style.display = 'none'; }, 3000);
+    }
+    return;
+  }
+
+  var nameInput = document.getElementById('secret-name-input');
+  var typedName = nameInput ? nameInput.value.trim() : '';
+  if (!_secretNameLocked && !typedName) {
+    if (msg) {
+      msg.textContent = 'Enter a secret name before saving.';
+      msg.style.color = 'var(--color-danger)';
+      msg.style.display = 'block';
+    }
+    if (nameInput) nameInput.focus();
+    return;
+  }
+
+  try {
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> Saving...';
+    if (window.lucide) lucide.createIcons();
+
+    var payload = { secrets: secretsObj };
+    if (!_secretNameLocked) payload.secretName = typedName;
+
+    var res = await api.post('/api/secrets/' + _activeProject.id, payload);
+    if (res && res.ok) {
+      _secretKeys = res.keys;
+      renderSecretsTable();
+      if (res.secretName && nameInput) {
+        nameInput.value = res.secretName;
+        nameInput.readOnly = true;
+        nameInput.style.opacity = '0.7';
+        nameInput.style.cursor = 'not-allowed';
+        _secretNameLocked = true;
+        var nameHint = document.getElementById('secret-name-hint');
+        if (nameHint) nameHint.textContent = 'This secret already exists in AWS Secrets Manager under this name — it\'s locked in for this project.';
+      }
+      if (msg) {
+        msg.innerHTML = '<span style="color:var(--color-success);"><i data-lucide="check-circle-2" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;"></i> Secrets saved successfully. Please Re-apply Deployment Infra below to update running containers.</span>';
+        msg.style.display = 'block';
+        if (window.lucide) lucide.createIcons();
+        setTimeout(function() { msg.style.display = 'none'; }, 8000);
+      }
+    } else {
+      throw new Error(res.error || 'Failed to save secrets');
+    }
+  } catch (e) {
+    if (msg) {
+      msg.textContent = 'Error: ' + e.message;
+      msg.style.color = 'var(--color-danger)';
+      msg.style.display = 'block';
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save to AWS Secrets Manager';
+  }
+}
+
+async function handleDeleteSecret(key) {
+  if (!confirm('Are you sure you want to delete the secret key "' + key + '"? This will remove it from AWS Secrets Manager immediately.')) return;
+  
+  try {
+    var res = await api.delete('/api/secrets/' + _activeProject.id + '/' + key);
+    if (res && res.ok) {
+      _secretKeys = res.keys;
+      renderSecretsTable();
+      var msg = document.getElementById('secrets-save-msg');
+      if (msg) {
+        msg.innerHTML = '<span style="color:var(--color-warning);"><i data-lucide="info" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;"></i> Secret deleted. Please Re-apply Deployment Infra to update running containers.</span>';
+        msg.style.display = 'block';
+        if (window.lucide) lucide.createIcons();
+        setTimeout(function() { msg.style.display = 'none'; }, 8000);
+      }
+    } else {
+      alert('Failed to delete secret: ' + (res.error || 'Unknown error'));
+    }
+  } catch (e) {
+    alert('Error: ' + e.message);
+  }
+}
+
+// ─── SECRETS APPLY ACTIONS ───────────────────────────────────────────────────
+
+// Helper: open the inline status panel with a given label and state
+function setSecretsActionStatus(label, state /* 'running'|'success'|'failed' */, logLines) {
+  var panel  = document.getElementById('secrets-action-status');
+  var badge  = document.getElementById('secrets-action-badge');
+  var lbl    = document.getElementById('secrets-action-label');
+  var logEl  = document.getElementById('secrets-action-log');
+
+  if (!panel) return;
+  panel.style.display = 'block';
+  if (lbl) lbl.textContent = label;
+
+  var stateMap = {
+    running: { html: '<i data-lucide="loader-2" class="animate-spin" style="width:10px;height:10px;"></i> RUNNING',  bg: 'rgba(56,189,248,0.15)', color: '#38bdf8' },
+    success: { html: '✔ COMPLETED', bg: 'rgba(16,185,129,0.15)', color: '#10b981' },
+    failed:  { html: '✖ FAILED',    bg: 'rgba(239,68,68,0.15)',  color: '#ef4444' },
+  };
+  var s = stateMap[state] || stateMap.running;
+  if (badge) {
+    badge.innerHTML = s.html;
+    badge.style.background = s.bg;
+    badge.style.color = s.color;
+    if (window.lucide) lucide.createIcons();
+  }
+
+  if (logEl && logLines && logLines.length) {
+    logLines.forEach(function(line) {
+      var div = document.createElement('div');
+      div.style.color = (line.includes('ERROR') || line.includes('error') || line.includes('failed')) ? '#f87171'
+                       : (line.includes('✔') || line.includes('success') || line.includes('completed')) ? '#4ade80'
+                       : '#cbd5e1';
+      div.textContent = line;
+      logEl.appendChild(div);
+      logEl.scrollTop = logEl.scrollHeight;
+    });
+  }
+
+  // Scroll panel into view
+  setTimeout(function() { panel.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }, 80);
+}
+
+// Restart ECS — fast path, no Terraform needed. Picks up updated secret VALUES.
+async function handleRestartEcs() {
+  if (!_activeProject) return;
+  var btn = document.getElementById('btn-restart-ecs');
+  var logEl = document.getElementById('secrets-action-log');
+
+  // Reset log
+  if (logEl) logEl.innerHTML = '';
+  setSecretsActionStatus('RESTART ECS', 'running', ['Sending force-restart to ECS services...']);
+
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
+  try {
+    var res = await api.post('/api/secrets/' + _activeProject.id + '/restart', {});
+    if (res && res.ok) {
+      var lines = [];
+      if (res.restarted && res.restarted.length) lines.push('✔ Restarted: ' + res.restarted.join(', '));
+      if (res.failed && res.failed.length)    lines.push('⚠ Skipped/Failed: ' + res.failed.join(' | '));
+      lines.push('\n✔ ECS rolling restart triggered. New tasks will pull fresh secret values.');
+      setSecretsActionStatus('RESTART ECS', 'success', lines);
+    } else {
+      throw new Error(res.error || 'Restart failed');
+    }
+  } catch (e) {
+    setSecretsActionStatus('RESTART ECS', 'failed', ['✖ Error: ' + e.message]);
+  } finally {
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  }
+}
+
+// Re-apply Deployment Infra — needed when a NEW secret key was added.
+// Streams Terraform logs into the inline panel (same SSE as the wizard).
+async function handleReapplyDeployment() {
+  if (!_activeProject) return;
+  var logEl = document.getElementById('secrets-action-log');
+  var btn   = document.getElementById('btn-reapply-deploy');
+
+  // Reset
+  if (logEl) logEl.innerHTML = '';
+  setSecretsActionStatus('RE-APPLY INFRA', 'running', ['Starting Terraform deployment apply...']);
+  if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
+
+  try {
+    var res = await api.post('/api/terraform/deployment/run', { projectId: _activeProject.id });
+    if (!res || !res.ok) throw new Error(res.error || 'Failed to start Terraform run');
+
+    var runId = res.runId;
+    setSecretsActionStatus('RE-APPLY INFRA', 'running', ['Run ID: ' + runId, 'Streaming live logs...']);
+
+    // Wire up SSE into our inline log panel (mirror — does NOT steal the main terminal)
+    var es = new EventSource('/api/terraform/' + runId + '/logs');
+    es.onmessage = function(event) {
+      try {
+        var data = JSON.parse(event.data);
+        if (data.line && logEl) {
+          var div = document.createElement('div');
+          div.style.color = (data.line.includes('ERROR') || data.line.includes('Error:')) ? '#f87171'
+                           : (data.line.includes('✔') || data.line.includes('Apply complete!')) ? '#4ade80'
+                           : '#cbd5e1';
+          div.textContent = data.line;
+          logEl.appendChild(div);
+          logEl.scrollTop = logEl.scrollHeight;
+        }
+      } catch (e) {}
+    };
+    es.addEventListener('done', function(event) {
+      try {
+        var result = JSON.parse(event.data);
+        var ok = result.status === 'done' || result.status === 'success';
+        setSecretsActionStatus('RE-APPLY INFRA', ok ? 'success' : 'failed',
+          [ok ? '\n✔ Terraform apply completed successfully.' : '\n✖ Terraform apply failed — check logs above.']);
+        loadProjectsAndSetup(); // refresh badges
+      } catch (e) {}
+      es.close();
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    });
+    es.addEventListener('error', function() {
+      setSecretsActionStatus('RE-APPLY INFRA', 'failed', ['✖ Lost connection to log stream.']);
+      es.close();
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+    });
+
+  } catch (e) {
+    setSecretsActionStatus('RE-APPLY INFRA', 'failed', ['✖ ' + e.message]);
+    if (btn) { btn.disabled = false; btn.style.opacity = ''; }
+  }
+}
+
+
 function openConfirmModal(title, description, actionLabel, onConfirm, isWarningOnly) {
   var modal = document.getElementById('custom-confirm-modal');
   var titleText = document.getElementById('modal-title-text');

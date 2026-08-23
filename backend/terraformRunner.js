@@ -157,8 +157,18 @@ async function _execute(runId, folder, tfvars, isDestroy, opts = {}) {
 
     // 2. Write terraform.auto.tfvars
     const tfvarsContent = Object.entries(tfvars)
-      .filter(([, v]) => v !== undefined && v !== null && v !== "")
-      .map(([k, v]) => `${k} = ${JSON.stringify(String(v))}`)
+      .filter(([, v]) => {
+        if (Array.isArray(v)) return true; // always keep arrays, even empty ones
+        return v !== undefined && v !== null && v !== "";
+      })
+      .map(([k, v]) => {
+        if (Array.isArray(v)) {
+          const items = v.map(item => JSON.stringify(String(item))).join(", ");
+          return `${k} = [${items}]`;
+        }
+        if (typeof v === "boolean") return `${k} = ${v}`;
+        return `${k} = ${JSON.stringify(String(v))}`;
+      })
       .join("\n");
     fs.writeFileSync(path.join(folder, "panel.auto.tfvars"), tfvarsContent + "\n");
 

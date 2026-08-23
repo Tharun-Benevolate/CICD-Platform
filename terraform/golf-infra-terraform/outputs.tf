@@ -3,8 +3,12 @@ output "ecr_repository_url" {
   value       = aws_ecr_repository.app.repository_url
 }
 
-output "ecs_cluster_name" {
-  value = aws_ecs_cluster.main.name
+output "ecs_cluster_name_non_prod" {
+  value = aws_ecs_cluster.non_prod.name
+}
+
+output "ecs_cluster_name_prod" {
+  value = aws_ecs_cluster.prod.name
 }
 
 output "dev_service_name" { value = aws_ecs_service.dev.name }
@@ -45,3 +49,4 @@ output "cost_estimate_monthly" {
 # Needed by the platform for on-demand beta provisioning
 output "vpc_id" { value = var.vpc_id }
 output "alb_listener_arn" { value = var.alb_listener_arn }
+output "secret_arn" { value = var.secret_arn }

@@ -52,7 +52,7 @@
           <span style="font-weight:700;font-size:13px;color:var(--color-text-primary);">Deployment Infra</span>
         </div>
         <span style="font-size:11px;color:var(--color-text-tertiary);">
-          VPC &bull; ALB &bull; ECS &bull; Pipeline
+          ECR &bull; Non-Prod ECS Cluster &bull; Prod ECS Cluster &bull; Pipeline
         </span>
       </div>
     </div>
@@ -130,7 +130,7 @@
         2. Deployment Infrastructure
       </h2>
       <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:14px;">
-        Creates: VPC &bull; Private subnets &bull; NAT Gateway &bull; ALB (Dev, UAT, Prod Blue &amp; Green Target Groups) &bull; ECS Cluster &bull; Fargate services (Dev, UAT, Prod with CODE_DEPLOY controller) &bull; CodeDeploy application &amp; deployment group &bull; Auto-scaling &bull; Route53 DNS &bull; 7-stage CodePipeline.
+        Creates: ECR repository &bull; <strong>Non-Prod ECS Cluster</strong> (Dev &amp; UAT Fargate services) &bull; <strong>Prod ECS Cluster</strong> (Prod Fargate service) &bull; ALB target groups (Dev, UAT, Prod Blue) &bull; Listener rules &bull; CloudWatch log groups &bull; Auto-scaling &bull; Route53 DNS &bull; 7-stage CodePipeline.
       </p>
 
       <div style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:20px;">
@@ -151,10 +151,86 @@
       </div>
     </div>
 
-    <!-- SECTION 3: DANGER ZONE — DESTROY ENTIRE PROJECT -->
+    <!-- SECTION 3: SECRETS MANAGEMENT -->
+    <div class="setup-section-box">
+      <h2 style="font-size:17px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">
+        3. Environment Secrets Management
+      </h2>
+      <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:14px;">
+        Store sensitive configuration (e.g. <code>DB_HOST</code>, <code>DB_PASSWORD</code>) directly in AWS Secrets Manager. These are injected securely as environment variables to containers in Dev, UAT, Prod, and Beta.
+      </p>
+
+      <div style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:20px;">
+        <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:text-bottom;"></i> Values are write-only. Once saved, they are never exposed back to this interface.
+      </div>
+
+      <div style="margin-bottom:18px;">
+        <label for="secret-name-input" style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+          AWS Secrets Manager secret name
+        </label>
+        <input type="text" id="secret-name-input" placeholder="e.g. my-project/secrets" autocomplete="off" data-lpignore="true"
+               style="width:100%;max-width:420px;padding:8px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:13px;" />
+        <div id="secret-name-hint" style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px;">
+          Choose the exact name to create in AWS Secrets Manager. This is set once — after the first save it can't be changed here (delete the secret in AWS first if you need to reuse a different name).
+        </div>
+      </div>
+
+      <div id="secrets-table-container" style="margin-bottom:16px;">
+        <!-- Filled by JS -->
+      </div>
+
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <button id="btn-add-secret-row" onclick="handleAddSecretRow()" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
+          <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
+        </button>
+        <button id="btn-save-secrets" onclick="handleSaveSecrets()" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;margin-left:auto;">
+          Save to AWS Secrets Manager
+        </button>
+      </div>
+      <div id="secrets-save-msg" style="margin-top:12px;font-size:12px;display:none;"></div>
+
+      <!-- ── APPLY ACTIONS ── -->
+      <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border);">
+        <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">
+          Apply Secret Changes to Running Containers
+        </div>
+        <p style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:14px;line-height:1.6;">
+          <strong style="color:var(--color-text-secondary);">Updated a value?</strong> Use <em>Restart ECS</em> — fast, zero-downtime (30s).<br>
+          <strong style="color:var(--color-text-secondary);">Added a new key?</strong> Use <em>Re-apply Infra</em> to update the task definition (~3–4 min).
+        </p>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <button id="btn-restart-ecs" onclick="handleRestartEcs()" class="btn-secondary" style="font-size:13px;padding:8px 16px;gap:6px;display:inline-flex;align-items:center;">
+            <i data-lucide="rotate-ccw" style="width:14px;height:14px;"></i> Restart ECS Services
+          </button>
+          <button id="btn-reapply-deploy" onclick="handleReapplyDeployment()" class="btn-grad-blue" style="font-size:13px;padding:8px 16px;gap:6px;display:inline-flex;align-items:center;">
+            <i data-lucide="refresh-cw" style="width:14px;height:14px;"></i> Re-apply Deployment Infra
+          </button>
+        </div>
+
+        <!-- Inline status panel (restart or apply) -->
+        <div id="secrets-action-status" style="display:none;margin-top:16px;border-radius:10px;border:1px solid var(--color-border);overflow:hidden;">
+          <!-- Status header bar -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--color-bg-secondary);border-bottom:1px solid var(--color-border);">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span id="secrets-action-label" style="font-size:12px;font-weight:700;color:var(--color-text-primary);letter-spacing:0.5px;">RESTART</span>
+              <span id="secrets-action-badge" style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(56,189,248,0.15);color:#38bdf8;display:inline-flex;align-items:center;gap:4px;">
+                <i data-lucide="loader-2" class="animate-spin" style="width:10px;height:10px;"></i> RUNNING
+              </span>
+            </div>
+            <button onclick="document.getElementById('secrets-action-status').style.display='none'" style="background:transparent;border:none;cursor:pointer;color:var(--color-text-tertiary);padding:2px;">
+              <i data-lucide="x" style="width:14px;height:14px;"></i>
+            </button>
+          </div>
+          <!-- Log area (used for terraform streaming or simple status messages) -->
+          <div id="secrets-action-log" style="padding:12px 14px;font-family:monospace;font-size:12px;color:#cbd5e1;background:#0f172a;max-height:260px;overflow-y:auto;white-space:pre-wrap;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: DANGER ZONE — DESTROY ENTIRE PROJECT -->
     <div class="setup-danger-box">
       <h2 style="font-size:17px;font-weight:700;color:var(--color-danger);margin-bottom:6px;">
-        3. Danger Zone: Destroy Entire Project
+        4. Danger Zone: Destroy Entire Project
       </h2>
       <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:20px;">
         Deletes all infrastructure and settings saved for this project. This action is permanent.

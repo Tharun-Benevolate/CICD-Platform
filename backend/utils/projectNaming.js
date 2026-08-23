@@ -22,17 +22,50 @@ function namesForProject({ githubRepo, projectName, buildProjectName } = {}) {
     prefix,
     projectName: prefix,
     s3BucketName: `${prefix}-artifacts-bucket`,
-    ecsClusterName: `${prefix}-cluster`,
+    ecsClusterName: `${prefix}-cluster`, // Legacy fallback
+    ecsClusterNameNonProd: `${prefix}-non-prod-cluster`,
+    ecsClusterNameProd: `${prefix}-prod-cluster`,
     ecrRepoName: prefix,
     devServiceName: `${prefix}-dev`,
     uatServiceName: `${prefix}-uat`,
     prodServiceName: `${prefix}-prod`,
     prodBetaServiceName: `${prefix}-prod-beta`,
     codebuildProjectName: prefix,
-    pipelineName: `${prefix}-cluster-pipeline`,
+    pipelineName: `${prefix}-prod-cluster-pipeline`,
     dnsHostPrefix: prefix,
     githubConnectionName: `${connPrefix}-github`
   };
 }
 
-module.exports = { sanitizeProjectPrefix, namesForProject, betaTgNameFor };
+/**
+ * Returns the canonical AWS Secrets Manager prefix for a project.
+ * Secret is stored as: `{prefix}/secrets`
+ * This is the single source of truth — used by both secrets.js and terraform.js.
+ */
+function secretPrefixForProject(project) {
+  const name = project.githubRepo || project.buildProjectName || project.name || "app";
+  return sanitizeProjectPrefix(name);
+}
+
+// AWS Secrets Manager names allow: alphanumerics and the characters / _ + = . @ -
+// (max 512 chars). Strip anything else so a user-typed name can't break the API call.
+function sanitizeSecretName(name) {
+  return String(name || "")
+    .trim()
+    .replace(/[^A-Za-z0-9/_+=.@-]/g, "-")
+    .slice(0, 512);
+}
+
+/**
+ * Resolves the actual AWS Secrets Manager name to use for a project.
+ * If the user typed a custom name in the setup wizard (stored as project.secretName
+ * the first time secrets were saved), that name is authoritative and is reused for
+ * every subsequent read/write/delete — it is NEVER re-derived from the project prefix.
+ * Only projects that have never had a name chosen fall back to the auto `{prefix}/secrets`.
+ */
+function resolveSecretName(project) {
+  if (project && project.secretName) return project.secretName;
+  return `${secretPrefixForProject(project)}/secrets`;
+}
+
+module.exports = { sanitizeProjectPrefix, namesForProject, betaTgNameFor, secretPrefixForProject, sanitizeSecretName, resolveSecretName };

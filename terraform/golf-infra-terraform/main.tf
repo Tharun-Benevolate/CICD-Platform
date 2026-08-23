@@ -10,11 +10,11 @@ locals {
   placeholder_image = "public.ecr.aws/docker/library/httpd:latest"
   task_role         = var.ecs_task_role_arn != "" ? var.ecs_task_role_arn : var.ecs_execution_role_arn
   container_name    = var.ecr_repo_name
-  project_prefix    = var.project_prefix != "" ? var.project_prefix : replace(var.ecs_cluster_name, "-cluster", "")
-  aws_name_prefix   = substr(var.project_prefix != "" ? var.project_prefix : replace(var.ecs_cluster_name, "-cluster", ""), 0, 19)
+  project_prefix    = var.project_prefix != "" ? var.project_prefix : replace(var.ecs_cluster_name_non_prod, "-non-prod-cluster", "")
+  aws_name_prefix   = substr(var.project_prefix != "" ? var.project_prefix : replace(var.ecs_cluster_name_non_prod, "-non-prod-cluster", ""), 0, 19)
   dev_host          = var.dns_host_prefix != "" ? "dev-${var.dns_host_prefix}.${var.domain_name}" : "dev.${var.domain_name}"
   uat_host          = var.dns_host_prefix != "" ? "uat-${var.dns_host_prefix}.${var.domain_name}" : "uat.${var.domain_name}"
-  prod_host         = var.dns_host_prefix != "" ? "prod-${var.dns_host_prefix}.${var.domain_name}" : "prod.${var.domain_name}"
+  prod_host         = var.dns_host_prefix != "" ? "${var.dns_host_prefix}.${var.domain_name}" : "${var.domain_name}"
 }
 
 # ─── 1-4. VPC, NAT GATEWAY, SECURITY GROUPS, ALB ──────────────────────
@@ -43,10 +43,13 @@ resource "aws_lb_target_group" "dev" {
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
+  deregistration_delay = 30
   health_check {
     path                = "/health"
     healthy_threshold   = 2
     unhealthy_threshold = 10
+    interval            = 15
+    timeout             = 5
   }
 }
 
@@ -57,10 +60,13 @@ resource "aws_lb_target_group" "uat" {
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
+  deregistration_delay = 30
   health_check {
     path                = "/health"
     healthy_threshold   = 2
     unhealthy_threshold = 10
+    interval            = 15
+    timeout             = 5
   }
 }
 
@@ -78,10 +84,13 @@ resource "aws_lb_target_group" "prod_blue" {
   protocol    = "HTTP"
   vpc_id      = var.vpc_id
   target_type = "ip"
+  deregistration_delay = 30
   health_check {
     path                = "/health"
     healthy_threshold   = 2
     unhealthy_threshold = 10
+    interval            = 15
+    timeout             = 5
   }
 }
 
@@ -191,25 +200,26 @@ resource "aws_ecr_repository" "app" {
   force_delete         = true
 }
 
-resource "aws_ecs_cluster" "main" { name = var.ecs_cluster_name }
+resource "aws_ecs_cluster" "non_prod" { name = var.ecs_cluster_name_non_prod }
+resource "aws_ecs_cluster" "prod" { name = var.ecs_cluster_name_prod }
 
 resource "aws_cloudwatch_log_group" "dev" {
-  name              = "/ecs/${var.ecs_cluster_name}-dev"
+  name              = "/ecs/${var.ecs_cluster_name_non_prod}-dev"
   retention_in_days = 7
 }
 resource "aws_cloudwatch_log_group" "uat" {
-  name              = "/ecs/${var.ecs_cluster_name}-uat"
+  name              = "/ecs/${var.ecs_cluster_name_non_prod}-uat"
   retention_in_days = 7
 }
 resource "aws_cloudwatch_log_group" "prod" {
-  name              = "/ecs/${var.ecs_cluster_name}-prod"
+  name              = "/ecs/${var.ecs_cluster_name_prod}-prod"
   retention_in_days = 7
 }
 
 # ─── 7. TASK DEFINITIONS ─────────────────────────────────────────────
 
 resource "aws_ecs_task_definition" "dev" {
-  family                   = "${var.ecs_cluster_name}-dev"
+  family                   = "${var.ecs_cluster_name_non_prod}-dev"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "256"
@@ -232,6 +242,12 @@ resource "aws_ecs_task_definition" "dev" {
         "awslogs-stream-prefix" = "dev"
       }
     }
+    secrets = var.secret_arn != "" ? [
+      for key in var.secret_keys : {
+        name      = key
+        valueFrom = "${var.secret_arn}:${key}::"
+      }
+    ] : []
   }])
 
   # CodePipeline's plain "ECS" deploy action registers a new task-def
@@ -247,7 +263,7 @@ resource "aws_ecs_task_definition" "dev" {
 }
 
 resource "aws_ecs_task_definition" "uat" {
-  family                   = "${var.ecs_cluster_name}-uat"
+  family                   = "${var.ecs_cluster_name_non_prod}-uat"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "256"
@@ -270,6 +286,12 @@ resource "aws_ecs_task_definition" "uat" {
         "awslogs-stream-prefix" = "uat"
       }
     }
+    secrets = var.secret_arn != "" ? [
+      for key in var.secret_keys : {
+        name      = key
+        valueFrom = "${var.secret_arn}:${key}::"
+      }
+    ] : []
   }])
 
   # Same reasoning as the dev task definition above: prevent Terraform from
@@ -281,7 +303,7 @@ resource "aws_ecs_task_definition" "uat" {
 }
 
 resource "aws_ecs_task_definition" "prod" {
-  family                   = "${var.ecs_cluster_name}-prod"
+  family                   = "${var.ecs_cluster_name_prod}-prod"
   requires_compatibilities = ["FARGATE"]
   network_mode             = "awsvpc"
   cpu                      = "256"
@@ -304,6 +326,12 @@ resource "aws_ecs_task_definition" "prod" {
         "awslogs-stream-prefix" = "prod"
       }
     }
+    secrets = var.secret_arn != "" ? [
+      for key in var.secret_keys : {
+        name      = key
+        valueFrom = "${var.secret_arn}:${key}::"
+      }
+    ] : []
   }])
 
   # CRITICAL: unlike dev/uat, prod's live task revision is entirely owned by
@@ -330,7 +358,7 @@ resource "aws_ecs_task_definition" "prod" {
 
 resource "aws_ecs_service" "dev" {
   name    = var.dev_service_name
-  cluster = aws_ecs_cluster.main.id
+  cluster = aws_ecs_cluster.non_prod.id
   # Use the family name, not .arn — ECS resolves this to whatever revision
   # is currently ACTIVE in the family (the pipeline's real-image revision),
   # instead of Terraform's own frozen placeholder revision ARN. See the
@@ -364,7 +392,7 @@ resource "aws_ecs_service" "dev" {
 
 resource "aws_ecs_service" "uat" {
   name    = var.uat_service_name
-  cluster = aws_ecs_cluster.main.id
+  cluster = aws_ecs_cluster.non_prod.id
   # Same reasoning as aws_ecs_service.dev above.
   task_definition = aws_ecs_task_definition.uat.family
   desired_count   = 1
@@ -388,7 +416,7 @@ resource "aws_ecs_service" "uat" {
 
 resource "aws_ecs_service" "prod" {
   name            = var.prod_service_name
-  cluster         = aws_ecs_cluster.main.id
+  cluster         = aws_ecs_cluster.prod.id
   task_definition = aws_ecs_task_definition.prod.family
   desired_count   = 1
   launch_type     = "FARGATE"
@@ -419,13 +447,13 @@ resource "aws_ecs_service" "prod" {
 resource "aws_appautoscaling_target" "uat" {
   max_capacity       = 4
   min_capacity       = 1
-  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.uat.name}"
+  resource_id        = "service/${aws_ecs_cluster.non_prod.name}/${aws_ecs_service.uat.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
 }
 
 resource "aws_appautoscaling_policy" "uat_cpu" {
-  name               = "${var.ecs_cluster_name}-uat-cpu-scaling"
+  name               = "${var.ecs_cluster_name_non_prod}-uat-cpu-scaling"
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.uat.resource_id
   scalable_dimension = aws_appautoscaling_target.uat.scalable_dimension
@@ -445,13 +473,13 @@ resource "aws_appautoscaling_policy" "uat_cpu" {
 resource "aws_appautoscaling_target" "prod" {
   max_capacity       = 4
   min_capacity       = 1
-  resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.prod.name}"
+  resource_id        = "service/${aws_ecs_cluster.prod.name}/${aws_ecs_service.prod.name}"
   scalable_dimension = "ecs:service:DesiredCount"
   service_namespace  = "ecs"
 }
 
 resource "aws_appautoscaling_policy" "prod_cpu" {
-  name               = "${var.ecs_cluster_name}-prod-cpu-scaling"
+  name               = "${var.ecs_cluster_name_prod}-prod-cpu-scaling"
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.prod.resource_id
   scalable_dimension = aws_appautoscaling_target.prod.scalable_dimension
@@ -473,7 +501,7 @@ resource "aws_appautoscaling_policy" "prod_cpu" {
 # ─── 9. FULL 7-STAGE CODEPIPELINE ────────────────────────────────────
 
 resource "aws_codepipeline" "main" {
-  name     = "${var.ecs_cluster_name}-pipeline"
+  name     = "${var.ecs_cluster_name_prod}-pipeline"
   role_arn = var.pipeline_role_arn
 
   artifact_store {
@@ -527,7 +555,7 @@ resource "aws_codepipeline" "main" {
       version         = "1"
       input_artifacts = ["build_output"]
       configuration = {
-        ClusterName = var.ecs_cluster_name
+        ClusterName = var.ecs_cluster_name_non_prod
         ServiceName = var.dev_service_name
         FileName    = "imagedefinitions.json"
       }
@@ -560,7 +588,7 @@ resource "aws_codepipeline" "main" {
       version         = "1"
       input_artifacts = ["build_output"]
       configuration = {
-        ClusterName = var.ecs_cluster_name
+        ClusterName = var.ecs_cluster_name_non_prod
         ServiceName = var.uat_service_name
         FileName    = "imagedefinitions.json"
       }
@@ -596,7 +624,7 @@ resource "aws_codepipeline" "main" {
       version         = "1"
       input_artifacts = ["build_output"]
       configuration = {
-        ClusterName = var.ecs_cluster_name
+        ClusterName = var.ecs_cluster_name_prod
         ServiceName = var.prod_service_name
         FileName    = "imagedefinitions.json"
       }

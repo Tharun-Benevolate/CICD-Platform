@@ -150,7 +150,7 @@ router.get("/bluegreen/status", auth.requireAuth, async (req, res) => {
     }
     const region = project.region || "us-east-1";
     const [svc, orgs] = await Promise.all([
-      aws.describeEcsService(region, project.ecsClusterName, project.prodBetaServiceName).catch(() => null),
+      aws.describeEcsService(region, project.ecsClusterNameProd || project.ecsClusterName, project.prodBetaServiceName).catch(() => null),
       betaOrgStore.listBetaOrgs()
     ]);
     const desiredCount = svc ? (svc.desiredCount || 0) : 0;
@@ -188,16 +188,17 @@ router.post("/bluegreen/beta/start", auth.requireRole(...auth.ADMIN_ROLES), asyn
     const { imageUri } = req.body;
     if (!imageUri) return res.status(400).json({ ok: false, error: "imageUri is required" });
     const region = project.region || "us-east-1";
+    const clusterName = project.ecsClusterNameProd || project.ecsClusterName;
     const result = await aws.deployImageToService(region, {
-      clusterName: project.ecsClusterName,
+      clusterName: clusterName,
       serviceName: project.prodBetaServiceName,
-      family: `${project.ecsClusterName}-prod-beta`,
+      family: `${clusterName}-prod-beta`,
       image: imageUri,
       executionRoleArn: project.ecsExecutionRoleArn,
       taskRoleArn: project.ecsTaskRoleArn || project.ecsExecutionRoleArn
     });
-    await aws.scaleEcsService(region, project.ecsClusterName, project.prodBetaServiceName, 1);
-    const stable = await aws.waitForServiceStable(region, project.ecsClusterName, project.prodBetaServiceName);
+    await aws.scaleEcsService(region, clusterName, project.prodBetaServiceName, 1);
+    const stable = await aws.waitForServiceStable(region, clusterName, project.prodBetaServiceName);
     let priorityFix = null;
     if (project.prodBetaListenerRuleArn) {
       // Fix any rule-ordering drift BEFORE flipping the cookie condition back
@@ -233,8 +234,9 @@ router.post("/bluegreen/beta/stop", auth.requireRole(...auth.ADMIN_ROLES), async
     if (project.prodBetaListenerRuleArn) {
       await aws.setBetaRoutingEnabled(region, project.prodBetaListenerRuleArn, false);
     }
-    await aws.scaleEcsService(region, project.ecsClusterName, project.prodBetaServiceName, 0);
-    const stable = await aws.waitForServiceStable(region, project.ecsClusterName, project.prodBetaServiceName);
+    const clusterName = project.ecsClusterNameProd || project.ecsClusterName;
+    await aws.scaleEcsService(region, clusterName, project.prodBetaServiceName, 0);
+    const stable = await aws.waitForServiceStable(region, clusterName, project.prodBetaServiceName);
     const user = auth.getLoggedInUser(req) || "unknown";
     auditStore.logAction(user, "Beta environment stopped (scaled to 0); ALB beta routing disabled", project.name, "Success");
     res.json({ ok: true, stable, betaRoutingEnabled: false });
@@ -293,12 +295,12 @@ router.post("/release/promote-to-prod", auth.requireRole(...auth.ADMIN_ROLES), a
     });
 
     // Scale down beta — release path is complete; prod will come via pipeline
-    if (project.prodBetaServiceName && project.ecsClusterName) {
+    if (project.prodBetaServiceName && (project.ecsClusterNameProd || project.ecsClusterName)) {
       try {
         if (project.prodBetaListenerRuleArn) {
           await aws.setBetaRoutingEnabled(region, project.prodBetaListenerRuleArn, false);
         }
-        await aws.scaleEcsService(region, project.ecsClusterName, project.prodBetaServiceName, 0);
+        await aws.scaleEcsService(region, project.ecsClusterNameProd || project.ecsClusterName, project.prodBetaServiceName, 0);
       } catch (betaErr) {
         console.warn("Beta stop after promote-to-prod:", betaErr.message);
       }
@@ -368,7 +370,8 @@ router.post("/bluegreen/beta/promote", auth.requireRole(...auth.ADMIN_ROLES), as
       return res.status(400).json({ ok: false, error: "Beta or prod service not configured." });
     }
     const region = project.region || "us-east-1";
-    const betaSvc = await aws.describeEcsService(region, project.ecsClusterName, project.prodBetaServiceName);
+    const clusterName = project.ecsClusterNameProd || project.ecsClusterName;
+    const betaSvc = await aws.describeEcsService(region, clusterName, project.prodBetaServiceName);
     if (!betaSvc || !betaSvc.taskDefinition) {
       return res.status(400).json({ ok: false, error: "Beta service has no active task definition. Start the beta environment first." });
     }
@@ -379,14 +382,14 @@ router.post("/bluegreen/beta/promote", auth.requireRole(...auth.ADMIN_ROLES), as
       return res.status(400).json({ ok: false, error: "Could not determine beta image URI." });
     }
     const result = await aws.deployImageToService(region, {
-      clusterName: project.ecsClusterName,
+      clusterName: clusterName,
       serviceName: project.prodServiceName,
-      family: `${project.ecsClusterName}-prod`,
+      family: `${clusterName}-prod`,
       image: betaImage,
       executionRoleArn: project.ecsExecutionRoleArn,
       taskRoleArn: project.ecsTaskRoleArn || project.ecsExecutionRoleArn
     });
-    const stable = await aws.waitForServiceStable(region, project.ecsClusterName, project.prodServiceName);
+    const stable = await aws.waitForServiceStable(region, clusterName, project.prodServiceName);
     const user = auth.getLoggedInUser(req) || "unknown";
     auditStore.logAction(user, `Promoted beta image to prod: ${betaImage}`, project.name, "Success");
     res.json({ ok: true, promotedImage: betaImage, taskDefinitionArn: result.taskDefinitionArn, stable });
@@ -410,24 +413,25 @@ router.post("/bluegreen/beta/provision", auth.requireRole(...auth.ADMIN_ROLES), 
     }
 
     // Required project fields
-    const { ecsClusterName, prodServiceName, ecsExecutionRoleArn, ecsTaskRoleArn,
+    const { ecsClusterNameProd, ecsClusterName, prodServiceName, ecsExecutionRoleArn, ecsTaskRoleArn,
             subnetIds, securityGroupId, prodBetaListenerRuleArn, albListenerArn,
             prodUrl, vpcId } = project;
 
-    if (!ecsClusterName) return res.status(400).json({ ok: false, error: "ECS cluster not configured." });
+    const actualCluster = ecsClusterNameProd || ecsClusterName;
+    if (!actualCluster) return res.status(400).json({ ok: false, error: "ECS cluster not configured." });
     if (!albListenerArn && !project.albDnsName) return res.status(400).json({ ok: false, error: "ALB listener ARN or DNS not configured on this project." });
 
     const user = auth.getLoggedInUser(req) || "unknown";
 
     // 1. Derive beta service name from existing prod service name
-    const prefix = prodServiceName ? prodServiceName.replace(/-prod$/, "") : ecsClusterName;
+    const prefix = prodServiceName ? prodServiceName.replace(/-prod$/, "") : actualCluster;
     const betaServiceName = `${prefix}-prod-beta`;
     const betaTgName     = betaTgNameFor(prefix);
 
     // 2. Resolve the prod task def to use as base for beta
     let baseImage = null;
     try {
-      const prodSvc = await aws.describeEcsService(region, ecsClusterName, prodServiceName);
+      const prodSvc = await aws.describeEcsService(region, actualCluster, prodServiceName);
       if (prodSvc?.taskDefinition) {
         const td = await aws.describeTaskDefinition(region, prodSvc.taskDefinition);
         baseImage = td?.containerDefinitions?.[0]?.image || null;
@@ -509,7 +513,7 @@ router.post("/bluegreen/beta/provision", auth.requireRole(...auth.ADMIN_ROLES), 
       environment: [
         { name: "ADMIN_API_URL", value: process.env.PANEL_PUBLIC_URL || "" },
         { name: "AWS_REGION", value: region },
-        { name: "ECS_CLUSTER", value: ecsClusterName },
+        { name: "ECS_CLUSTER", value: actualCluster },
         { name: "ECS_BETA_SERVICE", value: betaServiceName },
         { name: "ECS_PROD_SERVICE", value: prodServiceName },
         { name: "ALB_LISTENER_RULE_ARN", value: betaRuleArn || prodBetaListenerRuleArn || "" }
@@ -523,7 +527,7 @@ router.post("/bluegreen/beta/provision", auth.requireRole(...auth.ADMIN_ROLES), 
     // 6. Create the ECS service (desired_count=0 — off by default). The TG
     // is now attached to the ALB from step 5, so this passes AWS's check.
     await aws.createEcsService(region, {
-      clusterName: ecsClusterName,
+      clusterName: actualCluster,
       serviceName: betaServiceName,
       taskDefinitionArn: registeredTd.taskDefinitionArn,
       subnetIds: (subnetIds || "").split(",").map(s => s.trim()).filter(Boolean),
@@ -568,8 +572,9 @@ router.post("/bluegreen/beta/teardown", auth.requireRole(...auth.ADMIN_ROLES), a
     // 1. Disable routing and scale to 0 before deleting
     try {
       if (project.prodBetaListenerRuleArn) await aws.setBetaRoutingEnabled(region, project.prodBetaListenerRuleArn, false);
-      await aws.scaleEcsService(region, project.ecsClusterName, project.prodBetaServiceName, 0);
-      await aws.waitForServiceStable(region, project.ecsClusterName, project.prodBetaServiceName, 120);
+      const clusterName = project.ecsClusterNameProd || project.ecsClusterName;
+      await aws.scaleEcsService(region, clusterName, project.prodBetaServiceName, 0);
+      await aws.waitForServiceStable(region, clusterName, project.prodBetaServiceName, 120);
     } catch (_) {}
 
     // 2. Delete ECS service
@@ -578,8 +583,9 @@ router.post("/bluegreen/beta/teardown", auth.requireRole(...auth.ADMIN_ROLES), a
       // Use AWS SDK directly — deleteService is not exposed, so use force delete via update then delete
       const { ECSClient, DeleteServiceCommand, UpdateServiceCommand } = require("@aws-sdk/client-ecs");
       const ecsClient = new ECSClient({ region });
-      await ecsClient.send(new UpdateServiceCommand({ cluster: project.ecsClusterName, service: project.prodBetaServiceName, desiredCount: 0 }));
-      await ecsClient.send(new DeleteServiceCommand({ cluster: project.ecsClusterName, service: project.prodBetaServiceName, force: true }));
+      const clusterName = project.ecsClusterNameProd || project.ecsClusterName;
+      await ecsClient.send(new UpdateServiceCommand({ cluster: clusterName, service: project.prodBetaServiceName, desiredCount: 0 }));
+      await ecsClient.send(new DeleteServiceCommand({ cluster: clusterName, service: project.prodBetaServiceName, force: true }));
     } catch (e) { console.warn("Beta service delete:", e.message); }
 
     // 3. Delete ALB listener rule

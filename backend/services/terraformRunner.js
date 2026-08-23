@@ -109,19 +109,30 @@ async function _execute(runId, folder, tfvars, isDestroy) {
   const run = runs.get(runId);
   const addLog = (line) => run.logs.push({ ts: Date.now(), line: line.trimEnd() });
 
+  const crypto = require("crypto");
+  const tmpFolder = path.join("/tmp", `tf-run-${crypto.randomUUID()}`);
+  const originalFolder = folder;
+
   try {
-    if (!fs.existsSync(folder)) {
-      addLog(`❌ Error: Terraform directory does not exist at "${folder}".`);
+    if (!fs.existsSync(originalFolder)) {
+      addLog(`❌ Error: Terraform directory does not exist at "${originalFolder}".`);
       run.status = "error";
-      run.error  = `Directory not found: ${folder}`;
+      run.error  = `Directory not found: ${originalFolder}`;
       return;
     }
 
-    // 0. Clean up stale lock files if left behind by crashed/interrupted runs
-    const lockInfoFile = path.join(folder, "terraform.tfstate.lock.info");
-    if (fs.existsSync(lockInfoFile)) {
-      try { fs.unlinkSync(lockInfoFile); } catch (_) {}
-    }
+    addLog(`Creating isolated workspace for this run...`);
+    fs.cpSync(originalFolder, tmpFolder, {
+      recursive: true,
+      filter: (src) => {
+        const basename = path.basename(src);
+        if (basename === ".terraform" || basename === ".terraform.lock.hcl") return false;
+        if (basename.endsWith(".auto.tfvars")) return false;
+        if (basename === "backend_override.tf") return false;
+        return true;
+      }
+    });
+    folder = tmpFolder;
 
     // Allow Windows/Linux OS file handles to settle cleanly
     await new Promise(resolve => setTimeout(resolve, 500));
@@ -134,30 +145,10 @@ async function _execute(runId, folder, tfvars, isDestroy) {
     // Ensure S3 state bucket and DynamoDB lock table exist in active AWS account
     await ensureTerraformBackendInfra(process.env.AWS_REGION || "us-east-1");
 
-    // Detect if AWS Account ID changed from previous run in this folder
-    const accountTrackingFile = path.join(folder, ".last_active_aws_account");
-    let previousAccount = null;
-    if (fs.existsSync(accountTrackingFile)) {
-      try { previousAccount = fs.readFileSync(accountTrackingFile, "utf8").trim(); } catch (_) {}
-    }
-
-    if (previousAccount && previousAccount !== activeAccountId) {
-      addLog(`🔄 AWS Account ID changed (${previousAccount} ➔ ${activeAccountId}). Purging stale local .terraform cache...`);
-      const dotTerraform = path.join(folder, ".terraform");
-      const lockHcl = path.join(folder, ".terraform.lock.hcl");
-      if (fs.existsSync(dotTerraform)) {
-        try { fs.rmSync(dotTerraform, { recursive: true, force: true }); } catch (_) {}
-      }
-      if (fs.existsSync(lockHcl)) {
-        try { fs.unlinkSync(lockHcl); } catch (_) {}
-      }
-    }
-    fs.writeFileSync(accountTrackingFile, activeAccountId, "utf8");
-
     // Write dynamic S3 backend_override.tf using active AWS Account ID & project slug
     const bucketName = `benevolate-tf-state-${activeAccountId}`;
-    const projectSlug = tfvars.project_name || path.basename(folder);
-    const stackName = path.basename(folder);
+    const projectSlug = tfvars.project_name || path.basename(originalFolder);
+    const stackName = path.basename(originalFolder);
     const backendContent = `
 terraform {
   backend "s3" {
@@ -173,8 +164,26 @@ terraform {
 
     // Write terraform.auto.tfvars so terraform picks them up automatically
     const tfvarsContent = Object.entries(tfvars)
-      .filter(([, v]) => v !== undefined && v !== null && v !== "")
-      .map(([k, v]) => `${k} = ${JSON.stringify(String(v))}`)
+      .filter(([, v]) => {
+        // Always keep arrays (even empty ones) — dropping [] would cause Terraform to
+        // read a stale string value from a prior run file and fail with a type error.
+        if (Array.isArray(v)) return true;
+        return v !== undefined && v !== null && v !== "";
+      })
+      .map(([k, v]) => {
+        // Arrays → HCL list syntax e.g. ["a","b"] or []
+        if (Array.isArray(v)) {
+          const items = v.map(item => JSON.stringify(String(item))).join(", ");
+          return `${k} = [${items}]`;
+        }
+        // Booleans → HCL bare true/false (not quoted strings)
+        if (typeof v === "boolean") return `${k} = ${v}`;
+        // Escape ${...} → $${...} so Terraform HCL does not try to interpret shell
+        // variable expressions (e.g. ${VAR:-default} in buildspec YAML) as its own
+        // template interpolation syntax. $${} is the HCL escape for a literal ${}.
+        const safe = String(v).replace(/\$\{/g, () => "$${");
+        return `${k} = ${JSON.stringify(safe)}`;
+      })
       .join("\n");
     fs.writeFileSync(path.join(folder, "panel.auto.tfvars"), tfvarsContent + "\n");
 
@@ -196,7 +205,7 @@ terraform {
           const { DynamoDBClient, DeleteItemCommand } = require("@aws-sdk/client-dynamodb");
           const ddb = new DynamoDBClient({ region: process.env.AWS_REGION || "us-east-1" });
           const lockTable = process.env.TF_LOCK_TABLE || "benevolate-tf-locks";
-          const stateKey  = `${tfvars.project_name || path.basename(folder)}/${path.basename(folder)}/terraform.tfstate`;
+          const stateKey  = `${projectSlug}/${stackName}/terraform.tfstate`;
           // Delete the stale digest item so Terraform can re-sync
           await ddb.send(new DeleteItemCommand({
             TableName: lockTable,
@@ -337,6 +346,11 @@ terraform {
     run.status = "error";
     run.error  = err.message;
     addLog(`Failed: ${err.message}`);
+  } finally {
+    if (folder === tmpFolder && fs.existsSync(tmpFolder)) {
+      addLog(`Cleaning up isolated workspace...`);
+      try { fs.rmSync(tmpFolder, { recursive: true, force: true }); } catch (_) {}
+    }
   }
 }
 
@@ -347,9 +361,14 @@ function spawnAsync(cmd, args, cwd, onLog) {
   return new Promise((resolve, reject) => {
     let proc;
     try {
+      const pluginCacheDir = "/tmp/tf-plugin-cache";
+      if (!fs.existsSync(pluginCacheDir)) {
+        try { fs.mkdirSync(pluginCacheDir, { recursive: true }); } catch (_) {}
+      }
+
       proc = spawn(execCmd, args, {
         cwd,
-        env: { ...process.env, TF_IN_AUTOMATION: "1", TF_CLI_ARGS: "" }
+        env: { ...process.env, TF_IN_AUTOMATION: "1", TF_CLI_ARGS: "", TF_PLUGIN_CACHE_DIR: pluginCacheDir }
       });
     } catch (err) {
       onLog(`❌ Failed to spawn terraform process (${execCmd}): ${err.message}`);
@@ -443,6 +462,33 @@ async function readFoundationOutputs(forceRefresh = false) {
     try {
       const fileData = JSON.parse(fs.readFileSync(FOUNDATION_CACHE_FILE, "utf8"));
       if (fileData && fileData._aws_account_id === activeAccountId && fileData.vpc_id) {
+        // ── Stale-cache guard ──────────────────────────────────────────────
+        // Disk cache survives destroy + server restart, causing a false "Provisioned"
+        // badge. Do a single S3 GetObject to check if the state file still has
+        // resources. This is ~1 S3 call and requires no terraform binary.
+        try {
+          const { S3Client, GetObjectCommand } = require("@aws-sdk/client-s3");
+          const bucketName = process.env.TF_STATE_BUCKET || `benevolate-tf-state-${activeAccountId}`;
+          const stackName = path.basename(SHARED_FOUNDATION_DIR);
+          const stateKey = `${stackName}/${stackName}/terraform.tfstate`;
+          const s3 = new S3Client({ region: process.env.AWS_REGION || "us-east-1" });
+          const resp = await s3.send(new GetObjectCommand({ Bucket: bucketName, Key: stateKey }));
+          const body = await resp.Body.transformToString();
+          const stateJson = JSON.parse(body || "{}");
+          if ((stateJson.resources || []).length === 0) {
+            // State file exists but is empty — destroy ran successfully
+            clearFoundationCache();
+            return {};
+          }
+        } catch (s3Err) {
+          // State file not found → not provisioned
+          if (s3Err.name === "NoSuchKey" || (s3Err.$metadata && s3Err.$metadata.httpStatusCode === 404)) {
+            clearFoundationCache();
+            return {};
+          }
+          // Any other S3/network error → trust disk cache to avoid false negatives
+        }
+        // S3 confirms resources exist — accept the disk cache
         cachedFoundationOutputs = fileData;
         lastFoundationFetch = Date.now();
         return cachedFoundationOutputs;
