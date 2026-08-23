@@ -1,0 +1,13 @@
+{
+  "alb_dns_name": "shared-foundation-alb-628744302.us-east-1.elb.amazonaws.com",
+  "alb_listener_arn": "arn:aws:elasticloadbalancing:us-east-1:393886308751:listener/app/shared-foundation-alb/afb99fe7aa70d2b3/9055eb14d7873eca",
+  "alb_sg_id": "sg-00cd02f727ff3e9f0",
+  "alb_zone_id": "Z35SXDOTRQ7X7K",
+  "ecs_sg_id": "sg-0087e5c1c69472912",
+  "efs_sg_id": "sg-03066117b6aa51914",
+  "nat_gateway_id": "nat-05b559760f0a28ea3",
+  "private_subnet_ids": "subnet-0a891c046ca69b5f3,subnet-00dee886e795ec7ce",
+  "public_subnet_ids": "subnet-0a4a7177cac943710,subnet-0cb128ae545339928",
+  "vpc_id": "vpc-057f4672e8a8342f6",
+  "_aws_account_id": "393886308751"
+}

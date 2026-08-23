@@ -23,6 +23,11 @@ output "alb_sg_id" {
   value       = aws_security_group.alb.id
 }
 
+output "efs_sg_id" {
+  description = "Shared EFS security group ID — allows NFS from ECS tasks"
+  value       = aws_security_group.efs.id
+}
+
 output "alb_dns_name" {
   description = "Shared ALB DNS name"
   value       = aws_lb.main.dns_name

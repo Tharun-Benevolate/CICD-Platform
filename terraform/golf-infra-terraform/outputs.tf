@@ -50,3 +50,29 @@ output "cost_estimate_monthly" {
 output "vpc_id" { value = var.vpc_id }
 output "alb_listener_arn" { value = var.alb_listener_arn }
 output "secret_arn" { value = var.secret_arn }
+
+# ─── EFS outputs ─────────────────────────────────────────────────────
+output "efs_filesystem_id" {
+  description = "EFS filesystem ID attached to this project (empty if EFS is disabled)"
+  value       = var.enable_efs ? local.efs_id : ""
+}
+
+output "efs_access_point_id_dev" {
+  description = "EFS access point ID for the dev environment"
+  value       = var.enable_efs ? aws_efs_access_point.dev[0].id : ""
+}
+
+output "efs_access_point_id_uat" {
+  description = "EFS access point ID for the uat environment"
+  value       = var.enable_efs ? aws_efs_access_point.uat[0].id : ""
+}
+
+output "efs_access_point_id_prod" {
+  description = "EFS access point ID for the prod environment"
+  value       = var.enable_efs ? aws_efs_access_point.prod[0].id : ""
+}
+
+output "efs_mount_path" {
+  description = "Container path where EFS is mounted"
+  value       = var.enable_efs ? var.efs_mount_path : ""
+}

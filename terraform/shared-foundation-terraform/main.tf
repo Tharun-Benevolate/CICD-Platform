@@ -175,6 +175,34 @@ resource "aws_security_group" "ecs" {
   }
 }
 
+# ─── EFS Security Group ──────────────────────────────────────────────
+# Allows NFS (port 2049) inbound ONLY from ECS tasks. Shared across all
+# projects — each project's EFS mount targets use this SG so Fargate
+# containers can reach them without per-project SG duplication.
+resource "aws_security_group" "efs" {
+  name        = "${local.foundation_name}-efs-sg"
+  description = "Allow NFS from ECS tasks to EFS mount targets"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 2049
+    to_port         = 2049
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ecs.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "${local.foundation_name}-efs-sg"
+  }
+}
+
 resource "aws_lb" "main" {
   name               = "${local.foundation_name}-alb"
   internal           = false

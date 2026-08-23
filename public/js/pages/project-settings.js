@@ -25,6 +25,7 @@ async function loadActiveProjectData() {
     var res = await api.get('/api/projects/' + activeId);
     if (res.ok && res.project) {
       var p = res.project;
+      window._activeProject = p;
       
       // Update Identity Cards
       var tagEl = document.getElementById('proj-settings-name-tag');
@@ -44,6 +45,9 @@ async function loadActiveProjectData() {
 
       // Update Slack Status
       loadProjectSlackStatus(p);
+
+      // Update EFS Storage Config
+      loadEfsConfig(p);
 
       // Update Buildspec
       if (p.customBuildspec) {
@@ -185,14 +189,141 @@ function showMsg(el, text, isError) {
   el.style.display = 'block';
 }
 
+
+// ─── EFS Storage Management ─────────────────────────────────────────
+
+async function loadEfsConfig(projData) {
+  var p = projData || window._activeProject;
+  if (!p) return;
+  var toggle = document.getElementById('efs-enable-toggle');
+  var configPanel = document.getElementById('efs-config-panel');
+  var badge = document.getElementById('efs-status-badge');
+  var autoName = document.getElementById('efs-auto-name');
+  var mountInput = document.getElementById('efs-mount-path');
+
+  if (!toggle) return;
+
+  var isEnabled = !!p.efsEnabled;
+  toggle.checked = isEnabled;
+  configPanel.style.display = isEnabled ? 'block' : 'none';
+
+  if (autoName) autoName.textContent = (p.githubRepo || p.repoName || p.name || 'app').toLowerCase().replace(/[^a-z0-9-]/g, '-');
+  if (mountInput && p.efsMountPath) mountInput.value = p.efsMountPath;
+
+  if (isEnabled && p.efsFilesystemId) {
+    badge.textContent = 'Connected (' + p.efsFilesystemId + ')';
+    badge.style.background = 'rgba(34,197,94,0.12)';
+    badge.style.color = '#22c55e';
+
+    var existingRadio = document.querySelector('input[name="efs-mode"][value="existing"]');
+    if (existingRadio) existingRadio.checked = true;
+    handleEfsModeChange();
+  } else if (isEnabled) {
+    badge.textContent = 'Enabled (pending apply)';
+    badge.style.background = 'rgba(234,179,8,0.12)';
+    badge.style.color = '#eab308';
+  } else {
+    badge.textContent = 'Not Configured';
+    badge.style.background = 'var(--color-bg)';
+    badge.style.color = 'var(--color-text-tertiary)';
+  }
+
+  loadExistingEfsList(p);
+}
+
+async function loadExistingEfsList(projData) {
+  var p = projData || window._activeProject;
+  var select = document.getElementById('efs-existing-select');
+  if (!select) return;
+  try {
+    var res = await api.get('/api/efs/list' + (p ? '?projectId=' + p.id : ''));
+    if (res && res.ok && res.filesystems) {
+      select.innerHTML = '<option value="">-- Select an EFS filesystem --</option>';
+      res.filesystems.forEach(function(fs) {
+        var opt = document.createElement('option');
+        opt.value = fs.id;
+        opt.textContent = fs.name + ' (' + fs.id + ') — ' + fs.state;
+        if (p && p.efsFilesystemId === fs.id) opt.selected = true;
+        select.appendChild(opt);
+      });
+    } else {
+      select.innerHTML = '<option value="">No existing EFS filesystems found</option>';
+    }
+  } catch (e) {
+    select.innerHTML = '<option value="">Failed to load EFS list</option>';
+  }
+}
+
+function handleEfsToggleChange() {
+  var toggle = document.getElementById('efs-enable-toggle');
+  var configPanel = document.getElementById('efs-config-panel');
+  if (configPanel) configPanel.style.display = toggle.checked ? 'block' : 'none';
+}
+
+function handleEfsModeChange() {
+  var mode = document.querySelector('input[name="efs-mode"]:checked');
+  var existingPanel = document.getElementById('efs-existing-panel');
+  var newHint = document.getElementById('efs-new-hint');
+  if (existingPanel) existingPanel.style.display = (mode && mode.value === 'existing') ? 'block' : 'none';
+  if (newHint) newHint.style.display = (mode && mode.value === 'new') ? 'block' : 'none';
+}
+
+async function handleSaveEfsConfig() {
+  var p = window._activeProject;
+  var activeId = p ? p.id : window._activeProjectId;
+  if (!activeId) return;
+
+  var toggle = document.getElementById('efs-enable-toggle');
+  var mode = document.querySelector('input[name="efs-mode"]:checked');
+  var mountPath = document.getElementById('efs-mount-path');
+  var existingSelect = document.getElementById('efs-existing-select');
+  var msgEl = document.getElementById('efs-save-msg');
+
+  var enabled = toggle && toggle.checked;
+  var existingEfsId = '';
+  if (enabled && mode && mode.value === 'existing' && existingSelect) {
+    existingEfsId = existingSelect.value;
+    if (!existingEfsId) {
+      if (msgEl) { msgEl.style.display = 'block'; msgEl.className = 'msg-box error'; msgEl.textContent = 'Please select an existing EFS filesystem.'; }
+      return;
+    }
+  }
+
+  try {
+    var res = await api.post('/api/projects/' + activeId + '/storage', {
+      enabled: enabled,
+      existingEfsId: existingEfsId,
+      mountPath: (mountPath && mountPath.value) || '/mnt/efs'
+    });
+    if (res && res.ok) {
+      if (msgEl) { msgEl.style.display = 'block'; msgEl.className = 'msg-box success'; msgEl.textContent = '✔ Storage config saved! Go to Setup Wizard → Re-apply Deployment Infra to provision.'; }
+      if (p) {
+        p.efsEnabled = enabled;
+        p.efsFilesystemId = existingEfsId;
+        p.efsMountPath = (mountPath && mountPath.value) || '/mnt/efs';
+      }
+      loadActiveProjectData();
+    } else {
+      if (msgEl) { msgEl.style.display = 'block'; msgEl.className = 'msg-box error'; msgEl.textContent = (res && res.error) || 'Failed to save EFS configuration.'; }
+    }
+  } catch (e) {
+    if (msgEl) { msgEl.style.display = 'block'; msgEl.className = 'msg-box error'; msgEl.textContent = e.message || 'Server error'; }
+  }
+}
+
 window.initProjectSettingsPage = initProjectSettingsPage;
 window.loadProjectSlackStatus = loadProjectSlackStatus;
 window.provisionProjectSlackChannel = provisionProjectSlackChannel;
 window.loadGenericBuildspec = loadGenericBuildspec;
 window.saveProjectBuildspec = saveProjectBuildspec;
+window.loadEfsConfig = loadEfsConfig;
+window.handleEfsToggleChange = handleEfsToggleChange;
+window.handleEfsModeChange = handleEfsModeChange;
+window.handleSaveEfsConfig = handleSaveEfsConfig;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initProjectSettingsPage);
 } else {
   initProjectSettingsPage();
 }
+

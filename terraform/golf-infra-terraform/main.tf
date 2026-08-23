@@ -192,6 +192,108 @@ resource "aws_route53_record" "prod" {
   }
 }
 
+# ─── 5b. EFS PERSISTENT STORAGE (optional, per-project) ─────────────
+# When var.enable_efs = true:
+#   - If var.efs_filesystem_id is empty → creates a NEW encrypted EFS filesystem
+#   - If var.efs_filesystem_id is set   → attaches to an EXISTING filesystem
+# Each environment (dev/uat/prod) gets its own access point with an isolated
+# root directory so files don't leak between environments.
+# Mount targets are created in every private subnet for Fargate network access.
+# The filesystem itself survives project infra destroy (data-safe by default).
+
+resource "aws_efs_file_system" "project" {
+  count          = var.enable_efs && var.efs_filesystem_id == "" ? 1 : 0
+  creation_token = "${local.project_prefix}-efs"
+  encrypted      = true
+
+  lifecycle {
+    prevent_destroy = false  # Set to true in production to guard data
+  }
+
+  tags = {
+    Name    = "${local.project_prefix}-efs"
+    Project = local.project_prefix
+  }
+}
+
+locals {
+  efs_id = var.enable_efs ? (
+    var.efs_filesystem_id != "" ? var.efs_filesystem_id : aws_efs_file_system.project[0].id
+  ) : ""
+}
+
+# Per-environment access points — each gets an isolated root directory
+resource "aws_efs_access_point" "dev" {
+  count          = var.enable_efs ? 1 : 0
+  file_system_id = local.efs_id
+
+  posix_user {
+    gid = 1000
+    uid = 1000
+  }
+
+  root_directory {
+    path = "/${local.project_prefix}/dev"
+    creation_info {
+      owner_gid   = 1000
+      owner_uid   = 1000
+      permissions = "755"
+    }
+  }
+
+  tags = { Name = "${local.project_prefix}-dev-ap" }
+}
+
+resource "aws_efs_access_point" "uat" {
+  count          = var.enable_efs ? 1 : 0
+  file_system_id = local.efs_id
+
+  posix_user {
+    gid = 1000
+    uid = 1000
+  }
+
+  root_directory {
+    path = "/${local.project_prefix}/uat"
+    creation_info {
+      owner_gid   = 1000
+      owner_uid   = 1000
+      permissions = "755"
+    }
+  }
+
+  tags = { Name = "${local.project_prefix}-uat-ap" }
+}
+
+resource "aws_efs_access_point" "prod" {
+  count          = var.enable_efs ? 1 : 0
+  file_system_id = local.efs_id
+
+  posix_user {
+    gid = 1000
+    uid = 1000
+  }
+
+  root_directory {
+    path = "/${local.project_prefix}/prod"
+    creation_info {
+      owner_gid   = 1000
+      owner_uid   = 1000
+      permissions = "755"
+    }
+  }
+
+  tags = { Name = "${local.project_prefix}-prod-ap" }
+}
+
+# Mount targets — one per private subnet for Fargate network connectivity
+resource "aws_efs_mount_target" "private" {
+  count           = var.enable_efs ? length(split(",", var.private_subnet_ids)) : 0
+  file_system_id  = local.efs_id
+  subnet_id       = split(",", var.private_subnet_ids)[count.index]
+  security_groups = [var.efs_sg_id]
+}
+
 # ─── 6. ECR + ECS CLUSTER + LOGS ────────────────────────────────────
 
 resource "aws_ecr_repository" "app" {
@@ -226,6 +328,22 @@ resource "aws_ecs_task_definition" "dev" {
   memory                   = "512"
   execution_role_arn       = var.ecs_execution_role_arn
   task_role_arn            = local.task_role
+
+  dynamic "volume" {
+    for_each = var.enable_efs ? [1] : []
+    content {
+      name = "efs-storage"
+      efs_volume_configuration {
+        file_system_id     = local.efs_id
+        transit_encryption = "ENABLED"
+        authorization_config {
+          access_point_id = aws_efs_access_point.dev[0].id
+          iam             = "ENABLED"
+        }
+      }
+    }
+  }
+
   container_definitions = jsonencode([{
     name      = local.container_name
     image     = local.placeholder_image
@@ -248,6 +366,11 @@ resource "aws_ecs_task_definition" "dev" {
         valueFrom = "${var.secret_arn}:${key}::"
       }
     ] : []
+    mountPoints = var.enable_efs ? [{
+      sourceVolume  = "efs-storage"
+      containerPath = var.efs_mount_path
+      readOnly      = false
+    }] : []
   }])
 
   # CodePipeline's plain "ECS" deploy action registers a new task-def
@@ -270,6 +393,22 @@ resource "aws_ecs_task_definition" "uat" {
   memory                   = "512"
   execution_role_arn       = var.ecs_execution_role_arn
   task_role_arn            = local.task_role
+
+  dynamic "volume" {
+    for_each = var.enable_efs ? [1] : []
+    content {
+      name = "efs-storage"
+      efs_volume_configuration {
+        file_system_id     = local.efs_id
+        transit_encryption = "ENABLED"
+        authorization_config {
+          access_point_id = aws_efs_access_point.uat[0].id
+          iam             = "ENABLED"
+        }
+      }
+    }
+  }
+
   container_definitions = jsonencode([{
     name      = local.container_name
     image     = local.placeholder_image
@@ -292,6 +431,11 @@ resource "aws_ecs_task_definition" "uat" {
         valueFrom = "${var.secret_arn}:${key}::"
       }
     ] : []
+    mountPoints = var.enable_efs ? [{
+      sourceVolume  = "efs-storage"
+      containerPath = var.efs_mount_path
+      readOnly      = false
+    }] : []
   }])
 
   # Same reasoning as the dev task definition above: prevent Terraform from
@@ -310,6 +454,22 @@ resource "aws_ecs_task_definition" "prod" {
   memory                   = "512"
   execution_role_arn       = var.ecs_execution_role_arn
   task_role_arn            = local.task_role
+
+  dynamic "volume" {
+    for_each = var.enable_efs ? [1] : []
+    content {
+      name = "efs-storage"
+      efs_volume_configuration {
+        file_system_id     = local.efs_id
+        transit_encryption = "ENABLED"
+        authorization_config {
+          access_point_id = aws_efs_access_point.prod[0].id
+          iam             = "ENABLED"
+        }
+      }
+    }
+  }
+
   container_definitions = jsonencode([{
     name      = local.container_name
     image     = local.placeholder_image
@@ -332,6 +492,11 @@ resource "aws_ecs_task_definition" "prod" {
         valueFrom = "${var.secret_arn}:${key}::"
       }
     ] : []
+    mountPoints = var.enable_efs ? [{
+      sourceVolume  = "efs-storage"
+      containerPath = var.efs_mount_path
+      readOnly      = false
+    }] : []
   }])
 
   # CRITICAL: unlike dev/uat, prod's live task revision is entirely owned by

@@ -163,3 +163,28 @@ variable "secret_keys" {
   type        = list(string)
   default     = []
 }
+
+# ─── EFS Persistent Storage (optional, per-project) ──────────────────
+variable "enable_efs" {
+  description = "Whether to create/attach EFS persistent storage for this project's containers"
+  type        = bool
+  default     = false
+}
+
+variable "efs_filesystem_id" {
+  description = "Existing EFS filesystem ID to attach. If empty and enable_efs=true, a new filesystem is created with the project prefix."
+  type        = string
+  default     = ""
+}
+
+variable "efs_mount_path" {
+  description = "Container mount path for the EFS volume inside each task"
+  type        = string
+  default     = "/mnt/efs"
+}
+
+variable "efs_sg_id" {
+  description = "Security group ID for EFS mount targets — allows NFS from ECS tasks (output of shared-foundation-terraform)"
+  type        = string
+  default     = ""
+}

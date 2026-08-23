@@ -95,7 +95,13 @@ async function _saveRunOutputs(runId) {
       albListenerArn: o.alb_listener_arn,
       codedeployAppName: o.codedeploy_app_name,
       codedeployDeploymentGroup: o.codedeploy_deployment_group,
-      deploymentTfApplied: true
+      deploymentTfApplied: true,
+      // EFS outputs — persisted so the UI shows the connected filesystem
+      efsFilesystemId:    o.efs_filesystem_id    || null,
+      efsAccessPointDev:  o.efs_access_point_id_dev  || null,
+      efsAccessPointUat:  o.efs_access_point_id_uat  || null,
+      efsAccessPointProd: o.efs_access_point_id_prod || null,
+      efsMountPath:       o.efs_mount_path        || null,
     });
   } else if (meta.type === "initial-destroy") {
     await store.updateProject(meta.projectId, {
@@ -133,7 +139,13 @@ async function _saveRunOutputs(runId) {
       codedeployAppName: null,
       codedeployDeploymentGroup: null,
       buildHistory: [],
-      deploymentTfApplied: false
+      deploymentTfApplied: false,
+      // Clear EFS references on destroy (filesystem itself is kept in AWS)
+      efsFilesystemId: null,
+      efsAccessPointDev: null,
+      efsAccessPointUat: null,
+      efsAccessPointProd: null,
+      efsMountPath: null,
     });
   }
 
@@ -393,7 +405,12 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
       alb_listener_arn: sfOutputs.alb_listener_arn,
       manage_route53: true,
       secret_arn: project.secretArn || "",
-      secret_keys: secretKeys
+      secret_keys: secretKeys,
+      // EFS persistent storage (optional)
+      enable_efs:        !!project.efsEnabled,
+      efs_filesystem_id: project.efsFilesystemId || "",
+      efs_mount_path:    project.efsMountPath    || "/mnt/efs",
+      efs_sg_id:         sfOutputs.efs_sg_id     || "",
     };
 
     const runId = tf.startRun(tf.DEPLOYMENT_DIR, tfvars, { projectId: project.id, moduleLabel: "deployment" });
@@ -449,7 +466,12 @@ router.post("/terraform/deployment/destroy", auth.requireRole(...auth.ADMIN_ROLE
       alb_listener_arn: sfOutputs.alb_listener_arn || "arn:aws:elasticloadbalancing:us-east-1:511974512004:listener/app/shared-foundation-alb/a36126009c7b192e/0eacc50cd4bf7e49",
       manage_route53: true,
       secret_arn: project.secretArn || "",
-      secret_keys: []
+      secret_keys: [],
+      // EFS persistent storage — needed for destroy to know what to tear down
+      enable_efs:        !!project.efsEnabled,
+      efs_filesystem_id: project.efsFilesystemId || "",
+      efs_mount_path:    project.efsMountPath    || "/mnt/efs",
+      efs_sg_id:         sfOutputs.efs_sg_id     || "",
     };
 
     const runId = tf.startDestroy(tf.DEPLOYMENT_DIR, tfvars, { projectId: project.id, moduleLabel: "deployment-destroy" });
@@ -661,6 +683,59 @@ router.get("/terraform/state-url", auth.requireRole(...auth.ADMIN_ROLES), async 
       deployment: deploymentUrl,
       bucket: process.env.TF_STATE_BUCKET || "benevolate-tf-state"
     });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+
+// ─── EFS Storage Management Routes ──────────────────────────────────
+
+// GET /api/efs/list — enumerate EFS filesystems in the active AWS account.
+// Used by the Project Settings Storage card to populate the "connect existing" dropdown.
+router.get("/efs/list", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+  try {
+    const project = req.query.projectId ? await store.getProject(req.query.projectId) : null;
+    const region = (project && project.region) || req.query.region || process.env.AWS_REGION || "us-east-1";
+    const { EFSClient, DescribeFileSystemsCommand } = require("@aws-sdk/client-efs");
+    const efsClient = new EFSClient({ region });
+    const result = await efsClient.send(new DescribeFileSystemsCommand({}));
+    res.json({
+      ok: true,
+      filesystems: (result.FileSystems || []).map(fs => ({
+        id: fs.FileSystemId,
+        name: (fs.Tags || []).find(t => t.Key === "Name")?.Value || fs.FileSystemId,
+        sizeBytes: fs.SizeInBytes?.Value,
+        state: fs.LifeCycleState,
+        encrypted: fs.Encrypted
+      }))
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/projects/:id/storage — save EFS config for a project (enables/disables EFS).
+// Does NOT provision anything — user must Re-apply Deployment Infra in Setup Wizard after this.
+router.post("/projects/:id/storage", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+  try {
+    const project = await store.getProject(req.params.id);
+    if (!project) return res.status(404).json({ ok: false, error: "Project not found" });
+
+    const { enabled, existingEfsId, mountPath } = req.body;
+    await store.updateProject(project.id, {
+      efsEnabled:      !!enabled,
+      efsFilesystemId: existingEfsId || "",
+      efsMountPath:    mountPath     || "/mnt/efs"
+    });
+
+    auditStore.logAction(
+      auth.getLoggedInUser(req),
+      enabled ? "Enable EFS Storage" : "Disable EFS Storage",
+      project.name,
+      "Completed"
+    );
+    res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
