@@ -772,7 +772,7 @@ resource "aws_codepipeline" "main" {
       configuration = {
         ClusterName = var.ecs_cluster_name_non_prod
         ServiceName = var.dev_service_name
-        FileName    = "imagedefinitions-dev.json"
+        FileName    = "imagedefinitions.json"
       }
     }
   }
@@ -805,7 +805,7 @@ resource "aws_codepipeline" "main" {
       configuration = {
         ClusterName = var.ecs_cluster_name_non_prod
         ServiceName = var.uat_service_name
-        FileName    = "imagedefinitions-uat.json"
+        FileName    = "imagedefinitions.json"
       }
     }
   }
@@ -825,10 +825,7 @@ resource "aws_codepipeline" "main" {
     }
   }
 
-  # Stage 7: Deploy to live prod (blue). This is the normal CI/CD path —
-  # prod.domain for all users. Beta is a SEPARATE release path (dashboard
-  # Release / Beta Environment) and must never be targeted by this stage,
-  # so a pipeline run does not restart or replace the beta ECS service.
+  # Stage 7: Deploy to live prod (blue).
   stage {
     name = "Deploy-Prod"
     action {
@@ -841,7 +838,7 @@ resource "aws_codepipeline" "main" {
       configuration = {
         ClusterName = var.ecs_cluster_name_prod
         ServiceName = var.prod_service_name
-        FileName    = "imagedefinitions-prod.json"
+        FileName    = "imagedefinitions.json"
       }
     }
   }
