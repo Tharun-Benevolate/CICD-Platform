@@ -84,7 +84,11 @@ router.get("/:projectId/values", auth.requireRole(...auth.ADMIN_ROLES), async (r
       const resp = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretName }));
       values = JSON.parse(resp.SecretString || "{}");
     } catch (err) {
-      if (err.name === "ResourceNotFoundException") {
+      if (err.name === "ResourceNotFoundException" || err.name === "InvalidRequestException") {
+        // Secret doesn't exist or was marked for deletion — clear stale reference
+        if (project.secretArn) {
+          await store.updateProject(project.id, { secretArn: null, secretName: null });
+        }
         return res.json({ ok: true, values: {}, exists: false });
       }
       throw err;
@@ -140,7 +144,15 @@ router.post("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, re
       const resp = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretNameToUse }));
       existingSecrets = JSON.parse(resp.SecretString || "{}");
     } catch(err) {
-      if (err.name !== "ResourceNotFoundException") throw err;
+      if (err.name === "InvalidRequestException") {
+        // Secret was marked for deletion in AWS — clear stale reference and treat as new
+        await store.updateProject(project.id, { secretArn: null, secretName: null });
+        project.secretArn = null;
+        project.secretName = null;
+        // Allow the save to proceed — upsertProjectSecret will create a new secret
+      } else if (err.name !== "ResourceNotFoundException") {
+        throw err;
+      }
     }
 
     const mergedSecrets = { ...existingSecrets, ...newSecrets };
@@ -179,12 +191,23 @@ router.delete("/:projectId/:key", auth.requireRole(...auth.ADMIN_ROLES), async (
       const resp = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretName }));
       existingSecrets = JSON.parse(resp.SecretString || "{}");
     } catch(err) {
-      if (err.name !== "ResourceNotFoundException") throw err;
+      if (err.name === "ResourceNotFoundException" || err.name === "InvalidRequestException") {
+        // Secret was deleted or marked for deletion in AWS — clear stale reference
+        await store.updateProject(project.id, { secretArn: null, secretName: null });
+        syncSecretsToCodeBuild(project, null, []).catch(() => {});
+        return res.json({ ok: true, keys: [], message: "Secret was deleted from AWS. Reference cleared." });
+      }
+      throw err;
     }
 
     if (existingSecrets[keyToDelete]) {
       delete existingSecrets[keyToDelete];
       await upsertProjectSecret(region, secretName, existingSecrets);
+    }
+
+    // If no keys remain, clear the secret reference from the project
+    if (Object.keys(existingSecrets).length === 0) {
+      await store.updateProject(project.id, { secretArn: null, secretName: null });
     }
 
     // Sync remaining keys to CodeBuild env vars

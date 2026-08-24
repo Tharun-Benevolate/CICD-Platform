@@ -369,7 +369,16 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
     // Fetch secret keys if secretArn exists, using canonical project prefix
     let secretKeys = [];
     if (project.secretArn) {
-      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project));
+      try {
+        secretKeys = await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project));
+      } catch (secretErr) {
+        // Secret may have been deleted or marked for deletion in AWS.
+        // Clear stale reference so subsequent operations don't keep failing.
+        console.warn(`[terraform] Secret read failed (${secretErr.message}) — clearing stale secretArn.`);
+        await store.updateProject(project.id, { secretArn: null, secretName: null });
+        project.secretArn = null;
+        project.secretName = null;
+      }
     }
 
     if (!sfOutputs.vpc_id) {
@@ -512,8 +521,18 @@ router.post("/terraform/initial/reapply", auth.requireRole(...auth.ADMIN_ROLES),
       aws_region:    project.region || process.env.AWS_REGION || "us-east-1",
       buildspec:     await resolveBuildspecForTerraform(project, project.sourceType === 'codecommit', project.repoName, project.githubOwner, project.githubRepo, project.githubBranch),
       // Preserve secret env vars on re-apply so CodeBuild keeps them.
+      // If the secret was deleted/marked-for-deletion, clear the stale reference.
       secret_arn: project.secretArn || "",
-      secret_keys: JSON.stringify(project.secretArn ? (await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project)).catch(() => [])) : [])
+      secret_keys: JSON.stringify(project.secretArn ? (await (async () => {
+        try {
+          return await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project));
+        } catch (e) {
+          console.warn(`[terraform/initial-reapply] Secret read failed (${e.message}) — clearing stale secretArn.`);
+          await store.updateProject(project.id, { secretArn: null, secretName: null });
+          project.secretArn = null;
+          return [];
+        }
+      })()) : [])
     };
     const runId = tf.startRun(tf.INITIAL_DIR, tfvars, { projectId: project.id, moduleLabel: "initial" });
     auditStore.logAction(auth.getLoggedInUser(req), "Re-apply Initial Infrastructure", project.name, "Started");
@@ -541,7 +560,16 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
 
     let secretKeys = [];
     if (project.secretArn) {
-      secretKeys = await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project));
+      try {
+        secretKeys = await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project));
+      } catch (secretErr) {
+        // Secret may have been deleted or marked for deletion in AWS.
+        // Clear stale reference so subsequent operations don't keep failing.
+        console.warn(`[terraform] Secret read failed (${secretErr.message}) — clearing stale secretArn.`);
+        await store.updateProject(project.id, { secretArn: null, secretName: null });
+        project.secretArn = null;
+        project.secretName = null;
+      }
     }
 
     const tfvars = {
