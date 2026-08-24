@@ -48,6 +48,15 @@
             <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;">Connected Repository</div>
             <div id="ps-proj-repo" style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-top:4px;">--</div>
           </div>
+          <div style="padding:12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:10px;">
+            <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);text-transform:uppercase;margin-bottom:4px;">Target Git Branch</div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input type="text" id="ps-proj-branch" value="main" placeholder="e.g. master or main" autocomplete="off"
+                style="padding:5px 8px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);font-size:13px;font-weight:600;width:120px;outline:none;" />
+              <button type="button" onclick="saveProjectBranch()" id="btn-save-branch" class="btn-primary" style="padding:5px 10px;font-size:12px;font-weight:600;">Save</button>
+            </div>
+            <div id="ps-branch-msg" style="font-size:11px;margin-top:4px;display:none;"></div>
+          </div>
         </div>
       </div>
 

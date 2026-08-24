@@ -37,11 +37,13 @@ async function loadActiveProjectData() {
       var regEl = document.getElementById('ps-proj-region');
       var provEl = document.getElementById('ps-proj-provider');
       var repoEl = document.getElementById('ps-proj-repo');
+      var branchEl = document.getElementById('ps-proj-branch');
 
       if (nameEl) nameEl.textContent = p.name || activeId;
       if (regEl) regEl.textContent = p.region || 'us-east-1';
       if (provEl) provEl.textContent = (p.sourceType || 'codecommit').toUpperCase();
       if (repoEl) repoEl.textContent = p.repoName || p.githubRepo || '--';
+      if (branchEl) branchEl.value = p.githubBranch || p.branchName || 'main';
 
       // Update Slack Status
       loadProjectSlackStatus(p);
@@ -311,11 +313,55 @@ async function handleSaveEfsConfig() {
   }
 }
 
+
+async function saveProjectBranch() {
+  var p = window._activeProject;
+  var activeId = p ? p.id : window._activeProjectId;
+  if (!activeId) return;
+
+  var branchInput = document.getElementById('ps-proj-branch');
+  var btn = document.getElementById('btn-save-branch');
+  var msgEl = document.getElementById('ps-branch-msg');
+
+  var newBranch = (branchInput && branchInput.value.trim()) || 'main';
+  btn.disabled = true;
+  if (msgEl) msgEl.style.display = 'none';
+
+  try {
+    var res = await api.put('/api/projects/' + activeId, {
+      githubBranch: newBranch
+    });
+    if (res && res.ok) {
+      if (msgEl) {
+        msgEl.style.display = 'block';
+        msgEl.style.color = '#10b981';
+        msgEl.textContent = '✔ Target branch updated to ' + newBranch + '! Go to Setup Wizard → Re-apply Deployment Infra to update CodePipeline.';
+      }
+      if (p) p.githubBranch = newBranch;
+    } else {
+      if (msgEl) {
+        msgEl.style.display = 'block';
+        msgEl.style.color = '#ef4444';
+        msgEl.textContent = (res && res.error) || 'Failed to update branch';
+      }
+    }
+  } catch (err) {
+    if (msgEl) {
+      msgEl.style.display = 'block';
+      msgEl.style.color = '#ef4444';
+      msgEl.textContent = err.message || 'Server error';
+    }
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 window.initProjectSettingsPage = initProjectSettingsPage;
 window.loadProjectSlackStatus = loadProjectSlackStatus;
 window.provisionProjectSlackChannel = provisionProjectSlackChannel;
 window.loadGenericBuildspec = loadGenericBuildspec;
 window.saveProjectBuildspec = saveProjectBuildspec;
+window.saveProjectBranch = saveProjectBranch;
 window.loadEfsConfig = loadEfsConfig;
 window.handleEfsToggleChange = handleEfsToggleChange;
 window.handleEfsModeChange = handleEfsModeChange;
