@@ -2,7 +2,8 @@ const express = require("express");
 const router = express.Router();
 const auth = require("../auth");
 const store = require("../projectStore");
-const { upsertProjectSecret, listProjectSecretKeys, deleteProjectSecret, updateBuildProjectEnvVars } = require("../aws");
+const { upsertProjectSecret, listProjectSecretKeys, deleteProjectSecret } = require("../aws");
+const { updateBuildProjectEnvVars } = require("../config/aws");
 const auditStore = require("../auditStore");
 const { secretPrefixForProject, sanitizeSecretName, resolveSecretName } = require("../utils/projectNaming");
 
