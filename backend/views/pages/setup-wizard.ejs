@@ -157,37 +157,108 @@
         3. Environment Secrets Management
       </h2>
       <p style="font-size:13px;color:var(--color-text-secondary);line-height:1.5;margin-bottom:14px;">
-        Store sensitive configuration (e.g. <code>DB_HOST</code>, <code>DB_PASSWORD</code>) directly in AWS Secrets Manager. These are injected securely as environment variables to containers in Dev, UAT, Prod, and Beta.
+        Store sensitive configuration (e.g. <code>DB_HOST</code>, <code>DB_PASSWORD</code>) directly in AWS Secrets Manager — <strong>one secret per environment</strong>. Each environment (Dev, UAT, Prod) gets its own secret with its own database credentials.
       </p>
 
       <div style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:20px;">
-        <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:text-bottom;"></i> Values are stored in AWS Secrets Manager only — never in the platform database. Existing values are shown as masked inputs for easy editing.
+        <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:text-bottom;"></i> Values are stored in AWS Secrets Manager only — never in the platform database. Each environment can have different DB_HOST, DB_NAME, etc. UAT can inherit from Dev, Prod can inherit from Dev or UAT.
       </div>
 
-      <div style="margin-bottom:18px;">
-        <label for="secret-name-input" style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
-          AWS Secrets Manager secret name
-        </label>
-        <input type="text" id="secret-name-input" placeholder="e.g. my-project/secrets" autocomplete="off" data-lpignore="true"
-               style="width:100%;max-width:420px;padding:8px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:13px;" />
-        <div id="secret-name-hint" style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px;">
-          Choose the exact name to create in AWS Secrets Manager. This is set once — after the first save it can't be changed here (delete the secret in AWS first if you need to reuse a different name).
+      <!-- ── Environment Tabs ── -->
+      <div id="secrets-env-tabs" style="display:flex;gap:0;margin-bottom:0;border-bottom:2px solid var(--color-border);">
+        <button class="secrets-tab active" data-env="dev" onclick="switchSecretsTab('dev')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--color-text-tertiary);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">
+          Dev
+        </button>
+        <button class="secrets-tab" data-env="uat" onclick="switchSecretsTab('uat')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--color-text-tertiary);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">
+          UAT
+        </button>
+        <button class="secrets-tab" data-env="prod" onclick="switchSecretsTab('prod')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--color-text-tertiary);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">
+          Prod
+        </button>
+      </div>
+
+      <!-- ── Tab Content (one per env, shown/hidden by JS) ── -->
+      <div id="secrets-tab-dev" class="secrets-tab-content" style="padding-top:18px;">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+            AWS Secrets Manager secret name
+          </label>
+          <input type="text" id="secret-name-dev" class="secret-name-input" data-env="dev" placeholder="e.g. my-project/dev-secrets" autocomplete="off" data-lpignore="true"
+                 style="width:100%;max-width:420px;padding:8px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:13px;" />
+          <div id="secret-name-hint-dev" class="secret-name-hint" style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px;"></div>
         </div>
+        <div id="secrets-table-dev" class="secrets-table-container" style="margin-bottom:16px;"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <button onclick="handleAddSecretRow('dev')" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
+            <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
+          </button>
+          <button onclick="handleSaveSecrets('dev')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;margin-left:auto;">
+            Save Dev Secrets
+          </button>
+        </div>
+        <div id="secrets-save-msg-dev" style="margin-top:12px;font-size:12px;display:none;"></div>
       </div>
 
-      <div id="secrets-table-container" style="margin-bottom:16px;">
-        <!-- Filled by JS -->
+      <div id="secrets-tab-uat" class="secrets-tab-content" style="padding-top:18px;display:none;">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+            AWS Secrets Manager secret name
+          </label>
+          <input type="text" id="secret-name-uat" class="secret-name-input" data-env="uat" placeholder="e.g. my-project/uat-secrets" autocomplete="off" data-lpignore="true"
+                 style="width:100%;max-width:420px;padding:8px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:13px;" />
+          <div id="secret-name-hint-uat" class="secret-name-hint" style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px;"></div>
+        </div>
+        <!-- Inheritance controls -->
+        <div style="margin-bottom:14px;padding:10px 14px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);">
+          <label style="font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-right:12px;">Inherit from:</label>
+          <button onclick="handleInheritSecrets('dev','uat')" class="btn-secondary" style="font-size:12px;padding:5px 12px;">
+            Copy from Dev (pre-fill values)
+          </button>
+          <span style="font-size:11px;color:var(--color-text-tertiary);margin-left:8px;">Pre-fills values from Dev — edit what's different, then save.</span>
+        </div>
+        <div id="secrets-table-uat" class="secrets-table-container" style="margin-bottom:16px;"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <button onclick="handleAddSecretRow('uat')" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
+            <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
+          </button>
+          <button onclick="handleSaveSecrets('uat')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;margin-left:auto;">
+            Save UAT Secrets
+          </button>
+        </div>
+        <div id="secrets-save-msg-uat" style="margin-top:12px;font-size:12px;display:none;"></div>
       </div>
 
-      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
-        <button id="btn-add-secret-row" onclick="handleAddSecretRow()" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
-          <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
-        </button>
-        <button id="btn-save-secrets" onclick="handleSaveSecrets()" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;margin-left:auto;">
-          Save to AWS Secrets Manager
-        </button>
+      <div id="secrets-tab-prod" class="secrets-tab-content" style="padding-top:18px;display:none;">
+        <div style="margin-bottom:14px;">
+          <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
+            AWS Secrets Manager secret name
+          </label>
+          <input type="text" id="secret-name-prod" class="secret-name-input" data-env="prod" placeholder="e.g. my-project/prod-secrets" autocomplete="off" data-lpignore="true"
+                 style="width:100%;max-width:420px;padding:8px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:13px;" />
+          <div id="secret-name-hint-prod" class="secret-name-hint" style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px;"></div>
+        </div>
+        <!-- Inheritance controls -->
+        <div style="margin-bottom:14px;padding:10px 14px;border-radius:8px;background:var(--color-bg-secondary);border:1px solid var(--color-border);">
+          <label style="font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-right:12px;">Inherit from:</label>
+          <button onclick="handleInheritSecrets('dev','prod')" class="btn-secondary" style="font-size:12px;padding:5px 12px;margin-right:8px;">
+            Copy from Dev
+          </button>
+          <button onclick="handleInheritSecrets('uat','prod')" class="btn-secondary" style="font-size:12px;padding:5px 12px;">
+            Copy from UAT
+          </button>
+          <span style="font-size:11px;color:var(--color-text-tertiary);margin-left:8px;">Pre-fills values — edit what's different, then save.</span>
+        </div>
+        <div id="secrets-table-prod" class="secrets-table-container" style="margin-bottom:16px;"></div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <button onclick="handleAddSecretRow('prod')" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
+            <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
+          </button>
+          <button onclick="handleSaveSecrets('prod')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;margin-left:auto;">
+            Save Prod Secrets
+          </button>
+        </div>
+        <div id="secrets-save-msg-prod" style="margin-top:12px;font-size:12px;display:none;"></div>
       </div>
-      <div id="secrets-save-msg" style="margin-top:12px;font-size:12px;display:none;"></div>
 
       <!-- ── APPLY ACTIONS ── -->
       <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border);">
@@ -209,7 +280,6 @@
 
         <!-- Inline status panel (restart or apply) -->
         <div id="secrets-action-status" style="display:none;margin-top:16px;border-radius:10px;border:1px solid var(--color-border);overflow:hidden;">
-          <!-- Status header bar -->
           <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--color-bg-secondary);border-bottom:1px solid var(--color-border);">
             <div style="display:flex;align-items:center;gap:8px;">
               <span id="secrets-action-label" style="font-size:12px;font-weight:700;color:var(--color-text-primary);letter-spacing:0.5px;">RESTART</span>
@@ -221,7 +291,6 @@
               <i data-lucide="x" style="width:14px;height:14px;"></i>
             </button>
           </div>
-          <!-- Log area (used for terraform streaming or simple status messages) -->
           <div id="secrets-action-log" style="padding:12px 14px;font-family:monospace;font-size:12px;color:#cbd5e1;background:#0f172a;max-height:260px;overflow-y:auto;white-space:pre-wrap;"></div>
         </div>
       </div>

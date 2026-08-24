@@ -153,13 +153,45 @@ variable "manage_route53" {
 }
 
 variable "secret_arn" {
-  description = "ARN of the AWS Secrets Manager secret for this project (shared across dev/uat/prod/beta). When set, all keys in the secret are injected as environment variables into ECS containers."
+  description = "(Legacy fallback) ARN of the AWS Secrets Manager secret for this project. Used when per-env vars are not set."
   type        = string
   default     = ""
 }
 
 variable "secret_keys" {
-  description = "List of key names stored in the secret (used to build ECS secrets references). Must match the keys in the Secrets Manager secret JSON."
+  description = "(Legacy fallback) List of key names stored in the secret. Used when per-env vars are not set."
+  type        = list(string)
+  default     = []
+}
+
+# ─── Per-environment secrets ───────────────────────────────────────
+variable "secret_arn_dev" {
+  description = "ARN of the AWS Secrets Manager secret for the DEV environment"
+  type        = string
+  default     = ""
+}
+variable "secret_keys_dev" {
+  description = "List of key names for the DEV environment secret"
+  type        = list(string)
+  default     = []
+}
+variable "secret_arn_uat" {
+  description = "ARN of the AWS Secrets Manager secret for the UAT environment"
+  type        = string
+  default     = ""
+}
+variable "secret_keys_uat" {
+  description = "List of key names for the UAT environment secret"
+  type        = list(string)
+  default     = []
+}
+variable "secret_arn_prod" {
+  description = "ARN of the AWS Secrets Manager secret for the PROD environment"
+  type        = string
+  default     = ""
+}
+variable "secret_keys_prod" {
+  description = "List of key names for the PROD environment secret"
   type        = list(string)
   default     = []
 }

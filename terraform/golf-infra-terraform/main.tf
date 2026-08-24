@@ -407,10 +407,11 @@ resource "aws_ecs_task_definition" "dev" {
         "awslogs-stream-prefix" = "dev"
       }
     }
-    secrets = var.secret_arn != "" ? [
-      for key in var.secret_keys : {
+    # Per-env secrets: use secret_arn_dev if set, fall back to legacy secret_arn
+    secrets = (var.secret_arn_dev != "" ? var.secret_arn_dev : var.secret_arn) != "" ? [
+      for key in (var.secret_keys_dev != [] ? var.secret_keys_dev : var.secret_keys) : {
         name      = key
-        valueFrom = "${var.secret_arn}:${key}::"
+        valueFrom = "${var.secret_arn_dev != "" ? var.secret_arn_dev : var.secret_arn}:${key}::"
       }
     ] : []
     mountPoints = var.enable_efs ? [{
@@ -472,10 +473,11 @@ resource "aws_ecs_task_definition" "uat" {
         "awslogs-stream-prefix" = "uat"
       }
     }
-    secrets = var.secret_arn != "" ? [
-      for key in var.secret_keys : {
+    # Per-env secrets: use secret_arn_uat if set, fall back to legacy secret_arn
+    secrets = (var.secret_arn_uat != "" ? var.secret_arn_uat : var.secret_arn) != "" ? [
+      for key in (var.secret_keys_uat != [] ? var.secret_keys_uat : var.secret_keys) : {
         name      = key
-        valueFrom = "${var.secret_arn}:${key}::"
+        valueFrom = "${var.secret_arn_uat != "" ? var.secret_arn_uat : var.secret_arn}:${key}::"
       }
     ] : []
     mountPoints = var.enable_efs ? [{
@@ -533,10 +535,11 @@ resource "aws_ecs_task_definition" "prod" {
         "awslogs-stream-prefix" = "prod"
       }
     }
-    secrets = var.secret_arn != "" ? [
-      for key in var.secret_keys : {
+    # Per-env secrets: use secret_arn_prod if set, fall back to legacy secret_arn
+    secrets = (var.secret_arn_prod != "" ? var.secret_arn_prod : var.secret_arn) != "" ? [
+      for key in (var.secret_keys_prod != [] ? var.secret_keys_prod : var.secret_keys) : {
         name      = key
-        valueFrom = "${var.secret_arn}:${key}::"
+        valueFrom = "${var.secret_arn_prod != "" ? var.secret_arn_prod : var.secret_arn}:${key}::"
       }
     ] : []
     mountPoints = var.enable_efs ? [{
@@ -769,7 +772,7 @@ resource "aws_codepipeline" "main" {
       configuration = {
         ClusterName = var.ecs_cluster_name_non_prod
         ServiceName = var.dev_service_name
-        FileName    = "imagedefinitions.json"
+        FileName    = "imagedefinitions-dev.json"
       }
     }
   }
@@ -802,7 +805,7 @@ resource "aws_codepipeline" "main" {
       configuration = {
         ClusterName = var.ecs_cluster_name_non_prod
         ServiceName = var.uat_service_name
-        FileName    = "imagedefinitions.json"
+        FileName    = "imagedefinitions-uat.json"
       }
     }
   }
@@ -838,7 +841,7 @@ resource "aws_codepipeline" "main" {
       configuration = {
         ClusterName = var.ecs_cluster_name_prod
         ServiceName = var.prod_service_name
-        FileName    = "imagedefinitions.json"
+        FileName    = "imagedefinitions-prod.json"
       }
     }
   }
