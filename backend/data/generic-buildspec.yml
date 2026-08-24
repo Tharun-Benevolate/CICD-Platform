@@ -3,27 +3,22 @@ version: 0.2
 phases:
   pre_build:
     commands:
-      # ── 1. Validate required environment variables ──────────────────────────
       - |
         [ -z "$AWS_REGION" ]     && echo "ERROR: AWS_REGION is not set."     >&2 && exit 1 || true
         [ -z "$ECR_REPO_URI" ]   && echo "ERROR: ECR_REPO_URI is not set."   >&2 && exit 1 || true
         [ -z "$CONTAINER_NAME" ] && echo "ERROR: CONTAINER_NAME is not set." >&2 && exit 1 || true
         echo "All required environment variables are present."
 
-      # ── 2. Authenticate to Amazon ECR ───────────────────────────────────────
       - echo "Logging in to Amazon ECR..."
       - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REPO_URI"
 
-      # ── 3. Set image tag to commit SHA (immutable), fallback to 'latest' ────
       - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}"
       - echo "Image tag -> $IMAGE_TAG"
 
-      # ── 4. Pull latest for Docker layer cache (failure is OK if first run) ──
       - docker pull "$ECR_REPO_URI:latest" || true
 
   build:
     commands:
-      # ── 5. Build Docker image with layer cache ───────────────────────────────
       - echo "Building Docker image..."
       - |
         docker build \
@@ -35,25 +30,24 @@ phases:
 
   post_build:
     commands:
-      # ── 6. Push both the commit-SHA tag and latest to ECR ───────────────────
       - echo "Pushing images to ECR..."
       - docker push "$ECR_REPO_URI:$IMAGE_TAG"
       - docker push "$ECR_REPO_URI:latest"
 
-      # ── 7. Generate per-environment imagedefinitions JSON files ──────────────
+      # ── Generate imagedefinitions files ─────────────────────────────────────
       #
-      # Each pipeline deploy stage reads its own file:
-      #   Deploy-Dev  → imagedefinitions-dev.json
-      #   Deploy-UAT  → imagedefinitions-uat.json
-      #   Deploy-Prod → imagedefinitions-prod.json
+      # Generates BOTH formats for backward compatibility:
+      #   - imagedefinitions.json     (legacy single file, uses DEV secrets)
+      #   - imagedefinitions-dev.json (per-env, uses DEV secrets)
+      #   - imagedefinitions-uat.json (per-env, uses UAT secrets)
+      #   - imagedefinitions-prod.json (per-env, uses PROD secrets)
       #
-      # When SECRET_ARN_{ENV} is set, generates a FULL ECS task definition JSON
-      # (with Secrets Manager references) so the pipeline's Deploy action
-      # creates a new task def revision with all settings intact.
+      # The pipeline reads whichever filename its stage is configured for.
+      # When all secrets share the same DB (single secret), all files are identical.
+      # When per-env secrets exist, each file has different secret ARNs.
       #
-      # SECURITY: Only SECRET_ARN_* (ARNs, not values) and SECRET_KEYS_*
-      # (key names, not values) are used here. Actual secret values never
-      # appear in this buildspec or CodeBuild logs.
+      # SECURITY: Only SECRET_ARN_* (ARNs) and SECRET_KEYS_* (key names)
+      # are used. Actual secret values never appear here.
       - |
         EXECUTION_ROLE="${EXECUTION_ROLE_ARN:-}"
         TASK_ROLE="${TASK_ROLE_ARN:-$EXECUTION_ROLE}"
@@ -61,16 +55,11 @@ phases:
         CONTAINER_PORT="${CONTAINER_PORT:-3000}"
 
         generate_taskdef() {
-          local ENV_UPPER="$1"
-          local SECRET_ARN_VAR="SECRET_ARN_${ENV_UPPER}"
-          local SECRET_KEYS_VAR="SECRET_KEYS_${ENV_UPPER}"
-          local OUTPUT_FILE="imagedefinitions-$(echo "$ENV_UPPER" | tr 'A-Z' 'a-z').json"
-          local SECRET_ARN_VAL="${!SECRET_ARN_VAR:-}"
-          local SECRET_KEYS_VAL="${!SECRET_KEYS_VAR:-}"
+          local OUTPUT_FILE="$1"
+          local SECRET_ARN_VAL="$2"
+          local SECRET_KEYS_VAL="$3"
 
           if [ -n "$SECRET_ARN_VAL" ] && [ "$SECRET_ARN_VAL" != '""' ] && [ "$SECRET_ARN_VAL" != "" ]; then
-            echo "Generating $OUTPUT_FILE with Secrets Manager references..."
-
             SECRETS_ARRAY=$(echo "$SECRET_KEYS_VAL" | node -e "
               const keys = JSON.parse(require('fs').readFileSync(0, 'utf8'));
               const arn = process.env.SECRET_ARN_VAL;
@@ -78,52 +67,75 @@ phases:
             ")
 
             cat > "$OUTPUT_FILE" <<EOF_TASKDEF
-          {
-            "family": "$CONTAINER_NAME",
-            "requiresCompatibilities": ["FARGATE"],
-            "networkMode": "awsvpc",
-            "cpu": "256",
-            "memory": "512",
-            "executionRoleArn": "$EXECUTION_ROLE",
-            "taskRoleArn": "$TASK_ROLE",
-            "containerDefinitions": [{
-              "name": "$CONTAINER_NAME",
-              "image": "$ECR_REPO_URI:$IMAGE_TAG",
-              "essential": true,
-              "portMappings": [{
-                "containerPort": $CONTAINER_PORT,
-                "protocol": "tcp"
-              }],
-              "logConfiguration": {
-                "logDriver": "awslogs",
-                "options": {
-                  "awslogs-group": "$LOG_GROUP",
-                  "awslogs-region": "$AWS_REGION",
-                  "awslogs-stream-prefix": "$CONTAINER_NAME",
-                  "awslogs-create-group": "true"
-                }
-              },
-              "secrets": $SECRETS_ARRAY
-            }]
-          }
-      EOF_TASKDEF
+{
+  "family": "$CONTAINER_NAME",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "$EXECUTION_ROLE",
+  "taskRoleArn": "$TASK_ROLE",
+  "containerDefinitions": [{
+    "name": "$CONTAINER_NAME",
+    "image": "$ECR_REPO_URI:$IMAGE_TAG",
+    "essential": true,
+    "portMappings": [{"containerPort": $CONTAINER_PORT, "protocol": "tcp"}],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "$LOG_GROUP",
+        "awslogs-region": "$AWS_REGION",
+        "awslogs-stream-prefix": "$CONTAINER_NAME",
+        "awslogs-create-group": "true"
+      }
+    },
+    "secrets": $SECRETS_ARRAY
+  }]
+}
+EOF_TASKDEF
           else
-            echo "Generating $OUTPUT_FILE (no secrets)..."
             printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$IMAGE_TAG" > "$OUTPUT_FILE"
           fi
-          cat "$OUTPUT_FILE"
+          echo "Generated $OUTPUT_FILE"
         }
 
-        # Generate for all three environments
-        generate_taskdef "DEV"
-        generate_taskdef "UAT"
-        generate_taskdef "PROD"
+        # Determine which secret to use per environment
+        # DEV always uses SECRET_ARN (legacy) or SECRET_ARN_DEV
+        # UAT uses SECRET_ARN_UAT if set, else falls back to SECRET_ARN
+        # PROD uses SECRET_ARN_PROD if set, else falls back to SECRET_ARN
 
-      # ── 8. Free disk space by removing local image layers ───────────────────
+        DEV_ARN="${SECRET_ARN_DEV:-}"
+        DEV_KEYS="${SECRET_KEYS_DEV:-}"
+        if [ -z "$DEV_ARN" ] || [ "$DEV_ARN" = '""' ]; then
+          DEV_ARN="$SECRET_ARN"
+          DEV_KEYS="$SECRET_KEYS"
+        fi
+
+        UAT_ARN="${SECRET_ARN_UAT:-}"
+        UAT_KEYS="${SECRET_KEYS_UAT:-}"
+        if [ -z "$UAT_ARN" ] || [ "$UAT_ARN" = '""' ]; then
+          UAT_ARN="$DEV_ARN"
+          UAT_KEYS="$DEV_KEYS"
+        fi
+
+        PROD_ARN="${SECRET_ARN_PROD:-}"
+        PROD_KEYS="${SECRET_KEYS_PROD:-}"
+        if [ -z "$PROD_ARN" ] || [ "$PROD_ARN" = '""' ]; then
+          PROD_ARN="$DEV_ARN"
+          PROD_KEYS="$DEV_KEYS"
+        fi
+
+        # Generate all 4 files
+        generate_taskdef "imagedefinitions.json"     "$DEV_ARN"  "$DEV_KEYS"
+        generate_taskdef "imagedefinitions-dev.json"  "$DEV_ARN"  "$DEV_KEYS"
+        generate_taskdef "imagedefinitions-uat.json"  "$UAT_ARN"  "$UAT_KEYS"
+        generate_taskdef "imagedefinitions-prod.json" "$PROD_ARN" "$PROD_KEYS"
+
       - docker rmi "$ECR_REPO_URI:$IMAGE_TAG" "$ECR_REPO_URI:latest" || true
 
 artifacts:
   files:
+    - imagedefinitions.json
     - imagedefinitions-dev.json
     - imagedefinitions-uat.json
     - imagedefinitions-prod.json
