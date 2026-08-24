@@ -35,101 +35,84 @@ phases:
       - docker push "$ECR_REPO_URI:latest"
 
       # ── Generate imagedefinitions files ─────────────────────────────────────
-      #
-      # Generates BOTH formats for backward compatibility:
-      #   - imagedefinitions.json     (legacy single file, uses DEV secrets)
-      #   - imagedefinitions-dev.json (per-env, uses DEV secrets)
-      #   - imagedefinitions-uat.json (per-env, uses UAT secrets)
-      #   - imagedefinitions-prod.json (per-env, uses PROD secrets)
-      #
+      # Generates per-env files (imagedefinitions-dev/uat/prod.json) plus
+      # a legacy imagedefinitions.json for backward compatibility.
       # The pipeline reads whichever filename its stage is configured for.
-      # When all secrets share the same DB (single secret), all files are identical.
-      # When per-env secrets exist, each file has different secret ARNs.
       #
       # SECURITY: Only SECRET_ARN_* (ARNs) and SECRET_KEYS_* (key names)
       # are used. Actual secret values never appear here.
       - |
-        EXECUTION_ROLE="${EXECUTION_ROLE_ARN:-}"
-        TASK_ROLE="${TASK_ROLE_ARN:-$EXECUTION_ROLE}"
-        LOG_GROUP="${LOG_GROUP_NAME:-/ecs/$CONTAINER_NAME}"
-        CONTAINER_PORT="${CONTAINER_PORT:-3000}"
+        # Resolve per-env secrets (fallback to legacy SECRET_ARN if per-env not set)
+        DEV_ARN="${SECRET_ARN_DEV:-$SECRET_ARN}"
+        DEV_KEYS="${SECRET_KEYS_DEV:-$SECRET_KEYS}"
+        UAT_ARN="${SECRET_ARN_UAT:-$DEV_ARN}"
+        UAT_KEYS="${SECRET_KEYS_UAT:-$DEV_KEYS}"
+        PROD_ARN="${SECRET_ARN_PROD:-$DEV_ARN}"
+        PROD_KEYS="${SECRET_KEYS_PROD:-$DEV_KEYS}"
 
+        # Generate a task def JSON using node (avoids heredoc YAML conflicts)
         generate_taskdef() {
           local OUTPUT_FILE="$1"
           local SECRET_ARN_VAL="$2"
           local SECRET_KEYS_VAL="$3"
 
           if [ -n "$SECRET_ARN_VAL" ] && [ "$SECRET_ARN_VAL" != '""' ] && [ "$SECRET_ARN_VAL" != "" ]; then
-            SECRETS_ARRAY=$(echo "$SECRET_KEYS_VAL" | node -e "
-              const keys = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+            node -e "
               const arn = process.env.SECRET_ARN_VAL;
-              console.log(JSON.stringify(keys.map(k => ({ name: k, valueFrom: arn + ':' + k + '::' }))));
-            ")
-
-            cat > "$OUTPUT_FILE" <<EOF_TASKDEF
-{
-  "family": "$CONTAINER_NAME",
-  "requiresCompatibilities": ["FARGATE"],
-  "networkMode": "awsvpc",
-  "cpu": "256",
-  "memory": "512",
-  "executionRoleArn": "$EXECUTION_ROLE",
-  "taskRoleArn": "$TASK_ROLE",
-  "containerDefinitions": [{
-    "name": "$CONTAINER_NAME",
-    "image": "$ECR_REPO_URI:$IMAGE_TAG",
-    "essential": true,
-    "portMappings": [{"containerPort": $CONTAINER_PORT, "protocol": "tcp"}],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "$LOG_GROUP",
-        "awslogs-region": "$AWS_REGION",
-        "awslogs-stream-prefix": "$CONTAINER_NAME",
-        "awslogs-create-group": "true"
-      }
-    },
-    "secrets": $SECRETS_ARRAY
-  }]
-}
-EOF_TASKDEF
+              const keys = JSON.parse(process.env.SECRET_KEYS_VAL || '[]');
+              const secrets = keys.map(k => ({ name: k, valueFrom: arn + ':' + k + '::' }));
+              const taskDef = {
+                family: process.env.CONTAINER_NAME,
+                requiresCompatibilities: ['FARGATE'],
+                networkMode: 'awsvpc',
+                cpu: '256',
+                memory: '512',
+                executionRoleArn: process.env.EXECUTION_ROLE,
+                taskRoleArn: process.env.TASK_ROLE,
+                containerDefinitions: [{
+                  name: process.env.CONTAINER_NAME,
+                  image: process.env.ECR_REPO_URI + ':' + process.env.IMAGE_TAG,
+                  essential: true,
+                  portMappings: [{ containerPort: parseInt(process.env.CONTAINER_PORT), protocol: 'tcp' }],
+                  logConfiguration: {
+                    logDriver: 'awslogs',
+                    options: {
+                      'awslogs-group': process.env.LOG_GROUP,
+                      'awslogs-region': process.env.AWS_REGION,
+                      'awslogs-stream-prefix': process.env.CONTAINER_NAME,
+                      'awslogs-create-group': 'true'
+                    }
+                  },
+                  secrets: secrets
+                }]
+              };
+              require('fs').writeFileSync(process.argv[1], JSON.stringify(taskDef, null, 2));
+            " "$OUTPUT_FILE"
           else
             printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$IMAGE_TAG" > "$OUTPUT_FILE"
           fi
           echo "Generated $OUTPUT_FILE"
         }
 
-        # Determine which secret to use per environment
-        # DEV always uses SECRET_ARN (legacy) or SECRET_ARN_DEV
-        # UAT uses SECRET_ARN_UAT if set, else falls back to SECRET_ARN
-        # PROD uses SECRET_ARN_PROD if set, else falls back to SECRET_ARN
+        # Export vars for node
+        export SECRET_ARN_VAL SECRET_KEYS_VAL EXECUTION_ROLE TASK_ROLE LOG_GROUP CONTAINER_PORT
 
-        DEV_ARN="${SECRET_ARN_DEV:-}"
-        DEV_KEYS="${SECRET_KEYS_DEV:-}"
-        if [ -z "$DEV_ARN" ] || [ "$DEV_ARN" = '""' ]; then
-          DEV_ARN="$SECRET_ARN"
-          DEV_KEYS="$SECRET_KEYS"
-        fi
+        # Generate for each environment
+        for ENV_NAME in dev uat prod; do
+          UPPER=$(echo "$ENV_NAME" | tr 'a-z' 'A-Z')
+          eval "ARN_VAL=\$SECRET_ARN_${UPPER}"
+          eval "KEYS_VAL=\$SECRET_KEYS_${UPPER}"
+          [ -z "$ARN_VAL" ] || [ "$ARN_VAL" = '""' ] && ARN_VAL="$DEV_ARN"
+          [ -z "$KEYS_VAL" ] || [ "$KEYS_VAL" = '""' ] && KEYS_VAL="$DEV_KEYS"
+          export SECRET_ARN_VAL="$ARN_VAL"
+          export SECRET_KEYS_VAL="$KEYS_VAL"
+          generate_taskdef "imagedefinitions-${ENV_NAME}.json" "$ARN_VAL" "$KEYS_VAL"
+        done
 
-        UAT_ARN="${SECRET_ARN_UAT:-}"
-        UAT_KEYS="${SECRET_KEYS_UAT:-}"
-        if [ -z "$UAT_ARN" ] || [ "$UAT_ARN" = '""' ]; then
-          UAT_ARN="$DEV_ARN"
-          UAT_KEYS="$DEV_KEYS"
-        fi
-
-        PROD_ARN="${SECRET_ARN_PROD:-}"
-        PROD_KEYS="${SECRET_KEYS_PROD:-}"
-        if [ -z "$PROD_ARN" ] || [ "$PROD_ARN" = '""' ]; then
-          PROD_ARN="$DEV_ARN"
-          PROD_KEYS="$DEV_KEYS"
-        fi
-
-        # Generate all 4 files
-        generate_taskdef "imagedefinitions.json"     "$DEV_ARN"  "$DEV_KEYS"
-        generate_taskdef "imagedefinitions-dev.json"  "$DEV_ARN"  "$DEV_KEYS"
-        generate_taskdef "imagedefinitions-uat.json"  "$UAT_ARN"  "$UAT_KEYS"
-        generate_taskdef "imagedefinitions-prod.json" "$PROD_ARN" "$PROD_KEYS"
+        # Legacy single file (uses DEV secrets for backward compat)
+        export SECRET_ARN_VAL="$DEV_ARN"
+        export SECRET_KEYS_VAL="$DEV_KEYS"
+        generate_taskdef "imagedefinitions.json" "$DEV_ARN" "$DEV_KEYS"
 
       - docker rmi "$ECR_REPO_URI:$IMAGE_TAG" "$ECR_REPO_URI:latest" || true
 
