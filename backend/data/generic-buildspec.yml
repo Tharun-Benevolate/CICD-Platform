@@ -50,69 +50,80 @@ phases:
         PROD_ARN="${SECRET_ARN_PROD:-$DEV_ARN}"
         PROD_KEYS="${SECRET_KEYS_PROD:-$DEV_KEYS}"
 
-        # Generate a task def JSON using node (avoids heredoc YAML conflicts)
+        EXECUTION_ROLE="${EXECUTION_ROLE_ARN:-}"
+        TASK_ROLE="${TASK_ROLE_ARN:-$EXECUTION_ROLE}"
+        LOG_GROUP="${LOG_GROUP_NAME:-/ecs/$CONTAINER_NAME}"
+        CONTAINER_PORT="${CONTAINER_PORT:-3000}"
+
+        # Build secrets JSON array from keys and ARN using pure bash
+        build_secrets_json() {
+          local ARN="$1"
+          local KEYS_JSON="$2"
+          if [ -z "$ARN" ] || [ "$ARN" = '""' ]; then
+            echo "[]"
+            return
+          fi
+          # Parse JSON array of keys and build ECS secrets format
+          local RESULT=""
+          local FIRST=true
+          # Strip brackets and quotes, split by comma
+          local CLEANED=$(echo "$KEYS_JSON" | sed 's/^\[//;s/\]$//;s/"//g;s/,/ /g')
+          for KEY in $CLEANED; do
+            if [ "$FIRST" = true ]; then
+              FIRST=false
+            else
+              RESULT="$RESULT,"
+            fi
+            RESULT="$RESULT{\"name\":\"$KEY\",\"valueFrom\":\"$ARN:$KEY::\"}"
+          done
+          echo "[$RESULT]"
+        }
+
         generate_taskdef() {
           local OUTPUT_FILE="$1"
           local SECRET_ARN_VAL="$2"
           local SECRET_KEYS_VAL="$3"
 
           if [ -n "$SECRET_ARN_VAL" ] && [ "$SECRET_ARN_VAL" != '""' ] && [ "$SECRET_ARN_VAL" != "" ]; then
-            node -e "
-              const arn = process.env.SECRET_ARN_VAL;
-              const keys = JSON.parse(process.env.SECRET_KEYS_VAL || '[]');
-              const secrets = keys.map(k => ({ name: k, valueFrom: arn + ':' + k + '::' }));
-              const taskDef = {
-                family: process.env.CONTAINER_NAME,
-                requiresCompatibilities: ['FARGATE'],
-                networkMode: 'awsvpc',
-                cpu: '256',
-                memory: '512',
-                executionRoleArn: process.env.EXECUTION_ROLE,
-                taskRoleArn: process.env.TASK_ROLE,
-                containerDefinitions: [{
-                  name: process.env.CONTAINER_NAME,
-                  image: process.env.ECR_REPO_URI + ':' + process.env.IMAGE_TAG,
-                  essential: true,
-                  portMappings: [{ containerPort: parseInt(process.env.CONTAINER_PORT), protocol: 'tcp' }],
-                  logConfiguration: {
-                    logDriver: 'awslogs',
-                    options: {
-                      'awslogs-group': process.env.LOG_GROUP,
-                      'awslogs-region': process.env.AWS_REGION,
-                      'awslogs-stream-prefix': process.env.CONTAINER_NAME,
-                      'awslogs-create-group': 'true'
-                    }
-                  },
-                  secrets: secrets
-                }]
-              };
-              require('fs').writeFileSync(process.argv[1], JSON.stringify(taskDef, null, 2));
-            " "$OUTPUT_FILE"
+            local SECRETS_JSON=$(build_secrets_json "$SECRET_ARN_VAL" "$SECRET_KEYS_VAL")
+            printf '{
+  "family": "%s",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "%s",
+  "taskRoleArn": "%s",
+  "containerDefinitions": [{
+    "name": "%s",
+    "image": "%s:%s",
+    "essential": true,
+    "portMappings": [{"containerPort": %s, "protocol": "tcp"}],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "%s",
+        "awslogs-region": "%s",
+        "awslogs-stream-prefix": "%s",
+        "awslogs-create-group": "true"
+      }
+    },
+    "secrets": %s
+  }]
+}' "$CONTAINER_NAME" "$EXECUTION_ROLE" "$TASK_ROLE" "$CONTAINER_NAME" "$ECR_REPO_URI" "$IMAGE_TAG" "$CONTAINER_PORT" "$LOG_GROUP" "$AWS_REGION" "$CONTAINER_NAME" "$SECRETS_JSON" > "$OUTPUT_FILE"
           else
             printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$IMAGE_TAG" > "$OUTPUT_FILE"
           fi
-          echo "Generated $OUTPUT_FILE"
+          echo "Generated $OUTPUT_FILE ($(wc -c < "$OUTPUT_FILE") bytes)"
         }
 
-        # Export vars for node
-        export SECRET_ARN_VAL SECRET_KEYS_VAL EXECUTION_ROLE TASK_ROLE LOG_GROUP CONTAINER_PORT
-
-        # Generate for each environment
-        for ENV_NAME in dev uat prod; do
-          UPPER=$(echo "$ENV_NAME" | tr 'a-z' 'A-Z')
-          eval "ARN_VAL=\$SECRET_ARN_${UPPER}"
-          eval "KEYS_VAL=\$SECRET_KEYS_${UPPER}"
-          [ -z "$ARN_VAL" ] || [ "$ARN_VAL" = '""' ] && ARN_VAL="$DEV_ARN"
-          [ -z "$KEYS_VAL" ] || [ "$KEYS_VAL" = '""' ] && KEYS_VAL="$DEV_KEYS"
-          export SECRET_ARN_VAL="$ARN_VAL"
-          export SECRET_KEYS_VAL="$KEYS_VAL"
-          generate_taskdef "imagedefinitions-${ENV_NAME}.json" "$ARN_VAL" "$KEYS_VAL"
-        done
+        # Generate per-env files
+        generate_taskdef "imagedefinitions-dev.json"  "$DEV_ARN"  "$DEV_KEYS"
+        generate_taskdef "imagedefinitions-uat.json"  "$UAT_ARN"  "$UAT_KEYS"
+        generate_taskdef "imagedefinitions-prod.json" "$PROD_ARN" "$PROD_KEYS"
 
         # Legacy single file (uses DEV secrets for backward compat)
-        export SECRET_ARN_VAL="$DEV_ARN"
-        export SECRET_KEYS_VAL="$DEV_KEYS"
-        generate_taskdef "imagedefinitions.json" "$DEV_ARN" "$DEV_KEYS"
+        generate_taskdef "imagedefinitions.json"      "$DEV_ARN"  "$DEV_KEYS"
 
       - docker rmi "$ECR_REPO_URI:$IMAGE_TAG" "$ECR_REPO_URI:latest" || true
 
