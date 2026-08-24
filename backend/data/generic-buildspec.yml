@@ -67,34 +67,34 @@ phases:
           # Full task definition JSON — CodePipeline V1 ECS action uses this
           # to register a new task def revision with all settings intact.
           cat > imagedefinitions.json <<EOF_TASKDEF
-{
-  "family": "$CONTAINER_NAME",
-  "requiresCompatibilities": ["FARGATE"],
-  "networkMode": "awsvpc",
-  "cpu": "256",
-  "memory": "512",
-  "executionRoleArn": "$EXECUTION_ROLE",
-  "taskRoleArn": "$TASK_ROLE",
-  "containerDefinitions": [{
-    "name": "$CONTAINER_NAME",
-    "image": "$ECR_REPO_URI:$IMAGE_TAG",
-    "essential": true,
-    "portMappings": [{
-      "containerPort": $CONTAINER_PORT,
-      "protocol": "tcp"
-    }],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "$LOG_GROUP",
-        "awslogs-region": "$AWS_REGION",
-        "awslogs-stream-prefix": "$CONTAINER_NAME",
-        "awslogs-create-group": "true"
-      }
-    },
-    "secrets": $SECRETS_ARRAY
-  }]
-}
+          {
+            "family": "$CONTAINER_NAME",
+            "requiresCompatibilities": ["FARGATE"],
+            "networkMode": "awsvpc",
+            "cpu": "256",
+            "memory": "512",
+            "executionRoleArn": "$EXECUTION_ROLE",
+            "taskRoleArn": "$TASK_ROLE",
+            "containerDefinitions": [{
+              "name": "$CONTAINER_NAME",
+              "image": "$ECR_REPO_URI:$IMAGE_TAG",
+              "essential": true,
+              "portMappings": [{
+                "containerPort": $CONTAINER_PORT,
+                "protocol": "tcp"
+              }],
+              "logConfiguration": {
+                "logDriver": "awslogs",
+                "options": {
+                  "awslogs-group": "$LOG_GROUP",
+                  "awslogs-region": "$AWS_REGION",
+                  "awslogs-stream-prefix": "$CONTAINER_NAME",
+                  "awslogs-create-group": "true"
+                }
+              },
+              "secrets": $SECRETS_ARRAY
+            }]
+          }
 EOF_TASKDEF
           cat imagedefinitions.json
         else
