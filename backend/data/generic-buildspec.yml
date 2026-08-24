@@ -34,96 +34,49 @@ phases:
       - docker push "$ECR_REPO_URI:$IMAGE_TAG"
       - docker push "$ECR_REPO_URI:latest"
 
-      # ── Generate imagedefinitions files ─────────────────────────────────────
-      # Generates per-env files (imagedefinitions-dev/uat/prod.json) plus
-      # a legacy imagedefinitions.json for backward compatibility.
-      # The pipeline reads whichever filename its stage is configured for.
-      #
-      # SECURITY: Only SECRET_ARN_* (ARNs) and SECRET_KEYS_* (key names)
-      # are used. Actual secret values never appear here.
       - |
-        # Resolve per-env secrets (fallback to legacy SECRET_ARN if per-env not set)
         DEV_ARN="${SECRET_ARN_DEV:-$SECRET_ARN}"
         DEV_KEYS="${SECRET_KEYS_DEV:-$SECRET_KEYS}"
         UAT_ARN="${SECRET_ARN_UAT:-$DEV_ARN}"
         UAT_KEYS="${SECRET_KEYS_UAT:-$DEV_KEYS}"
         PROD_ARN="${SECRET_ARN_PROD:-$DEV_ARN}"
         PROD_KEYS="${SECRET_KEYS_PROD:-$DEV_KEYS}"
-
         EXECUTION_ROLE="${EXECUTION_ROLE_ARN:-}"
         TASK_ROLE="${TASK_ROLE_ARN:-$EXECUTION_ROLE}"
         LOG_GROUP="${LOG_GROUP_NAME:-/ecs/$CONTAINER_NAME}"
-        CONTAINER_PORT="${CONTAINER_PORT:-3000}"
+        PORT="${CONTAINER_PORT:-3000}"
 
-        # Build secrets JSON array from keys and ARN using pure bash
-        build_secrets_json() {
+        build_secrets() {
           local ARN="$1"
-          local KEYS_JSON="$2"
-          if [ -z "$ARN" ] || [ "$ARN" = '""' ]; then
-            echo "[]"
-            return
-          fi
-          # Parse JSON array of keys and build ECS secrets format
-          local RESULT=""
+          local KEYS_RAW="$2"
+          if [ -z "$ARN" ] || [ "$ARN" = '""' ]; then echo "[]"; return; fi
+          local OUT=""
           local FIRST=true
-          # Strip brackets and quotes, split by comma
-          local CLEANED=$(echo "$KEYS_JSON" | sed 's/^\[//;s/\]$//;s/"//g;s/,/ /g')
-          for KEY in $CLEANED; do
-            if [ "$FIRST" = true ]; then
-              FIRST=false
-            else
-              RESULT="$RESULT,"
-            fi
-            RESULT="$RESULT{\"name\":\"$KEY\",\"valueFrom\":\"$ARN:$KEY::\"}"
+          local KEYS=$(echo "$KEYS_RAW" | sed 's/^\[//;s/\]$//;s/"//g;s/,/ /g')
+          for K in $KEYS; do
+            if [ "$FIRST" = true ]; then FIRST=false; else OUT="$OUT,"; fi
+            OUT="${OUT}{\"name\":\"${K}\",\"valueFrom\":\"${ARN}:${K}::\"}"
           done
-          echo "[$RESULT]"
+          echo "[${OUT}]"
         }
 
-        generate_taskdef() {
-          local OUTPUT_FILE="$1"
-          local SECRET_ARN_VAL="$2"
-          local SECRET_KEYS_VAL="$3"
-
-          if [ -n "$SECRET_ARN_VAL" ] && [ "$SECRET_ARN_VAL" != '""' ] && [ "$SECRET_ARN_VAL" != "" ]; then
-            local SECRETS_JSON=$(build_secrets_json "$SECRET_ARN_VAL" "$SECRET_KEYS_VAL")
-            printf '{
-  "family": "%s",
-  "requiresCompatibilities": ["FARGATE"],
-  "networkMode": "awsvpc",
-  "cpu": "256",
-  "memory": "512",
-  "executionRoleArn": "%s",
-  "taskRoleArn": "%s",
-  "containerDefinitions": [{
-    "name": "%s",
-    "image": "%s:%s",
-    "essential": true,
-    "portMappings": [{"containerPort": %s, "protocol": "tcp"}],
-    "logConfiguration": {
-      "logDriver": "awslogs",
-      "options": {
-        "awslogs-group": "%s",
-        "awslogs-region": "%s",
-        "awslogs-stream-prefix": "%s",
-        "awslogs-create-group": "true"
-      }
-    },
-    "secrets": %s
-  }]
-}' "$CONTAINER_NAME" "$EXECUTION_ROLE" "$TASK_ROLE" "$CONTAINER_NAME" "$ECR_REPO_URI" "$IMAGE_TAG" "$CONTAINER_PORT" "$LOG_GROUP" "$AWS_REGION" "$CONTAINER_NAME" "$SECRETS_JSON" > "$OUTPUT_FILE"
+        gen() {
+          local FILE="$1"
+          local ARN="$2"
+          local KEYS="$3"
+          if [ -n "$ARN" ] && [ "$ARN" != '""' ]; then
+            local SEC=$(build_secrets "$ARN" "$KEYS")
+            echo "{\"family\":\"${CONTAINER_NAME}\",\"requiresCompatibilities\":[\"FARGATE\"],\"networkMode\":\"awsvpc\",\"cpu\":\"256\",\"memory\":\"512\",\"executionRoleArn\":\"${EXECUTION_ROLE}\",\"taskRoleArn\":\"${TASK_ROLE}\",\"containerDefinitions\":[{\"name\":\"${CONTAINER_NAME}\",\"image\":\"${ECR_REPO_URI}:${IMAGE_TAG}\",\"essential\":true,\"portMappings\":[{\"containerPort\":${PORT},\"protocol\":\"tcp\"}],\"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{\"awslogs-group\":\"${LOG_GROUP}\",\"awslogs-region\":\"${AWS_REGION}\",\"awslogs-stream-prefix\":\"${CONTAINER_NAME}\",\"awslogs-create-group\":\"true\"}},\"secrets\":${SEC}}]}" > "$FILE"
           else
-            printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$IMAGE_TAG" > "$OUTPUT_FILE"
+            echo "[{\"name\":\"${CONTAINER_NAME}\",\"imageUri\":\"${ECR_REPO_URI}:${IMAGE_TAG}\"}]" > "$FILE"
           fi
-          echo "Generated $OUTPUT_FILE ($(wc -c < "$OUTPUT_FILE") bytes)"
+          echo "Generated $FILE ($(wc -c < "$FILE") bytes)"
         }
 
-        # Generate per-env files
-        generate_taskdef "imagedefinitions-dev.json"  "$DEV_ARN"  "$DEV_KEYS"
-        generate_taskdef "imagedefinitions-uat.json"  "$UAT_ARN"  "$UAT_KEYS"
-        generate_taskdef "imagedefinitions-prod.json" "$PROD_ARN" "$PROD_KEYS"
-
-        # Legacy single file (uses DEV secrets for backward compat)
-        generate_taskdef "imagedefinitions.json"      "$DEV_ARN"  "$DEV_KEYS"
+        gen "imagedefinitions-dev.json"  "$DEV_ARN"  "$DEV_KEYS"
+        gen "imagedefinitions-uat.json"  "$UAT_ARN"  "$UAT_KEYS"
+        gen "imagedefinitions-prod.json" "$PROD_ARN" "$PROD_KEYS"
+        gen "imagedefinitions.json"      "$DEV_ARN"  "$DEV_KEYS"
 
       - docker rmi "$ECR_REPO_URI:$IMAGE_TAG" "$ECR_REPO_URI:latest" || true
 
