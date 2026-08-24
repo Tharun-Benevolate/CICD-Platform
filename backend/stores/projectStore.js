@@ -36,6 +36,25 @@ function rowToProject(row) {
   if (project.githubRepo && project.githubRepo.includes("/")) {
     project.githubRepo = project.githubRepo.split("/").pop();
   }
+
+  // ── Backward-compatible migration: legacy secretName/secretArn → per-env secrets ──
+  // If the project has old-style secretName/secretArn but no per-env secrets map,
+  // migrate them to secrets.dev so existing setups keep working without re-saving.
+  if (!project.secrets || typeof project.secrets !== "object") {
+    project.secrets = { dev: null, uat: null, prod: null };
+  }
+  if (project.secretArn && project.secretName && !project.secrets.dev) {
+    project.secrets.dev = {
+      name: project.secretName,
+      arn: project.secretArn,
+      keys: project.secretKeys || []
+    };
+  }
+  // Ensure all env slots exist
+  for (const env of ["dev", "uat", "prod"]) {
+    if (!project.secrets[env]) project.secrets[env] = null;
+  }
+
   return project;
 }
 

@@ -68,4 +68,31 @@ function resolveSecretName(project) {
   return `${secretPrefixForProject(project)}/secrets`;
 }
 
-module.exports = { sanitizeProjectPrefix, namesForProject, betaTgNameFor, secretPrefixForProject, sanitizeSecretName, resolveSecretName };
+/**
+ * Returns the per-env secret config for a given environment.
+ * Falls back to legacy project.secretName/project.secretArn for backward compat.
+ */
+function getSecretForEnv(project, env) {
+  if (!project) return null;
+  // New per-env schema
+  if (project.secrets && project.secrets[env]) return project.secrets[env];
+  // Legacy fallback: dev gets the old shared secret
+  if (env === "dev" && project.secretArn) {
+    return { name: project.secretName, arn: project.secretArn, keys: project.secretKeys || [] };
+  }
+  return null;
+}
+
+/**
+ * Returns the AWS Secrets Manager name for a given environment.
+ * If per-env secrets exist, uses that env's name. Otherwise falls back to legacy.
+ */
+function resolveSecretNameForEnv(project, env) {
+  const cfg = getSecretForEnv(project, env);
+  if (cfg && cfg.name) return cfg.name;
+  // Generate default: {prefix}/{env}-secrets
+  const prefix = secretPrefixForProject(project);
+  return `${prefix}/${env}-secrets`;
+}
+
+module.exports = { sanitizeProjectPrefix, namesForProject, betaTgNameFor, secretPrefixForProject, sanitizeSecretName, resolveSecretName, getSecretForEnv, resolveSecretNameForEnv };
