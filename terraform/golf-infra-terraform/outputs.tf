@@ -53,8 +53,23 @@ output "secret_arn" { value = var.secret_arn }
 
 # ─── EFS outputs ─────────────────────────────────────────────────────
 output "efs_filesystem_id" {
-  description = "EFS filesystem ID attached to this project (empty if EFS is disabled)"
-  value       = var.enable_efs ? local.efs_id : ""
+  description = "Primary/Dev EFS filesystem ID attached to this project"
+  value       = var.enable_efs ? local.efs_id_dev : ""
+}
+
+output "efs_filesystem_id_dev" {
+  description = "Dev environment EFS filesystem ID"
+  value       = var.enable_efs ? local.efs_id_dev : ""
+}
+
+output "efs_filesystem_id_uat" {
+  description = "UAT environment EFS filesystem ID"
+  value       = var.enable_efs ? local.efs_id_uat : ""
+}
+
+output "efs_filesystem_id_prod" {
+  description = "Prod environment EFS filesystem ID"
+  value       = var.enable_efs ? local.efs_id_prod : ""
 }
 
 output "efs_access_point_id_dev" {

@@ -201,31 +201,64 @@ resource "aws_route53_record" "prod" {
 # Mount targets are created in every private subnet for Fargate network access.
 # The filesystem itself survives project infra destroy (data-safe by default).
 
-resource "aws_efs_file_system" "project" {
+resource "aws_efs_file_system" "dev" {
   count          = var.enable_efs && var.efs_filesystem_id == "" ? 1 : 0
-  creation_token = "${local.project_prefix}-efs"
+  creation_token = "dev-${local.project_prefix}-efs"
   encrypted      = true
 
   lifecycle {
-    prevent_destroy = false  # Set to true in production to guard data
+    prevent_destroy = false
   }
 
   tags = {
-    Name    = "${local.project_prefix}-efs"
-    Project = local.project_prefix
+    Name        = "dev-${local.project_prefix}-efs"
+    Project     = local.project_prefix
+    Environment = "dev"
+  }
+}
+
+resource "aws_efs_file_system" "uat" {
+  count          = var.enable_efs && var.efs_filesystem_id == "" ? 1 : 0
+  creation_token = "uat-${local.project_prefix}-efs"
+  encrypted      = true
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+  tags = {
+    Name        = "uat-${local.project_prefix}-efs"
+    Project     = local.project_prefix
+    Environment = "uat"
+  }
+}
+
+resource "aws_efs_file_system" "prod" {
+  count          = var.enable_efs && var.efs_filesystem_id == "" ? 1 : 0
+  creation_token = "prod-${local.project_prefix}-efs"
+  encrypted      = true
+
+  lifecycle {
+    prevent_destroy = false
+  }
+
+  tags = {
+    Name        = "prod-${local.project_prefix}-efs"
+    Project     = local.project_prefix
+    Environment = "prod"
   }
 }
 
 locals {
-  efs_id = var.enable_efs ? (
-    var.efs_filesystem_id != "" ? var.efs_filesystem_id : aws_efs_file_system.project[0].id
-  ) : ""
+  efs_id_dev  = var.enable_efs ? (var.efs_filesystem_id != "" ? var.efs_filesystem_id : aws_efs_file_system.dev[0].id)  : ""
+  efs_id_uat  = var.enable_efs ? (var.efs_filesystem_id != "" ? var.efs_filesystem_id : aws_efs_file_system.uat[0].id)  : ""
+  efs_id_prod = var.enable_efs ? (var.efs_filesystem_id != "" ? var.efs_filesystem_id : aws_efs_file_system.prod[0].id) : ""
 }
 
-# Per-environment access points — each gets an isolated root directory
+# Per-environment access points — each connects to its dedicated environment filesystem
 resource "aws_efs_access_point" "dev" {
   count          = var.enable_efs ? 1 : 0
-  file_system_id = local.efs_id
+  file_system_id = local.efs_id_dev
 
   posix_user {
     gid = 1000
@@ -246,7 +279,7 @@ resource "aws_efs_access_point" "dev" {
 
 resource "aws_efs_access_point" "uat" {
   count          = var.enable_efs ? 1 : 0
-  file_system_id = local.efs_id
+  file_system_id = local.efs_id_uat
 
   posix_user {
     gid = 1000
@@ -267,7 +300,7 @@ resource "aws_efs_access_point" "uat" {
 
 resource "aws_efs_access_point" "prod" {
   count          = var.enable_efs ? 1 : 0
-  file_system_id = local.efs_id
+  file_system_id = local.efs_id_prod
 
   posix_user {
     gid = 1000
@@ -286,12 +319,24 @@ resource "aws_efs_access_point" "prod" {
   tags = { Name = "${local.project_prefix}-prod-ap" }
 }
 
-# Mount targets — one per private subnet for Fargate network connectivity
-# Only created when provisioning a NEW EFS filesystem. Existing EFS filesystems
-# already have their mount targets established, avoiding cross-VPC MountTargetConflict errors.
-resource "aws_efs_mount_target" "private" {
+# Mount targets — created for each environment's filesystem across private subnets
+resource "aws_efs_mount_target" "dev_private" {
   count           = var.enable_efs && var.efs_filesystem_id == "" ? length(split(",", var.private_subnet_ids)) : 0
-  file_system_id  = local.efs_id
+  file_system_id  = local.efs_id_dev
+  subnet_id       = split(",", var.private_subnet_ids)[count.index]
+  security_groups = [var.efs_sg_id]
+}
+
+resource "aws_efs_mount_target" "uat_private" {
+  count           = var.enable_efs && var.efs_filesystem_id == "" ? length(split(",", var.private_subnet_ids)) : 0
+  file_system_id  = local.efs_id_uat
+  subnet_id       = split(",", var.private_subnet_ids)[count.index]
+  security_groups = [var.efs_sg_id]
+}
+
+resource "aws_efs_mount_target" "prod_private" {
+  count           = var.enable_efs && var.efs_filesystem_id == "" ? length(split(",", var.private_subnet_ids)) : 0
+  file_system_id  = local.efs_id_prod
   subnet_id       = split(",", var.private_subnet_ids)[count.index]
   security_groups = [var.efs_sg_id]
 }
@@ -336,7 +381,7 @@ resource "aws_ecs_task_definition" "dev" {
     content {
       name = "efs-storage"
       efs_volume_configuration {
-        file_system_id     = local.efs_id
+        file_system_id     = local.efs_id_dev
         transit_encryption = "ENABLED"
         authorization_config {
           access_point_id = aws_efs_access_point.dev[0].id
@@ -401,7 +446,7 @@ resource "aws_ecs_task_definition" "uat" {
     content {
       name = "efs-storage"
       efs_volume_configuration {
-        file_system_id     = local.efs_id
+        file_system_id     = local.efs_id_uat
         transit_encryption = "ENABLED"
         authorization_config {
           access_point_id = aws_efs_access_point.uat[0].id
@@ -462,7 +507,7 @@ resource "aws_ecs_task_definition" "prod" {
     content {
       name = "efs-storage"
       efs_volume_configuration {
-        file_system_id     = local.efs_id
+        file_system_id     = local.efs_id_prod
         transit_encryption = "ENABLED"
         authorization_config {
           access_point_id = aws_efs_access_point.prod[0].id
