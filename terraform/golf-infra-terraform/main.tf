@@ -287,8 +287,10 @@ resource "aws_efs_access_point" "prod" {
 }
 
 # Mount targets — one per private subnet for Fargate network connectivity
+# Only created when provisioning a NEW EFS filesystem. Existing EFS filesystems
+# already have their mount targets established, avoiding cross-VPC MountTargetConflict errors.
 resource "aws_efs_mount_target" "private" {
-  count           = var.enable_efs ? length(split(",", var.private_subnet_ids)) : 0
+  count           = var.enable_efs && var.efs_filesystem_id == "" ? length(split(",", var.private_subnet_ids)) : 0
   file_system_id  = local.efs_id
   subnet_id       = split(",", var.private_subnet_ids)[count.index]
   security_groups = [var.efs_sg_id]
