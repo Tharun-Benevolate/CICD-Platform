@@ -544,18 +544,11 @@ async function handleSaveSecrets() {
     }
   }
 
-  // Check if any EXISTING values were changed
-  var hasChanges = false;
-  for (var key in secretsObj) {
-    if (_secretValues[key] !== secretsObj[key]) {
-      hasChanges = true;
-      break;
-    }
-  }
-  
-  if (!hasNew && !hasChanges) {
+  // Always allow saving if there are any values — the backend merges,
+  // and this also triggers the CodeBuild env var sync.
+  if (!hasNew && Object.keys(secretsObj).length === 0) {
     if (msg) {
-      msg.textContent = 'No changes to save.';
+      msg.textContent = 'No secrets to save.';
       msg.style.color = 'var(--color-text-tertiary)';
       msg.style.display = 'block';
       setTimeout(function() { msg.style.display = 'none'; }, 3000);
