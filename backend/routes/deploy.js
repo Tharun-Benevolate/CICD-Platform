@@ -479,6 +479,7 @@ router.post("/bluegreen/deploy-from-image", auth.requireRole(...auth.ADMIN_ROLES
     let containerPort = 3000;
     let cpu           = "256";
     let memory        = "512";
+    let secrets       = [];
 
     try {
       const prodService = await aws.describeEcsService(region, clusterName, project.prodServiceName);
@@ -492,6 +493,9 @@ router.post("/bluegreen/deploy-from-image", auth.requireRole(...auth.ADMIN_ROLES
           if (c0) {
             containerName = c0.name || containerName;
             containerPort = (c0.portMappings && c0.portMappings[0] && c0.portMappings[0].containerPort) || containerPort;
+            // Carry forward Secrets Manager references so the new task def
+            // revision keeps all platform-configured credentials.
+            secrets = c0.secrets || [];
           }
         }
       }
@@ -508,7 +512,8 @@ router.post("/bluegreen/deploy-from-image", auth.requireRole(...auth.ADMIN_ROLES
       containerName,
       containerPort,
       cpu,
-      memory
+      memory,
+      secrets
     });
 
     // ── Step 3: Apply soak time to the deployment group ──────────────────

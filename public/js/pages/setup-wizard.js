@@ -399,6 +399,7 @@ async function executeDestroyProject() {
 // ─── SECRETS MANAGEMENT ─────────────────────────────────────────────
 
 var _secretKeys = [];
+var _secretValues = {};
 var _secretNameLocked = false;
 
 async function loadSecrets() {
@@ -429,8 +430,22 @@ async function loadSecrets() {
     var res = await api.get('/api/secrets/' + _activeProject.id);
     if (res && res.ok) {
       _secretKeys = res.keys || [];
-      renderSecretsTable();
     }
+
+    // Fetch current values (for editing existing secrets)
+    _secretValues = {};
+    if (_secretKeys.length > 0) {
+      try {
+        var valRes = await api.get('/api/secrets/' + _activeProject.id + '/values');
+        if (valRes && valRes.ok && valRes.values) {
+          _secretValues = valRes.values;
+        }
+      } catch (e) {
+        console.warn('Could not load secret values for editing:', e);
+      }
+    }
+
+    renderSecretsTable();
   } catch (e) {
     container.innerHTML = '<div style="font-size:12px;color:var(--color-danger);">Failed to load secrets.</div>';
   }
@@ -453,9 +468,11 @@ function renderSecretsTable() {
              '</tr></thead><tbody>';
              
   _secretKeys.forEach(function(key, index) {
+    var existingVal = _secretValues[key] || '';
+    var valEncoded = existingVal.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     html += '<tr style="border-bottom:1px solid var(--color-border);">' +
             '<td style="padding:8px;"><input type="text" class="secret-key-input" value="' + key + '" readonly style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-secondary);color:var(--color-text-secondary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
-            '<td style="padding:8px;"><input type="text" value="••••••••" readonly style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-secondary);color:var(--color-text-tertiary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+            '<td style="padding:8px;"><input type="password" class="secret-val-input" data-key="' + key + '" value="' + valEncoded + '" placeholder="Enter value" autocomplete="new-password" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
             '<td style="padding:8px;text-align:center;"><button type="button" onclick="handleDeleteSecret(\'' + key + '\')" style="color:var(--color-danger);background:transparent;border:none;cursor:pointer;padding:4px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button></td>' +
             '</tr>';
   });
@@ -501,12 +518,23 @@ async function handleSaveSecrets() {
   var btn = document.getElementById('btn-save-secrets');
   var msg = document.getElementById('secrets-save-msg');
   
+  // Collect EXISTING values (from editable masked inputs on the table)
+  var existingInputs = document.querySelectorAll('.secret-val-input');
+  var secretsObj = {};
+  
+  for (var i = 0; i < existingInputs.length; i++) {
+    var key = existingInputs[i].getAttribute('data-key');
+    var val = existingInputs[i].value;
+    if (key && val) {
+      secretsObj[key] = val;
+    }
+  }
+
+  // Collect NEW values (from the add-row inputs)
   var newKeyInputs = document.querySelectorAll('.new-secret-key');
   var newValInputs = document.querySelectorAll('.new-secret-val');
   
-  var secretsObj = {};
   var hasNew = false;
-  
   for (var i = 0; i < newKeyInputs.length; i++) {
     var key = newKeyInputs[i].value.trim();
     var val = newValInputs[i].value;
@@ -515,10 +543,19 @@ async function handleSaveSecrets() {
       hasNew = true;
     }
   }
+
+  // Check if any EXISTING values were changed
+  var hasChanges = false;
+  for (var key in secretsObj) {
+    if (_secretValues[key] !== secretsObj[key]) {
+      hasChanges = true;
+      break;
+    }
+  }
   
-  if (!hasNew) {
+  if (!hasNew && !hasChanges) {
     if (msg) {
-      msg.textContent = 'No new secrets to save.';
+      msg.textContent = 'No changes to save.';
       msg.style.color = 'var(--color-text-tertiary)';
       msg.style.display = 'block';
       setTimeout(function() { msg.style.display = 'none'; }, 3000);

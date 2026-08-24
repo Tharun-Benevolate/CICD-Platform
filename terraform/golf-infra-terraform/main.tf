@@ -720,9 +720,9 @@ resource "aws_codepipeline" "main" {
       version         = "1"
       input_artifacts = ["build_output"]
       configuration = {
-        ClusterName = var.ecs_cluster_name_non_prod
-        ServiceName = var.dev_service_name
-        FileName    = "imagedefinitions.json"
+        ClusterName              = var.ecs_cluster_name_non_prod
+        ServiceName              = var.dev_service_name
+        TaskDefinitionTemplateFile = "taskdef.json"
       }
     }
   }
@@ -753,9 +753,9 @@ resource "aws_codepipeline" "main" {
       version         = "1"
       input_artifacts = ["build_output"]
       configuration = {
-        ClusterName = var.ecs_cluster_name_non_prod
-        ServiceName = var.uat_service_name
-        FileName    = "imagedefinitions.json"
+        ClusterName              = var.ecs_cluster_name_non_prod
+        ServiceName              = var.uat_service_name
+        TaskDefinitionTemplateFile = "taskdef.json"
       }
     }
   }
@@ -789,9 +789,9 @@ resource "aws_codepipeline" "main" {
       version         = "1"
       input_artifacts = ["build_output"]
       configuration = {
-        ClusterName = var.ecs_cluster_name_prod
-        ServiceName = var.prod_service_name
-        FileName    = "imagedefinitions.json"
+        ClusterName              = var.ecs_cluster_name_prod
+        ServiceName              = var.prod_service_name
+        TaskDefinitionTemplateFile = "taskdef.json"
       }
     }
   }

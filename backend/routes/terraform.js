@@ -290,7 +290,12 @@ router.post("/terraform/initial/run", auth.requireRole(...auth.ADMIN_ROLES), asy
       github_branch: isCodeCommit ? "main" : (githubBranch || project.githubBranch || "main"),
       // CodeCommit vars
       codecommit_repo_name: isCodeCommit ? (repoName || project.repoName || "") : "",
-      buildspec: await resolveBuildspecForTerraform(project, isCodeCommit, repoName, githubOwner, githubRepo, githubBranch)
+      buildspec: await resolveBuildspecForTerraform(project, isCodeCommit, repoName, githubOwner, githubRepo, githubBranch),
+      // Pass secret_arn/keys so CodeBuild env vars are set in the initial apply.
+      // At this point secrets may not exist yet (empty string), but if they do,
+      // the pipeline will have them from the start.
+      secret_arn: project.secretArn || "",
+      secret_keys: JSON.stringify([])
     };
 
     const runId = tf.startRun(tf.INITIAL_DIR, tfvars, { projectId: project.id, moduleLabel: "initial" });
@@ -505,7 +510,10 @@ router.post("/terraform/initial/reapply", auth.requireRole(...auth.ADMIN_ROLES),
       project_name:  project.buildProjectName || names.projectName,
       s3_bucket_name: project.artifactBucket || names.s3BucketName,
       aws_region:    project.region || process.env.AWS_REGION || "us-east-1",
-      buildspec:     await resolveBuildspecForTerraform(project, project.sourceType === 'codecommit', project.repoName, project.githubOwner, project.githubRepo, project.githubBranch)
+      buildspec:     await resolveBuildspecForTerraform(project, project.sourceType === 'codecommit', project.repoName, project.githubOwner, project.githubRepo, project.githubBranch),
+      // Preserve secret env vars on re-apply so CodeBuild keeps them.
+      secret_arn: project.secretArn || "",
+      secret_keys: JSON.stringify(project.secretArn ? (await listProjectSecretKeys(project.region || "us-east-1", resolveSecretName(project)).catch(() => [])) : [])
     };
     const runId = tf.startRun(tf.INITIAL_DIR, tfvars, { projectId: project.id, moduleLabel: "initial" });
     auditStore.logAction(auth.getLoggedInUser(req), "Re-apply Initial Infrastructure", project.name, "Started");
