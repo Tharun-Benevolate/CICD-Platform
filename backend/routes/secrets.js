@@ -39,11 +39,30 @@ router.get("/:projectId/name", auth.requireRole(...auth.ADMIN_ROLES), async (req
     const project = await requireProject(req, res);
     if (!project) return;
     const secretName = resolveSecretName(project);
+
+    // If the project claims to have a saved secret, verify it still exists
+    // in AWS. If the user deleted it from the console, release the lock so
+    // they can type a new name.
+    let locked = !!project.secretName;
+    if (locked && project.secretArn) {
+      try {
+        const { SecretsManagerClient, DescribeSecretCommand } = require("@aws-sdk/client-secrets-manager");
+        const sm = new SecretsManagerClient({ region: project.region || "us-east-1" });
+        await sm.send(new DescribeSecretCommand({ SecretId: project.secretArn }));
+      } catch (err) {
+        if (err.name === "ResourceNotFoundException" || err.name === "InvalidRequestException") {
+          // Secret was deleted or marked for deletion — clear stale reference
+          await store.updateProject(project.id, { secretArn: null, secretName: null });
+          locked = false;
+        }
+      }
+    }
+
     res.json({
       ok: true,
-      secretName,
-      locked: !!project.secretName,
-      arn: project.secretArn || null
+      secretName: locked ? secretName : "",
+      locked,
+      arn: locked ? project.secretArn : null
     });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
