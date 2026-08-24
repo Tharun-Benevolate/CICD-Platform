@@ -34,56 +34,14 @@ phases:
       - docker push "$ECR_REPO_URI:$IMAGE_TAG"
       - docker push "$ECR_REPO_URI:latest"
 
-      - |
-        DEV_ARN="${SECRET_ARN_DEV:-$SECRET_ARN}"
-        DEV_KEYS="${SECRET_KEYS_DEV:-$SECRET_KEYS}"
-        UAT_ARN="${SECRET_ARN_UAT:-$DEV_ARN}"
-        UAT_KEYS="${SECRET_KEYS_UAT:-$DEV_KEYS}"
-        PROD_ARN="${SECRET_ARN_PROD:-$DEV_ARN}"
-        PROD_KEYS="${SECRET_KEYS_PROD:-$DEV_KEYS}"
-        EXECUTION_ROLE="${EXECUTION_ROLE_ARN:-}"
-        TASK_ROLE="${TASK_ROLE_ARN:-$EXECUTION_ROLE}"
-        LOG_GROUP="${LOG_GROUP_NAME:-/ecs/$CONTAINER_NAME}"
-        PORT="${CONTAINER_PORT:-3000}"
-
-        build_secrets() {
-          local ARN="$1"
-          local KEYS_RAW="$2"
-          if [ -z "$ARN" ] || [ "$ARN" = '""' ]; then echo "[]"; return; fi
-          local OUT=""
-          local FIRST=true
-          local KEYS=$(echo "$KEYS_RAW" | sed 's/^\[//;s/\]$//;s/"//g;s/,/ /g')
-          for K in $KEYS; do
-            if [ "$FIRST" = true ]; then FIRST=false; else OUT="$OUT,"; fi
-            OUT="${OUT}{\"name\":\"${K}\",\"valueFrom\":\"${ARN}:${K}::\"}"
-          done
-          echo "[${OUT}]"
-        }
-
-        gen() {
-          local FILE="$1"
-          local ARN="$2"
-          local KEYS="$3"
-          if [ -n "$ARN" ] && [ "$ARN" != '""' ]; then
-            local SEC=$(build_secrets "$ARN" "$KEYS")
-            echo "{\"family\":\"${CONTAINER_NAME}\",\"requiresCompatibilities\":[\"FARGATE\"],\"networkMode\":\"awsvpc\",\"cpu\":\"256\",\"memory\":\"512\",\"executionRoleArn\":\"${EXECUTION_ROLE}\",\"taskRoleArn\":\"${TASK_ROLE}\",\"containerDefinitions\":[{\"name\":\"${CONTAINER_NAME}\",\"image\":\"${ECR_REPO_URI}:${IMAGE_TAG}\",\"essential\":true,\"portMappings\":[{\"containerPort\":${PORT},\"protocol\":\"tcp\"}],\"logConfiguration\":{\"logDriver\":\"awslogs\",\"options\":{\"awslogs-group\":\"${LOG_GROUP}\",\"awslogs-region\":\"${AWS_REGION}\",\"awslogs-stream-prefix\":\"${CONTAINER_NAME}\",\"awslogs-create-group\":\"true\"}},\"secrets\":${SEC}}]}" > "$FILE"
-          else
-            echo "[{\"name\":\"${CONTAINER_NAME}\",\"imageUri\":\"${ECR_REPO_URI}:${IMAGE_TAG}\"}]" > "$FILE"
-          fi
-          echo "Generated $FILE ($(wc -c < "$FILE") bytes)"
-        }
-
-        gen "imagedefinitions-dev.json"  "$DEV_ARN"  "$DEV_KEYS"
-        gen "imagedefinitions-uat.json"  "$UAT_ARN"  "$UAT_KEYS"
-        gen "imagedefinitions-prod.json" "$PROD_ARN" "$PROD_KEYS"
-        gen "imagedefinitions.json"      "$DEV_ARN"  "$DEV_KEYS"
+      # CodePipeline V1 ECS deploy only accepts [{name, imageUri}] format.
+      # Secrets are carried by Terraform task definitions, not by this file.
+      - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$IMAGE_TAG" > imagedefinitions.json
+      - cat imagedefinitions.json
 
       - docker rmi "$ECR_REPO_URI:$IMAGE_TAG" "$ECR_REPO_URI:latest" || true
 
 artifacts:
   files:
     - imagedefinitions.json
-    - imagedefinitions-dev.json
-    - imagedefinitions-uat.json
-    - imagedefinitions-prod.json
   discard-paths: yes
