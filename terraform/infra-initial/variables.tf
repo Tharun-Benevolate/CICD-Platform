@@ -92,3 +92,15 @@ variable "buildspec" {
   type        = string
   default     = "buildspec.yml"
 }
+
+variable "secret_arn" {
+  description = "ARN of the AWS Secrets Manager secret for this project. Injected into CodeBuild env vars so the buildspec generates taskdef.json with Secrets Manager references."
+  type        = string
+  default     = ""
+}
+
+variable "secret_keys" {
+  description = "JSON array of secret key names stored in the secret. Must match the keys in the Secrets Manager secret JSON."
+  type        = string
+  default     = "[]"
+}

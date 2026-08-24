@@ -40,10 +40,68 @@ phases:
       - docker push "$ECR_REPO_URI:$IMAGE_TAG"
       - docker push "$ECR_REPO_URI:latest"
 
-      # ── 7. Generate imagedefinitions.json for ECS CodePipeline deploy ───────
-      - echo "Generating imagedefinitions.json..."
-      - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$IMAGE_TAG" > imagedefinitions.json
-      - cat imagedefinitions.json
+      # ── 7. Generate imagedefinitions.json ───────────────────────────────────
+      # When SECRET_ARN is set, generates a FULL ECS task definition JSON
+      # (with Secrets Manager references) so the pipeline's Deploy action
+      # creates a new task def revision that includes all platform-configured
+      # credentials. Without secrets, uses the simple name+imageUri format.
+      #
+      # SECURITY: Only SECRET_ARN (an ARN, not a secret value) and SECRET_KEYS
+      # (key names like ["DB_HOST"], not values) are used here. Actual secret
+      # values never appear in this buildspec or CodeBuild logs.
+      - |
+        if [ -n "$SECRET_ARN" ] && [ "$SECRET_ARN" != '""' ]; then
+          echo "Generating imagedefinitions.json with Secrets Manager references..."
+          EXECUTION_ROLE="${EXECUTION_ROLE_ARN:-}"
+          TASK_ROLE="${TASK_ROLE_ARN:-$EXECUTION_ROLE}"
+          LOG_GROUP="${LOG_GROUP_NAME:-/ecs/$CONTAINER_NAME}"
+          CONTAINER_PORT="${CONTAINER_PORT:-3000}"
+
+          # Build the secrets array using node (avoids complex shell escaping)
+          SECRETS_ARRAY=$(echo "$SECRET_KEYS" | node -e "
+            const keys = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+            const arn = process.env.SECRET_ARN;
+            console.log(JSON.stringify(keys.map(k => ({ name: k, valueFrom: arn + ':' + k + '::' }))));
+          ")
+
+          # Full task definition JSON — CodePipeline V1 ECS action uses this
+          # to register a new task def revision with all settings intact.
+          cat > imagedefinitions.json <<EOF_TASKDEF
+{
+  "family": "$CONTAINER_NAME",
+  "requiresCompatibilities": ["FARGATE"],
+  "networkMode": "awsvpc",
+  "cpu": "256",
+  "memory": "512",
+  "executionRoleArn": "$EXECUTION_ROLE",
+  "taskRoleArn": "$TASK_ROLE",
+  "containerDefinitions": [{
+    "name": "$CONTAINER_NAME",
+    "image": "$ECR_REPO_URI:$IMAGE_TAG",
+    "essential": true,
+    "portMappings": [{
+      "containerPort": $CONTAINER_PORT,
+      "protocol": "tcp"
+    }],
+    "logConfiguration": {
+      "logDriver": "awslogs",
+      "options": {
+        "awslogs-group": "$LOG_GROUP",
+        "awslogs-region": "$AWS_REGION",
+        "awslogs-stream-prefix": "$CONTAINER_NAME",
+        "awslogs-create-group": "true"
+      }
+    },
+    "secrets": $SECRETS_ARRAY
+  }]
+}
+EOF_TASKDEF
+          cat imagedefinitions.json
+        else
+          echo "Generating imagedefinitions.json (no secrets)..."
+          printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$IMAGE_TAG" > imagedefinitions.json
+          cat imagedefinitions.json
+        fi
 
       # ── 8. Free disk space by removing local image layers ───────────────────
       - docker rmi "$ECR_REPO_URI:$IMAGE_TAG" "$ECR_REPO_URI:latest" || true

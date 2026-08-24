@@ -3,8 +3,23 @@ const router = express.Router();
 const auth = require("../auth");
 const store = require("../projectStore");
 const { upsertProjectSecret, listProjectSecretKeys, deleteProjectSecret } = require("../aws");
+const { updateBuildProjectEnvVars } = require("../config/aws");
 const auditStore = require("../auditStore");
 const { secretPrefixForProject, sanitizeSecretName, resolveSecretName } = require("../utils/projectNaming");
+
+// Push secret_arn and secret_keys into CodeBuild env vars so the buildspec
+// can generate taskdef.json with Secrets Manager references.
+async function syncSecretsToCodeBuild(project, secretArn, keys) {
+  if (!project.buildProjectName) return;
+  try {
+    await updateBuildProjectEnvVars(project.region || "us-east-1", project.buildProjectName, {
+      SECRET_ARN: secretArn || "",
+      SECRET_KEYS: JSON.stringify(keys || [])
+    });
+  } catch (e) {
+    console.warn(`[secrets] Could not update CodeBuild env vars for ${project.buildProjectName}:`, e.message);
+  }
+}
 
 async function requireProject(req, res) {
   const proj = await store.getProject(req.params.projectId);
@@ -25,11 +40,30 @@ router.get("/:projectId/name", auth.requireRole(...auth.ADMIN_ROLES), async (req
     const project = await requireProject(req, res);
     if (!project) return;
     const secretName = resolveSecretName(project);
+
+    // If the project claims to have a saved secret, verify it still exists
+    // in AWS. If the user deleted it from the console, release the lock so
+    // they can type a new name.
+    let locked = !!project.secretName;
+    if (locked && project.secretArn) {
+      try {
+        const { SecretsManagerClient, DescribeSecretCommand } = require("@aws-sdk/client-secrets-manager");
+        const sm = new SecretsManagerClient({ region: project.region || "us-east-1" });
+        await sm.send(new DescribeSecretCommand({ SecretId: project.secretArn }));
+      } catch (err) {
+        if (err.name === "ResourceNotFoundException" || err.name === "InvalidRequestException") {
+          // Secret was deleted or marked for deletion — clear stale reference
+          await store.updateProject(project.id, { secretArn: null, secretName: null });
+          locked = false;
+        }
+      }
+    }
+
     res.json({
       ok: true,
-      secretName,
-      locked: !!project.secretName,
-      arn: project.secretArn || null
+      secretName: locked ? secretName : "",
+      locked,
+      arn: locked ? project.secretArn : null
     });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
@@ -44,6 +78,47 @@ router.get("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, res
     const secretName = resolveSecretName(project);
     const keys = await listProjectSecretKeys(project.region || "us-east-1", secretName);
     res.json({ ok: true, keys });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// GET /api/secrets/:projectId/values — read current secret VALUES for editing.
+// Admin-only + audit-logged. Values are sent over HTTPS, never stored in the platform DB.
+// This lets the edit form pre-fill existing values so users only change what they need.
+router.get("/:projectId/values", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+  try {
+    const project = await requireProject(req, res);
+    if (!project) return;
+    if (!project.secretArn) {
+      return res.json({ ok: true, values: {}, exists: false });
+    }
+
+    const secretName = resolveSecretName(project);
+    const region = project.region || "us-east-1";
+    const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
+    const secretsClient = new SecretsManagerClient({ region });
+
+    let values = {};
+    try {
+      const resp = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretName }));
+      values = JSON.parse(resp.SecretString || "{}");
+    } catch (err) {
+      if (err.name === "ResourceNotFoundException" || err.name === "InvalidRequestException") {
+        // Secret doesn't exist or was marked for deletion — clear stale reference
+        if (project.secretArn) {
+          await store.updateProject(project.id, { secretArn: null, secretName: null });
+        }
+        return res.json({ ok: true, values: {}, exists: false });
+      }
+      throw err;
+    }
+
+    // Audit log who read the secrets (security trail)
+    const user = auth.getLoggedInUser(req) || "unknown";
+    auditStore.logAction(user, `Read secret values for ${Object.keys(values).length} keys`, project.name, "Success", "Secrets");
+
+    res.json({ ok: true, values, exists: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -89,7 +164,15 @@ router.post("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, re
       const resp = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretNameToUse }));
       existingSecrets = JSON.parse(resp.SecretString || "{}");
     } catch(err) {
-      if (err.name !== "ResourceNotFoundException") throw err;
+      if (err.name === "InvalidRequestException") {
+        // Secret was marked for deletion in AWS — clear stale reference and treat as new
+        await store.updateProject(project.id, { secretArn: null, secretName: null });
+        project.secretArn = null;
+        project.secretName = null;
+        // Allow the save to proceed — upsertProjectSecret will create a new secret
+      } else if (err.name !== "ResourceNotFoundException") {
+        throw err;
+      }
     }
 
     const mergedSecrets = { ...existingSecrets, ...newSecrets };
@@ -98,6 +181,11 @@ router.post("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, re
 
     // Lock in the name (only actually changes anything on the first save) and store the ARN.
     await store.updateProject(project.id, { secretName: secretNameToUse, secretArn: arn });
+
+    // Push secret_arn + keys into CodeBuild env vars so the buildspec can
+    // generate taskdef.json with Secrets Manager references on next pipeline run.
+    const updatedProject = { ...project, secretArn: arn, buildProjectName: project.buildProjectName };
+    syncSecretsToCodeBuild(updatedProject, arn, Object.keys(mergedSecrets)).catch(() => {});
 
     auditStore.logAction(auth.getLoggedInUser(req), "Update Project Secrets", project.name, "Completed");
     res.json({ ok: true, arn, secretName: secretNameToUse, keys: Object.keys(mergedSecrets) });
@@ -123,13 +211,27 @@ router.delete("/:projectId/:key", auth.requireRole(...auth.ADMIN_ROLES), async (
       const resp = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretName }));
       existingSecrets = JSON.parse(resp.SecretString || "{}");
     } catch(err) {
-      if (err.name !== "ResourceNotFoundException") throw err;
+      if (err.name === "ResourceNotFoundException" || err.name === "InvalidRequestException") {
+        // Secret was deleted or marked for deletion in AWS — clear stale reference
+        await store.updateProject(project.id, { secretArn: null, secretName: null });
+        syncSecretsToCodeBuild(project, null, []).catch(() => {});
+        return res.json({ ok: true, keys: [], message: "Secret was deleted from AWS. Reference cleared." });
+      }
+      throw err;
     }
 
     if (existingSecrets[keyToDelete]) {
       delete existingSecrets[keyToDelete];
       await upsertProjectSecret(region, secretName, existingSecrets);
     }
+
+    // If no keys remain, clear the secret reference from the project
+    if (Object.keys(existingSecrets).length === 0) {
+      await store.updateProject(project.id, { secretArn: null, secretName: null });
+    }
+
+    // Sync remaining keys to CodeBuild env vars
+    syncSecretsToCodeBuild(project, project.secretArn, Object.keys(existingSecrets)).catch(() => {});
 
     auditStore.logAction(auth.getLoggedInUser(req), `Delete Secret Key (${keyToDelete})`, project.name, "Completed");
     res.json({ ok: true, keys: Object.keys(existingSecrets) });

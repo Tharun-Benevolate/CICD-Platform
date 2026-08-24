@@ -5,6 +5,8 @@ const router = require("express").Router();
 const aws = require("../config/aws");
 const store = require("../stores/projectStore");
 const { requireProject } = require("./projects");
+const { listProjectSecretKeys } = require("../aws");
+const { resolveSecretName } = require("../utils/projectNaming");
 
 // POST /api/setup/repo
 router.post("/setup/repo", async (req, res) => {
@@ -117,12 +119,29 @@ router.post("/setup/ecs", async (req, res) => {
       }
 
       // Step C: Fallback creation (if you ever use the panel without Terraform)
+      // If secrets are already configured, include them so the placeholder
+      // task def keeps the Secrets Manager references intact.
+      let placeholderSecrets = [];
+      if (project.secretArn) {
+        try {
+          const secretName = resolveSecretName(project);
+          const keys = await listProjectSecretKeys(project.region || "us-east-1", secretName);
+          placeholderSecrets = (keys || []).map(key => ({
+            name: key,
+            valueFrom: `${project.secretArn}:${key}::`
+          }));
+        } catch (e) {
+          console.warn(`[setup/ecs] Could not read secrets for placeholder task def: ${e.message}`);
+        }
+      }
+
       const taskDef = await aws.registerTaskDefinition(project.region, {
         family: env.family,
         image: placeholderImage,
         executionRoleArn: project.ecsExecutionRoleArn,
         taskRoleArn: project.ecsTaskRoleArn,
-        containerPort: containerPort || 3000
+        containerPort: containerPort || 3000,
+        secrets: placeholderSecrets
       });
       await aws.createEcsService(project.region, {
         clusterName: env.cluster,

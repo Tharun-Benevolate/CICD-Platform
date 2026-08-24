@@ -494,6 +494,38 @@ async function deleteBuildProject(region, projectName) {
   return codebuild.send(new DeleteProjectCommand({ name: projectName }));
 }
 
+// Update an existing CodeBuild project's environment variables.
+// Used to push SECRET_ARN / SECRET_KEYS into the build so the buildspec
+// can generate taskdef.json with Secrets Manager references.
+async function updateBuildProjectEnvVars(region, projectName, envVars) {
+  const { codebuild } = clients(region);
+  const { BatchGetProjectsCommand, UpdateProjectCommand } = require("@aws-sdk/client-codebuild");
+  const res = await codebuild.send(new BatchGetProjectsCommand({ names: [projectName] }));
+  const project = (res.projects || [])[0];
+  if (!project) throw new Error(`CodeBuild project '${projectName}' not found`);
+
+  // Merge: keep existing env vars, overwrite/add the ones in envVars
+  const existing = project.environment?.environmentVariables || [];
+  const merged = [...existing];
+  for (const [name, value] of Object.entries(envVars)) {
+    const idx = merged.findIndex(e => e.name === name);
+    const entry = { name, value: String(value ?? ""), type: "PLAINTEXT" };
+    if (idx >= 0) merged[idx] = entry;
+    else merged.push(entry);
+  }
+  // Remove env vars with empty value (cleanup on secret delete)
+  const filtered = merged.filter(e => e.value !== "");
+
+  await codebuild.send(new UpdateProjectCommand({
+    name: projectName,
+    environment: {
+      ...project.environment,
+      environmentVariables: filtered
+    }
+  }));
+  return { updated: true, envVars: filtered.map(e => e.name) };
+}
+
 async function startBuild(region, projectName) {
   const { codebuild } = clients(region);
   const res = await codebuild.send(new StartBuildCommand({ projectName }));
@@ -555,8 +587,30 @@ async function createEcsCluster(region, clusterName) {
   return res.cluster;
 }
 
-async function registerTaskDefinition(region, { family, image, executionRoleArn, taskRoleArn, containerPort, cpu, memory, containerName, environment }) {
+async function registerTaskDefinition(region, { family, image, executionRoleArn, taskRoleArn, containerPort, cpu, memory, containerName, environment, secrets }) {
   const { ecs } = clients(region);
+  const containerDef = {
+    name: containerName || family,
+    image,
+    essential: true,
+    portMappings: [{ containerPort: containerPort || 3000, protocol: "tcp" }],
+    environment: environment || [],
+    logConfiguration: {
+      logDriver: "awslogs",
+      options: {
+        "awslogs-group": `/ecs/${family}`,
+        "awslogs-region": region,
+        "awslogs-stream-prefix": family,
+        "awslogs-create-group": "true"
+      }
+    }
+  };
+  // Inject Secrets Manager references as ECS-native secrets so the container
+  // receives environment variables resolved at runtime from the secret.
+  // Each entry: { name: "ENV_VAR_NAME", valueFrom: "arn:aws:secretsmanager:...:secret:name:key::" }
+  if (Array.isArray(secrets) && secrets.length > 0) {
+    containerDef.secrets = secrets;
+  }
   const res = await ecs.send(new RegisterTaskDefinitionCommand({
     family,
     requiresCompatibilities: ["FARGATE"],
@@ -565,22 +619,7 @@ async function registerTaskDefinition(region, { family, image, executionRoleArn,
     memory: memory || "512",
     executionRoleArn,
     taskRoleArn: taskRoleArn || executionRoleArn,
-    containerDefinitions: [{
-      name: containerName || family,
-      image,
-      essential: true,
-      portMappings: [{ containerPort: containerPort || 3000, protocol: "tcp" }],
-      environment: environment || [],
-      logConfiguration: {
-        logDriver: "awslogs",
-        options: {
-          "awslogs-group": `/ecs/${family}`,
-          "awslogs-region": region,
-          "awslogs-stream-prefix": family,
-          "awslogs-create-group": "true"
-        }
-      }
-    }]
+    containerDefinitions: [containerDef]
   }));
   return res.taskDefinition;
 }
@@ -771,6 +810,7 @@ async function deployImageToService(region, { clusterName, serviceName, family, 
   let containerName = family; // fallback
   let port = containerPort || 3000;
   let environment = [];
+  let secrets = [];
 
   if (service && service.taskDefinition) {
     const activeTaskDef = await describeTaskDefinition(region, service.taskDefinition);
@@ -785,6 +825,10 @@ async function deployImageToService(region, { clusterName, serviceName, family, 
       // redeploy silently registers a fresh task def with an empty
       // environment array and quietly breaks anything that depended on it.
       environment = mainContainer.environment || [];
+      // CRITICAL: Also carry forward Secrets Manager references. Without this,
+      // every new task def revision loses the secrets configured via the platform,
+      // causing the app to start with no env vars / credentials at all.
+      secrets = mainContainer.secrets || [];
     }
   }
 
@@ -795,7 +839,8 @@ async function deployImageToService(region, { clusterName, serviceName, family, 
     taskRoleArn, 
     containerPort: port,
     containerName,
-    environment
+    environment,
+    secrets
   });
   
   const { ecs } = clients(region);
@@ -1272,7 +1317,7 @@ module.exports = {
   getPendingApprovals, approveAction, createPipeline, deletePipeline,
   stopPipeline, retryStage,
   listRepos, getRepo, createRepo, deleteRepo, listBranches, getBranchDetail, createBranch,
-  createBuildProject, deleteBuildProject, startBuild, getLatestBuildForProject, getBuildLogs,
+  createBuildProject, deleteBuildProject, updateBuildProjectEnvVars, startBuild, getLatestBuildForProject, getBuildLogs,
   listConnections,
   createEcrRepo, listEcrImages,
   createEcsCluster, registerTaskDefinition, createEcsService, describeEcsService, describeTaskDefinition,

@@ -324,6 +324,19 @@ resource "aws_codebuild_project" "build" {
       value = var.admin_api_url
     }
     environment_variable {
+      # Secrets Manager secret ARN — injected by the platform when project
+      # secrets are saved. Used by the buildspec to generate taskdef.json
+      # with Secrets Manager references so pipeline deploys carry secrets.
+      name  = "SECRET_ARN"
+      value = var.secret_arn
+    }
+    environment_variable {
+      # JSON array of secret key names — injected by the platform alongside
+      # SECRET_ARN. The buildspec parses this to build the ECS secrets array.
+      name  = "SECRET_KEYS"
+      value = var.secret_keys
+    }
+    environment_variable {
       # Was hardcoded to "/ecs/golf-demo-cluster-prod" — must match the
       # aws_cloudwatch_log_group.prod name in golf-infra-terraform, which is
       # "/ecs/${ecs_cluster_name}-prod".
