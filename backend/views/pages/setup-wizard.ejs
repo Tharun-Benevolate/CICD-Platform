@@ -192,7 +192,10 @@
           <button onclick="handleAddSecretRow('dev')" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
             <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
           </button>
-          <button onclick="handleSaveSecrets('dev')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;margin-left:auto;">
+          <button onclick="handleDeleteEntireSecret('dev')" class="btn-danger-outline" style="font-size:12px;padding:6px 12px;color:var(--color-danger);border:1px solid var(--color-danger);border-radius:6px;background:transparent;cursor:pointer;">
+            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete Secret
+          </button>
+          <button onclick="handleSaveSecrets('dev')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;">
             Save Dev Secrets
           </button>
         </div>
@@ -221,7 +224,10 @@
           <button onclick="handleAddSecretRow('uat')" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
             <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
           </button>
-          <button onclick="handleSaveSecrets('uat')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;margin-left:auto;">
+          <button onclick="handleDeleteEntireSecret('uat')" class="btn-danger-outline" style="font-size:12px;padding:6px 12px;color:var(--color-danger);border:1px solid var(--color-danger);border-radius:6px;background:transparent;cursor:pointer;">
+            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete Secret
+          </button>
+          <button onclick="handleSaveSecrets('uat')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;">
             Save UAT Secrets
           </button>
         </div>
@@ -253,7 +259,10 @@
           <button onclick="handleAddSecretRow('prod')" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
             <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
           </button>
-          <button onclick="handleSaveSecrets('prod')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;margin-left:auto;">
+          <button onclick="handleDeleteEntireSecret('prod')" class="btn-danger-outline" style="font-size:12px;padding:6px 12px;color:var(--color-danger);border:1px solid var(--color-danger);border-radius:6px;background:transparent;cursor:pointer;">
+            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete Secret
+          </button>
+          <button onclick="handleSaveSecrets('prod')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;">
             Save Prod Secrets
           </button>
         </div>

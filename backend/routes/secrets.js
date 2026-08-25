@@ -74,7 +74,14 @@ router.get("/:projectId/names", auth.requireRole(...auth.ADMIN_ROLES), async (re
         try {
           const { SecretsManagerClient, DescribeSecretCommand } = require("@aws-sdk/client-secrets-manager");
           const sm = new SecretsManagerClient({ region: project.region || "us-east-1" });
-          await sm.send(new DescribeSecretCommand({ SecretId: cfg.arn }));
+          const desc = await sm.send(new DescribeSecretCommand({ SecretId: cfg.arn }));
+          // Also treat scheduled-for-deletion secrets as gone
+          if (desc.DeletedDate) {
+            const updatedSecrets = { ...project.secrets, [env]: null };
+            await store.updateProject(project.id, { secrets: updatedSecrets });
+            locked = false;
+            name = resolveSecretNameForEnv(project, env);
+          }
         } catch (err) {
           if (err.name === "ResourceNotFoundException" || err.name === "InvalidRequestException") {
             // Secret deleted/marked for deletion — clear stale reference
@@ -382,6 +389,43 @@ router.post("/:projectId/restart", auth.requireRole(...auth.ADMIN_ROLES), async 
 
     auditStore.logAction(auth.getLoggedInUser(req), "Force Restart ECS (secret update)", project.name, "Completed");
     res.json({ ok: true, restarted, failed });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── DELETE /api/secrets/:projectId/:env — force-delete entire secret from AWS + clear reference ──
+router.delete("/:projectId/:env", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+  try {
+    const project = await requireProject(req, res);
+    if (!project) return;
+    const env = validateEnv(req.params.env);
+    if (!env) return res.status(400).json({ ok: false, error: "Invalid environment." });
+
+    const cfg = getSecretForEnv(project, env);
+    if (!cfg || !cfg.name) {
+      return res.json({ ok: true, message: "No secret configured for this environment." });
+    }
+
+    const region = project.region || "us-east-1";
+    const { SecretsManagerClient, DeleteSecretCommand } = require("@aws-sdk/client-secrets-manager");
+    const sm = new SecretsManagerClient({ region });
+
+    try {
+      await sm.send(new DeleteSecretCommand({ SecretId: cfg.name, ForceDeleteWithoutRecovery: true }));
+    } catch (err) {
+      if (err.name !== "ResourceNotFoundException") {
+        console.warn(`[secrets] Could not delete ${cfg.name} from AWS:`, err.message);
+      }
+    }
+
+    // Clear reference in project
+    const updatedSecrets = { ...(project.secrets || {}), [env]: null };
+    await store.updateProject(project.id, { secrets: updatedSecrets });
+
+    syncSecretsToCodeBuild({ ...project, secrets: updatedSecrets }).catch(() => {});
+    auditStore.logAction(auth.getLoggedInUser(req), `Delete entire ${env} secret from AWS`, project.name, "Completed");
+    res.json({ ok: true, message: `Secret ${cfg.name} deleted from AWS. Reference cleared.` });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

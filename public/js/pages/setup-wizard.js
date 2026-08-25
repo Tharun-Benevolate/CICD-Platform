@@ -558,6 +558,34 @@ async function handleInheritSecrets(sourceEnv, targetEnv) {
   }
 }
 
+async function handleDeleteEntireSecret(env) {
+  if (!_activeProject) return;
+  if (!confirm('This will permanently delete the ' + env.toUpperCase() + ' secret from AWS Secrets Manager. Continue?')) return;
+
+  var msgEl = document.getElementById('secrets-save-msg-' + env);
+  if (msgEl) { msgEl.style.display = 'block'; msgEl.style.color = 'var(--color-text-secondary)'; msgEl.textContent = 'Deleting secret from AWS...'; }
+
+  try {
+    var res = await api.delete('/api/secrets/' + _activeProject.id + '/' + env);
+    if (res && res.ok) {
+      _envSecrets[env].locked = false;
+      _envSecrets[env].keys = [];
+      _envSecrets[env].values = {};
+      _envSecrets[env].name = '';
+      var nameInput = document.getElementById('secret-name-' + env);
+      if (nameInput) { nameInput.readOnly = false; nameInput.value = ''; nameInput.style.opacity = '1'; nameInput.style.cursor = 'text'; }
+      var nameHint = document.getElementById('secret-name-hint-' + env);
+      if (nameHint) nameHint.textContent = 'Choose the name for this environment\'s secret in AWS Secrets Manager.';
+      renderSecretsTable(env);
+      if (msgEl) { msgEl.style.color = '#22c55e'; msgEl.textContent = 'Secret deleted. You can now enter a new secret name.'; }
+    } else {
+      if (msgEl) { msgEl.style.color = 'var(--color-danger)'; msgEl.textContent = (res && res.error) || 'Failed to delete secret.'; }
+    }
+  } catch (e) {
+    if (msgEl) { msgEl.style.color = 'var(--color-danger)'; msgEl.textContent = 'Error: ' + e.message; }
+  }
+}
+
 async function handleSaveSecrets(env) {
   if (!_activeProject) return;
   var btn = document.querySelector('#secrets-tab-' + env + ' .btn-grad-primary');
