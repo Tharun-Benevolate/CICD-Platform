@@ -159,9 +159,9 @@ variable "secret_arn" {
 }
 
 variable "secret_keys" {
-  description = "(Legacy fallback) List of key names stored in the secret. Used when per-env vars are not set."
-  type        = list(string)
-  default     = []
+  description = "(Legacy fallback) JSON array of key names stored in the secret. Used when per-env vars are not set."
+  type        = string
+  default     = "[]"
 }
 
 # ─── Per-environment secrets ───────────────────────────────────────
@@ -171,9 +171,9 @@ variable "secret_arn_dev" {
   default     = ""
 }
 variable "secret_keys_dev" {
-  description = "List of key names for the DEV environment secret"
-  type        = list(string)
-  default     = []
+  description = "JSON array string of key names for the DEV environment secret"
+  type        = string
+  default     = "[]"
 }
 variable "secret_arn_uat" {
   description = "ARN of the AWS Secrets Manager secret for the UAT environment"
@@ -181,9 +181,9 @@ variable "secret_arn_uat" {
   default     = ""
 }
 variable "secret_keys_uat" {
-  description = "List of key names for the UAT environment secret"
-  type        = list(string)
-  default     = []
+  description = "JSON array string of key names for the UAT environment secret"
+  type        = string
+  default     = "[]"
 }
 variable "secret_arn_prod" {
   description = "ARN of the AWS Secrets Manager secret for the PROD environment"
@@ -191,9 +191,9 @@ variable "secret_arn_prod" {
   default     = ""
 }
 variable "secret_keys_prod" {
-  description = "List of key names for the PROD environment secret"
-  type        = list(string)
-  default     = []
+  description = "JSON array string of key names for the PROD environment secret"
+  type        = string
+  default     = "[]"
 }
 
 # ─── EFS Persistent Storage (optional, per-project) ──────────────────
@@ -217,6 +217,18 @@ variable "efs_mount_path" {
 
 variable "efs_sg_id" {
   description = "Security group ID for EFS mount targets — allows NFS from ECS tasks (output of shared-foundation-terraform)"
+  type        = string
+  default     = ""
+}
+
+variable "prod_beta_service_name" {
+  description = "ECS service name for the prod-beta (canary) environment. Created on-demand by the platform; declared here to silence tfvars warnings."
+  type        = string
+  default     = ""
+}
+
+variable "project_name" {
+  description = "Human-readable project name. Informational only — actual resource names use the project_prefix / dns_host_prefix variables."
   type        = string
   default     = ""
 }

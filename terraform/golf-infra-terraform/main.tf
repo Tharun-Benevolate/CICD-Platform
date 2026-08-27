@@ -407,9 +407,15 @@ resource "aws_ecs_task_definition" "dev" {
         "awslogs-stream-prefix" = "dev"
       }
     }
-    # Per-env secrets: use secret_arn_dev if set, fall back to legacy secret_arn
+    # Per-env secrets: use secret_arn_dev if set, fall back to legacy secret_arn.
+    # Keys are stored as JSON strings and decoded here so the type is consistent
+    # whether the value came from a tfvars file or a CodeBuild env var.
     secrets = (var.secret_arn_dev != "" ? var.secret_arn_dev : var.secret_arn) != "" ? [
-      for key in (var.secret_keys_dev != [] ? var.secret_keys_dev : var.secret_keys) : {
+      for key in (
+        length(jsondecode(var.secret_keys_dev)) > 0
+          ? jsondecode(var.secret_keys_dev)
+          : jsondecode(var.secret_keys)
+      ) : {
         name      = key
         valueFrom = "${var.secret_arn_dev != "" ? var.secret_arn_dev : var.secret_arn}:${key}::"
       }
@@ -478,7 +484,11 @@ resource "aws_ecs_task_definition" "uat" {
     }
     # Per-env secrets: use secret_arn_uat if set, fall back to legacy secret_arn
     secrets = (var.secret_arn_uat != "" ? var.secret_arn_uat : var.secret_arn) != "" ? [
-      for key in (var.secret_keys_uat != [] ? var.secret_keys_uat : var.secret_keys) : {
+      for key in (
+        length(jsondecode(var.secret_keys_uat)) > 0
+          ? jsondecode(var.secret_keys_uat)
+          : jsondecode(var.secret_keys)
+      ) : {
         name      = key
         valueFrom = "${var.secret_arn_uat != "" ? var.secret_arn_uat : var.secret_arn}:${key}::"
       }
@@ -542,7 +552,11 @@ resource "aws_ecs_task_definition" "prod" {
     }
     # Per-env secrets: use secret_arn_prod if set, fall back to legacy secret_arn
     secrets = (var.secret_arn_prod != "" ? var.secret_arn_prod : var.secret_arn) != "" ? [
-      for key in (var.secret_keys_prod != [] ? var.secret_keys_prod : var.secret_keys) : {
+      for key in (
+        length(jsondecode(var.secret_keys_prod)) > 0
+          ? jsondecode(var.secret_keys_prod)
+          : jsondecode(var.secret_keys)
+      ) : {
         name      = key
         valueFrom = "${var.secret_arn_prod != "" ? var.secret_arn_prod : var.secret_arn}:${key}::"
       }
