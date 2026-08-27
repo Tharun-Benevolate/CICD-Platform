@@ -486,21 +486,75 @@ function renderSecretsTable(env) {
              '<thead><tr style="border-bottom:1px solid var(--color-border);text-align:left;color:var(--color-text-tertiary);">' +
              '<th style="padding:8px;font-weight:600;">Key (e.g. DB_HOST)</th>' +
              '<th style="padding:8px;font-weight:600;">Value</th>' +
-             '<th style="padding:8px;width:40px;"></th>' +
+             '<th style="padding:8px;width:80px;text-align:center;">' +
+               '<button type="button" onclick="toggleAllSecretVisibility(\'' + env + '\')" title="Show/hide all values" style="background:transparent;border:none;cursor:pointer;color:var(--color-text-tertiary);padding:2px 6px;border-radius:4px;font-size:11px;display:flex;align-items:center;gap:4px;margin:0 auto;" id="eye-all-btn-' + env + '">' +
+               '<i data-lucide="eye" style="width:13px;height:13px;"></i><span style="font-size:10px;">all</span></button>' +
+             '</th>' +
              '</tr></thead><tbody>';
 
   data.keys.forEach(function(key) {
     var existingVal = (data.values && data.values[key]) || '';
     var valEncoded = existingVal.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-    html += '<tr style="border-bottom:1px solid var(--color-border);">' +
+    var rowId = 'secret-row-' + env + '-' + key.replace(/[^a-zA-Z0-9]/g, '_');
+    html += '<tr style="border-bottom:1px solid var(--color-border);" id="' + rowId + '">' +
             '<td style="padding:8px;"><input type="text" class="secret-key-input" value="' + key + '" readonly style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg-secondary);color:var(--color-text-secondary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
-            '<td style="padding:8px;"><input type="password" class="secret-val-input" data-env="' + env + '" data-key="' + key + '" value="' + valEncoded + '" placeholder="Enter value" autocomplete="new-password" style="width:100%;padding:6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;" /></td>' +
+            '<td style="padding:8px;position:relative;">' +
+              '<input type="password" class="secret-val-input" id="val-' + rowId + '" data-env="' + env + '" data-key="' + key + '" value="' + valEncoded + '" placeholder="Enter value" autocomplete="new-password" style="width:100%;padding:6px 36px 6px 10px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);outline:none;font-family:monospace;font-size:12px;box-sizing:border-box;" />' +
+              '<button type="button" onclick="toggleSecretVisibility(\'' + env + '\', \'' + key + '\')" title="Show/hide value" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer;color:var(--color-text-tertiary);padding:2px;" id="eye-btn-' + rowId + '">' +
+                '<i data-lucide="eye" style="width:14px;height:14px;"></i>' +
+              '</button>' +
+            '</td>' +
             '<td style="padding:8px;text-align:center;"><button type="button" onclick="handleDeleteSecret(\'' + env + '\', \'' + key + '\')" style="color:var(--color-danger);background:transparent;border:none;cursor:pointer;padding:4px;"><i data-lucide="trash-2" style="width:14px;height:14px;"></i></button></td>' +
             '</tr>';
   });
 
   html += '</tbody></table>';
   container.innerHTML = html;
+  if (window.lucide) lucide.createIcons();
+}
+
+// Toggle visibility for a single secret value
+function toggleSecretVisibility(env, key) {
+  var rowId = 'secret-row-' + env + '-' + key.replace(/[^a-zA-Z0-9]/g, '_');
+  var input = document.getElementById('val-' + rowId);
+  var btn   = document.getElementById('eye-btn-' + rowId);
+  if (!input) return;
+  var isHidden = input.type === 'password';
+  input.type = isHidden ? 'text' : 'password';
+  if (btn) {
+    btn.innerHTML = isHidden
+      ? '<i data-lucide="eye-off" style="width:14px;height:14px;"></i>'
+      : '<i data-lucide="eye" style="width:14px;height:14px;"></i>';
+    btn.style.color = isHidden ? '#6366f1' : 'var(--color-text-tertiary)';
+    if (window.lucide) lucide.createIcons();
+  }
+}
+
+// Toggle ALL secret values in an env at once
+function toggleAllSecretVisibility(env) {
+  var inputs = document.querySelectorAll('.secret-val-input[data-env="' + env + '"]');
+  if (!inputs.length) return;
+  var anyHidden = Array.from(inputs).some(function(i) { return i.type === 'password'; });
+  inputs.forEach(function(input) {
+    var key = input.getAttribute('data-key');
+    if (key) {
+      var rowId = 'secret-row-' + env + '-' + key.replace(/[^a-zA-Z0-9]/g, '_');
+      var btn = document.getElementById('eye-btn-' + rowId);
+      input.type = anyHidden ? 'text' : 'password';
+      if (btn) {
+        btn.innerHTML = anyHidden
+          ? '<i data-lucide="eye-off" style="width:14px;height:14px;"></i>'
+          : '<i data-lucide="eye" style="width:14px;height:14px;"></i>';
+        btn.style.color = anyHidden ? '#6366f1' : 'var(--color-text-tertiary)';
+      }
+    }
+  });
+  var allBtn = document.getElementById('eye-all-btn-' + env);
+  if (allBtn) {
+    allBtn.innerHTML = anyHidden
+      ? '<i data-lucide="eye-off" style="width:13px;height:13px;"></i><span style="font-size:10px;">all</span>'
+      : '<i data-lucide="eye" style="width:13px;height:13px;"></i><span style="font-size:10px;">all</span>';
+  }
   if (window.lucide) lucide.createIcons();
 }
 
@@ -650,7 +704,15 @@ async function handleSaveSecrets(env) {
 
     var res = await api.post('/api/secrets/' + _activeProject.id, payload);
     if (res && res.ok) {
+      // Re-fetch actual values from AWS so the table renders with real data
+      var freshValues = {};
+      try {
+        var valRes = await api.get('/api/secrets/' + _activeProject.id + '/values/' + env);
+        if (valRes && valRes.ok && valRes.values) freshValues = valRes.values;
+      } catch (e) { /* values will be empty on first save — not critical */ }
+
       _envSecrets[env].keys = res.keys || [];
+      _envSecrets[env].values = freshValues;
       _envSecrets[env].locked = true;
       _envSecrets[env].name = res.secretName || typedName;
       renderSecretsTable(env);
