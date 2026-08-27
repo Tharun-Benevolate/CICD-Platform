@@ -214,30 +214,55 @@ router.post("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, re
     }
 
     const region = project.region || "us-east-1";
-
-    // Resolve secret name for this env
-    const existingCfg = getSecretForEnv(project, env);
-    let secretNameToUse = existingCfg ? existingCfg.name : null;
-    if (!secretNameToUse) {
-      const requested = sanitizeSecretName(req.body.secretName);
-      secretNameToUse = requested || resolveSecretNameForEnv(project, env);
-    }
-
-    const { SecretsManagerClient, GetSecretValueCommand } = require("@aws-sdk/client-secrets-manager");
+    const { SecretsManagerClient, GetSecretValueCommand, RestoreSecretCommand, DescribeSecretCommand } = require("@aws-sdk/client-secrets-manager");
     const secretsClient = new SecretsManagerClient({ region });
 
-    // Read existing values to merge
+    // ── Resolve which secret name to use ─────────────────────────────────────
+    // Rule: if the user explicitly typed a new name in the UI, ALWAYS use it.
+    // This allows recovery when the old secret is gone or pending deletion.
+    const existingCfg = getSecretForEnv(project, env);
+    const requestedName = sanitizeSecretName(req.body.secretName);
+    let secretNameToUse;
+
+    if (requestedName && existingCfg && requestedName !== existingCfg.name) {
+      // User changed the name — use the new name, drop old reference
+      secretNameToUse = requestedName;
+      const clearedSecrets = { ...(project.secrets || {}), [env]: null };
+      await store.updateProject(project.id, { secrets: clearedSecrets });
+      project.secrets = clearedSecrets;
+    } else if (existingCfg) {
+      secretNameToUse = existingCfg.name;
+    } else {
+      secretNameToUse = requestedName || resolveSecretNameForEnv(project, env);
+    }
+
+    // ── Read existing values so we can merge (not overwrite) ─────────────────
     let existingSecrets = {};
     try {
       const resp = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretNameToUse }));
       existingSecrets = JSON.parse(resp.SecretString || "{}");
     } catch (err) {
       if (err.name === "InvalidRequestException") {
-        // Secret marked for deletion — clear and treat as new
-        const updatedSecrets = { ...project.secrets, [env]: null };
-        await store.updateProject(project.id, { secrets: updatedSecrets });
-        project.secrets[env] = null;
-      } else if (err.name !== "ResourceNotFoundException") {
+        // Secret is pending deletion — try to restore it first
+        try {
+          console.log(`[secrets] Secret "${secretNameToUse}" is pending deletion — attempting restore...`);
+          await secretsClient.send(new RestoreSecretCommand({ SecretId: secretNameToUse }));
+          console.log(`[secrets] Secret "${secretNameToUse}" restored successfully.`);
+          // Re-read after restore
+          const resp2 = await secretsClient.send(new GetSecretValueCommand({ SecretId: secretNameToUse }));
+          existingSecrets = JSON.parse(resp2.SecretString || "{}");
+        } catch (restoreErr) {
+          // Restore failed (e.g. name conflict) — clear stale ref and create fresh
+          console.warn(`[secrets] Could not restore "${secretNameToUse}": ${restoreErr.message}. Will create fresh.`);
+          const clearedSecrets = { ...(project.secrets || {}), [env]: null };
+          await store.updateProject(project.id, { secrets: clearedSecrets });
+          project.secrets = clearedSecrets;
+          existingSecrets = {};
+        }
+      } else if (err.name === "ResourceNotFoundException") {
+        // Secret doesn't exist yet — fine, we'll create it
+        existingSecrets = {};
+      } else {
         throw err;
       }
     }
@@ -260,6 +285,7 @@ router.post("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, re
     res.status(500).json({ ok: false, error: err.message });
   }
 });
+
 
 // ── POST /api/secrets/:projectId/inherit — copy secrets from source env to target env ──
 // Body: { sourceEnv: "dev", targetEnv: "uat" } — copies key names (not values) as a starting point

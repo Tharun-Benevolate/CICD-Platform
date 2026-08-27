@@ -52,7 +52,7 @@ const {
 
 const { S3Client, CreateBucketCommand, HeadBucketCommand } = require("@aws-sdk/client-s3");
 const { DynamoDBClient, CreateTableCommand, DescribeTableCommand } = require("@aws-sdk/client-dynamodb");
-const { SecretsManagerClient, CreateSecretCommand, PutSecretValueCommand, DescribeSecretCommand, DeleteSecretCommand } = require("@aws-sdk/client-secrets-manager");
+const { SecretsManagerClient, CreateSecretCommand, PutSecretValueCommand, DescribeSecretCommand, DeleteSecretCommand, RestoreSecretCommand } = require("@aws-sdk/client-secrets-manager");
 
 function clients(region) {
   const config = { region };
@@ -1319,12 +1319,18 @@ async function upsertProjectSecret(region, secretName, kvObject) {
   const { secrets } = clients(region);
   const secretString = JSON.stringify(kvObject);
   try {
-    const res = await secrets.send(new DescribeSecretCommand({ SecretId: secretName }));
-    const arn = res.ARN;
+    const desc = await secrets.send(new DescribeSecretCommand({ SecretId: secretName }));
+    // If the secret is scheduled for deletion, restore it first
+    if (desc.DeletedDate) {
+      console.log(`[aws] Secret "${secretName}" is pending deletion — restoring before update.`);
+      await secrets.send(new RestoreSecretCommand({ SecretId: secretName }));
+    }
+    const arn = desc.ARN;
     await secrets.send(new PutSecretValueCommand({ SecretId: secretName, SecretString: secretString }));
     return arn;
   } catch (err) {
     if (err.name === "ResourceNotFoundException") {
+      // Secret does not exist at all — create it fresh
       const res = await secrets.send(new CreateSecretCommand({
         Name: secretName,
         SecretString: secretString,
