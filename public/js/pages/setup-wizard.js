@@ -510,6 +510,19 @@ function renderSecretsTable(env) {
 
   html += '</tbody></table>';
   container.innerHTML = html;
+
+  // ── Crucial: set password input values via JS (not HTML attribute) ────────
+  // Some browsers block reading .value back from a password input that was set
+  // via an HTML value="..." attribute (security feature). Setting via element.value
+  // in JS is always readable by JS.
+  data.keys.forEach(function(key) {
+    var rowId = 'secret-row-' + env + '-' + key.replace(/[^a-zA-Z0-9]/g, '_');
+    var input = document.getElementById('val-' + rowId);
+    if (input && data.values && data.values[key] !== undefined) {
+      input.value = data.values[key];
+    }
+  });
+
   if (window.lucide) lucide.createIcons();
 }
 
@@ -646,11 +659,17 @@ async function handleSaveSecrets(env) {
   var msg = document.getElementById('secrets-save-msg-' + env);
 
   // Collect EXISTING values (from editable masked inputs)
+  // If a password input appears empty (browser security on HTML-attribute values),
+  // fall back to _envSecrets[env].values[key] so pre-filled rows are never lost.
   var existingInputs = document.querySelectorAll('.secret-val-input[data-env="' + env + '"]');
   var secretsObj = {};
   for (var i = 0; i < existingInputs.length; i++) {
     var key = existingInputs[i].getAttribute('data-key');
     var val = existingInputs[i].value;
+    // Fallback: if browser returned empty but we have the stored value, use it
+    if (!val && key && _envSecrets[env].values && _envSecrets[env].values[key]) {
+      val = _envSecrets[env].values[key];
+    }
     if (key) secretsObj[key] = val || '';
   }
 
@@ -699,8 +718,9 @@ async function handleSaveSecrets(env) {
   try {
     if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> Saving...'; if (window.lucide) lucide.createIcons(); }
 
-    var payload = { env: env, secrets: secretsObj };
-    if (!_envSecrets[env].locked) payload.secretName = typedName;
+    var payload = { env: env, secrets: secretsObj, secretName: typedName };
+    // Note: secretName is always sent — backend uses stored name if locked,
+    // uses typed name if new. Sending it always avoids lost-update edge cases.
 
     var res = await api.post('/api/secrets/' + _activeProject.id, payload);
     if (res && res.ok) {
