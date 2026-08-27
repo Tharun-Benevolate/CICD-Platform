@@ -4,6 +4,12 @@ variable "aws_region" {
   default     = "us-east-1"
 }
 
+variable "aws_account_id" {
+  description = "AWS account ID (informational — actual account ID is derived from aws_caller_identity data source)"
+  type        = string
+  default     = ""
+}
+
 variable "project_name" {
   description = "The CodeBuild project and ECR repository name"
   type        = string
