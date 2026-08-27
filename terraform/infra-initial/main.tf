@@ -134,7 +134,8 @@ resource "aws_iam_role_policy" "build_ecs_taskdef" {
         Action = [
           "ecs:RegisterTaskDefinition",
           "ecs:DescribeTaskDefinition",
-          "ecs:DescribeServices"
+          "ecs:DescribeServices",
+          "ecs:UpdateService"
         ]
         Resource = "*"
       },
