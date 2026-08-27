@@ -157,12 +157,29 @@ function renderPipeline() {
 
     var canApprove = (typeof auth !== 'undefined' && auth.isAdmin) ? auth.isAdmin() : false;
 
+    // Determine environment URL if this is a deployment stage
+    var envLinkHtml = '';
+    var stgNameLower = (stg.stageName || '').toLowerCase();
+    if (stgNameLower.startsWith('deploy-')) {
+      var pName = _activeProject.githubRepo || _activeProject.buildProjectName || _activeProject.name || 'app';
+      var prefix = String(pName).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'app';
+      var domain = _activeProject.domainName || 'benevolaite.com';
+      var url = '';
+      if (stgNameLower === 'deploy-dev') url = 'https://dev-' + prefix + '.' + domain;
+      else if (stgNameLower === 'deploy-uat') url = 'https://uat-' + prefix + '.' + domain;
+      else if (stgNameLower === 'deploy-prod') url = 'https://' + prefix + '.' + domain;
+      
+      if (url) {
+        envLinkHtml = '<a href="' + url + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-size:12px;color:#3b82f6;text-decoration:none;font-weight:600;"><i data-lucide="external-link" style="width:12px;height:12px;"></i> View Site</a>';
+      }
+    }
+
     var html =
       '<div style="display:flex;align-items:center;gap:14px;">' +
         iconSvg +
         '<div>' +
-          '<div style="font-size:15px;font-weight:800;color:var(--color-text-primary);">' +
-            (i + 1) + '. ' + stg.stageName +
+          '<div style="font-size:15px;font-weight:800;color:var(--color-text-primary);display:flex;align-items:center;">' +
+            (i + 1) + '. ' + stg.stageName + envLinkHtml +
           '</div>' +
           '<div style="font-size:12px;color:var(--color-text-tertiary);margin-top:2px;">' +
             'Action: ' + actionName +
