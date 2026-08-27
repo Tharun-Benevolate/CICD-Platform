@@ -164,10 +164,11 @@ function renderPipeline() {
       var pName = _activeProject.githubRepo || _activeProject.buildProjectName || _activeProject.name || 'app';
       var prefix = String(pName).toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'app';
       var domain = _activeProject.domainName || 'benevolaite.com';
+      var protocol = (_activeProject.certificateArn || _activeProject.httpsEnabled) ? 'https://' : 'http://';
       var url = '';
-      if (stgNameLower === 'deploy-dev') url = 'https://dev-' + prefix + '.' + domain;
-      else if (stgNameLower === 'deploy-uat') url = 'https://uat-' + prefix + '.' + domain;
-      else if (stgNameLower === 'deploy-prod') url = 'https://' + prefix + '.' + domain;
+      if (stgNameLower === 'deploy-dev') url = protocol + 'dev-' + prefix + '.' + domain;
+      else if (stgNameLower === 'deploy-uat') url = protocol + 'uat-' + prefix + '.' + domain;
+      else if (stgNameLower === 'deploy-prod') url = protocol + prefix + '.' + domain;
       
       if (url) {
         envLinkHtml = '<a href="' + url + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-size:12px;color:#3b82f6;text-decoration:none;font-weight:600;"><i data-lucide="external-link" style="width:12px;height:12px;"></i> View Site</a>';
