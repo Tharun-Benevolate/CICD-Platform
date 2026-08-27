@@ -549,7 +549,7 @@ router.post("/terraform/deployment/destroy", auth.requireRole(...auth.ADMIN_ROLE
       alb_listener_arn: sfOutputs.alb_listener_arn || "arn:aws:elasticloadbalancing:us-east-1:511974512004:listener/app/shared-foundation-alb/a36126009c7b192e/0eacc50cd4bf7e49",
       manage_route53: true,
       secret_arn: project.secretArn || "",
-      secret_keys: [],
+      secret_keys: "[]",
       // EFS persistent storage — needed for destroy to know what to tear down
       enable_efs:        !!project.efsEnabled,
       efs_filesystem_id: project.efsFilesystemId || "",
@@ -666,7 +666,7 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
       secret_keys_prod: perEnvSecrets.prod.keys,
       // Legacy fallback
       secret_arn: "",
-      secret_keys: []
+      secret_keys: "[]"
     };
     const runId = tf.startRun(tf.DEPLOYMENT_DIR, tfvars, { projectId: project.id, moduleLabel: "deployment" });
     auditStore.logAction(auth.getLoggedInUser(req), "Re-apply Deployment Infrastructure", project.name, "Started");
