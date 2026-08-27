@@ -417,6 +417,20 @@ resource "aws_codebuild_project" "build" {
       name  = "SECRET_KEYS_PROD"
       value = var.secret_keys_prod
     }
+    # ECS service names per env — used by register_taskdefs.py in the buildspec
+    # to locate the correct service when injecting secrets into task definitions.
+    environment_variable {
+      name  = "DEV_SERVICE_NAME"
+      value = "${var.project_name}-dev"
+    }
+    environment_variable {
+      name  = "UAT_SERVICE_NAME"
+      value = "${var.project_name}-uat"
+    }
+    environment_variable {
+      name  = "PROD_SERVICE_NAME"
+      value = "${var.project_name}-prod"
+    }
   }
 
   source {
@@ -429,6 +443,13 @@ resource "aws_codebuild_project" "build" {
       group_name  = "/aws/codebuild/${var.project_name}"
       stream_name = var.project_name
     }
+  }
+
+  # Prevent Terraform from clobbering env vars dynamically added by the
+  # admin platform (SECRET_ARN_*, SECRET_KEYS_*, etc.) on re-apply.
+  # The platform manages those via syncSecretsToCodeBuild independently.
+  lifecycle {
+    ignore_changes = [environment]
   }
 
   depends_on = [
