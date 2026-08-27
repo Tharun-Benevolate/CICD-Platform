@@ -125,6 +125,24 @@ async function _saveRunOutputs(runId) {
       efsAccessPointProd: o.efs_access_point_id_prod || null,
       efsMountPath:       o.efs_mount_path        || null,
     });
+
+    // After deployment infra is provisioned, sync cluster/service/role/secrets
+    // env vars into the CodeBuild project so the buildspec can register task
+    // definitions with the correct Secrets Manager references per env.
+    // This is safe to run even when no secrets are configured yet — the
+    // cluster/service/role names are needed by the buildspec regardless.
+    try {
+      const updatedProj = await store.getProject(meta.projectId);
+      if (updatedProj && updatedProj.buildProjectName) {
+        const { syncSecretsToCodeBuild: _sync } = require("../routes/secrets");
+        if (typeof _sync === "function") {
+          await _sync(updatedProj);
+        }
+      }
+    } catch (syncErr) {
+      console.warn("[terraform] Could not sync secrets to CodeBuild after deployment apply:", syncErr.message);
+    }
+
   } else if (meta.type === "initial-destroy") {
     await store.updateProject(meta.projectId, {
       artifactBucket: null,
@@ -242,7 +260,11 @@ function _watchAndSaveFoundationDestroy(runId) {
   }, 1000);
 }
 
-// Helper: Determine the buildspec to pass to Terraform
+// Helper: Determine the buildspec to pass to Terraform.
+// Priority: project repo's buildspec.yml > project.customBuildspec > generic buildspec.
+// The generic buildspec has a __TASKDEF_SCRIPT_B64__ placeholder that we fill with
+// the base64-encoded register_taskdefs.py so the Python script travels with the YAML
+// without any YAML parsing conflicts (no code embedded inline).
 async function resolveBuildspecForTerraform(project, isCodeCommit, repoName, githubOwner, githubRepo, githubBranch) {
   try {
     let hasFile = false;
@@ -272,9 +294,30 @@ async function resolveBuildspecForTerraform(project, isCodeCommit, repoName, git
   try {
     const fs = require("fs");
     const path = require("path");
-    const filepath = path.join(__dirname, "../data/generic-buildspec.yml");
-    if (fs.existsSync(filepath)) return fs.readFileSync(filepath, "utf8");
-  } catch (e) { }
+    const dataDir = path.join(__dirname, "../data");
+    const buildspecPath = path.join(dataDir, "generic-buildspec.yml");
+    const scriptPath    = path.join(dataDir, "register_taskdefs.py");
+
+    if (!fs.existsSync(buildspecPath)) return "buildspec.yml";
+
+    let buildspec = fs.readFileSync(buildspecPath, "utf8");
+
+    // Inject the base64-encoded Python script so CodeBuild can decode and run it.
+    // Using base64 avoids YAML parsing issues (no colons at column 0, no heredoc conflicts).
+    if (fs.existsSync(scriptPath)) {
+      const scriptB64 = fs.readFileSync(scriptPath).toString("base64");
+      // replaceAll because the placeholder appears in both a comment and the echo command
+      buildspec = buildspec.replaceAll("__TASKDEF_SCRIPT_B64__", scriptB64);
+    } else {
+      const noopB64 = Buffer.from('print("register_taskdefs.py not found - skipping task def registration")').toString("base64");
+      buildspec = buildspec.replaceAll("__TASKDEF_SCRIPT_B64__", noopB64);
+      console.warn("[buildspec] register_taskdefs.py not found — task def registration will be skipped");
+    }
+
+    return buildspec;
+  } catch (e) {
+    console.warn("[buildspec] Failed to load generic buildspec:", e.message);
+  }
 
   return "buildspec.yml";
 }
@@ -297,6 +340,10 @@ router.post("/terraform/initial/run", auth.requireRole(...auth.ADMIN_ROLES), asy
       buildProjectName: project.buildProjectName
     });
 
+    // Collect per-env secrets to embed in CodeBuild from day one.
+    // At initial apply time, secrets may not exist yet — defaults to empty strings.
+    const perEnvSecrets = await collectPerEnvSecrets(project);
+
     const tfvars = {
       project_name: names.projectName,
       s3_bucket_name: names.s3BucketName,
@@ -313,11 +360,15 @@ router.post("/terraform/initial/run", auth.requireRole(...auth.ADMIN_ROLES), asy
       // CodeCommit vars
       codecommit_repo_name: isCodeCommit ? (repoName || project.repoName || "") : "",
       buildspec: await resolveBuildspecForTerraform(project, isCodeCommit, repoName, githubOwner, githubRepo, githubBranch),
-      // Pass secret_arn/keys so CodeBuild env vars are set in the initial apply.
-      // At this point secrets may not exist yet (empty string), but if they do,
-      // the pipeline will have them from the start.
-      secret_arn: project.secretArn || "",
-      secret_keys: JSON.stringify([])
+      // Per-environment secrets — seeded into CodeBuild env vars from the start
+      secret_arn:      "",
+      secret_keys:     JSON.stringify([]),
+      secret_arn_dev:  perEnvSecrets.dev.arn,
+      secret_keys_dev: JSON.stringify(perEnvSecrets.dev.keys),
+      secret_arn_uat:  perEnvSecrets.uat.arn,
+      secret_keys_uat: JSON.stringify(perEnvSecrets.uat.keys),
+      secret_arn_prod: perEnvSecrets.prod.arn,
+      secret_keys_prod: JSON.stringify(perEnvSecrets.prod.keys)
     };
 
     const runId = tf.startRun(tf.INITIAL_DIR, tfvars, { projectId: project.id, moduleLabel: "initial" });
@@ -428,16 +479,16 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
       alb_zone_id: sfOutputs.alb_zone_id,
       alb_listener_arn: sfOutputs.alb_listener_arn,
       manage_route53: true,
-      // Per-environment secrets
+      // Per-environment secrets (keys must be JSON strings for Terraform string variable type)
       secret_arn_dev:  perEnvSecrets.dev.arn,
-      secret_keys_dev: perEnvSecrets.dev.keys,
+      secret_keys_dev: JSON.stringify(perEnvSecrets.dev.keys),
       secret_arn_uat:  perEnvSecrets.uat.arn,
-      secret_keys_uat: perEnvSecrets.uat.keys,
+      secret_keys_uat: JSON.stringify(perEnvSecrets.uat.keys),
       secret_arn_prod: perEnvSecrets.prod.arn,
-      secret_keys_prod: perEnvSecrets.prod.keys,
+      secret_keys_prod: JSON.stringify(perEnvSecrets.prod.keys),
       // Legacy fallback (empty when per-env is used)
       secret_arn: "",
-      secret_keys: [],
+      secret_keys: "[]",
       // EFS persistent storage (optional)
       enable_efs:        !!project.efsEnabled,
       efs_filesystem_id: project.efsFilesystemId || "",
@@ -530,6 +581,8 @@ router.post("/terraform/initial/reapply", auth.requireRole(...auth.ADMIN_ROLES),
       projectName: project.name,
       buildProjectName: project.buildProjectName
     });
+    const perEnvSecrets = await collectPerEnvSecrets(project);
+
     const tfvars = {
       github_owner:  resolveGithubRepo(project.githubOwner, project.githubRepo).owner,
       github_repo:   resolveGithubRepo(project.githubOwner, project.githubRepo).repo || "Golf-test-app",
@@ -538,9 +591,15 @@ router.post("/terraform/initial/reapply", auth.requireRole(...auth.ADMIN_ROLES),
       s3_bucket_name: project.artifactBucket || names.s3BucketName,
       aws_region:    project.region || process.env.AWS_REGION || "us-east-1",
       buildspec:     await resolveBuildspecForTerraform(project, project.sourceType === 'codecommit', project.repoName, project.githubOwner, project.githubRepo, project.githubBranch),
-      // Preserve per-env secret env vars on re-apply so CodeBuild keeps them.
-      secret_arn: project.secretArn || "",
-      secret_keys: JSON.stringify([])
+      // Per-environment secrets — seeded into CodeBuild env vars on re-apply
+      secret_arn:      "",
+      secret_keys:     JSON.stringify([]),
+      secret_arn_dev:  perEnvSecrets.dev.arn,
+      secret_keys_dev: JSON.stringify(perEnvSecrets.dev.keys),
+      secret_arn_uat:  perEnvSecrets.uat.arn,
+      secret_keys_uat: JSON.stringify(perEnvSecrets.uat.keys),
+      secret_arn_prod: perEnvSecrets.prod.arn,
+      secret_keys_prod: JSON.stringify(perEnvSecrets.prod.keys)
     };
     const runId = tf.startRun(tf.INITIAL_DIR, tfvars, { projectId: project.id, moduleLabel: "initial" });
     auditStore.logAction(auth.getLoggedInUser(req), "Re-apply Initial Infrastructure", project.name, "Started");

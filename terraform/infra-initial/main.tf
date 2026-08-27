@@ -121,6 +121,35 @@ resource "aws_iam_role_policy_attachment" "build_cloudwatch" {
   policy_arn = "arn:aws:iam::aws:policy/CloudWatchLogsFullAccess"
 }
 
+# Allow the CodeBuild role to register ECS task definitions (with secrets)
+# so the buildspec can create a proper task def revision per environment.
+resource "aws_iam_role_policy" "build_ecs_taskdef" {
+  name = "AllowBuildRoleECSTaskDef"
+  role = aws_iam_role.build_role.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "ecs:RegisterTaskDefinition",
+          "ecs:DescribeTaskDefinition",
+          "ecs:DescribeServices"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect   = "Allow"
+        Action   = ["iam:PassRole"]
+        Resource = "*"
+        Condition = {
+          StringLike = { "iam:PassedToService" = "ecs-tasks.amazonaws.com" }
+        }
+      }
+    ]
+  })
+}
+
 # ─── 4. IAM ROLE: Golf_ecs_execution_role ───────────────────────────
 
 resource "aws_iam_role" "ecs_execution_role" {
@@ -153,9 +182,13 @@ resource "aws_iam_role_policy" "ecs_execution_log_group_create" {
         Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/ecs/*"
       },
       {
+        # Allow ECS tasks to read ANY secret in this account/region so that
+        # per-env secrets (e.g. {prefix}/dev-secrets, {prefix}/uat-secrets,
+        # {prefix}/prod-secrets) are all accessible regardless of naming pattern.
+        # Access is still bounded by the task execution role attached to each task.
         Effect   = "Allow"
         Action   = ["secretsmanager:GetSecretValue"]
-        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:*/secrets-*"
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:${data.aws_caller_identity.current.account_id}:secret:*"
       }
     ]
   })
@@ -342,6 +375,46 @@ resource "aws_codebuild_project" "build" {
       # "/ecs/${ecs_cluster_name}-prod".
       name  = "LOG_GROUP_NAME"
       value = "/ecs/${var.project_name}-cluster-prod"
+    }
+    environment_variable {
+      # Non-prod cluster name (dev + uat services run here).
+      # golf-infra-terraform names this: ${project_prefix}-non-prod-cluster
+      name  = "ECS_CLUSTER_NAME_NON_PROD"
+      value = "${var.project_name}-non-prod-cluster"
+    }
+    environment_variable {
+      # Prod cluster name (prod service runs here).
+      # golf-infra-terraform names this: ${project_prefix}-prod-cluster
+      name  = "ECS_CLUSTER_NAME_PROD"
+      value = "${var.project_name}-prod-cluster"
+    }
+    # Per-environment Secrets Manager ARNs and key lists.
+    # Populated by the platform (syncSecretsToCodeBuild) when project secrets
+    # are saved or updated in the UI. The buildspec reads these to register
+    # task def revisions with proper Secrets Manager references per env.
+    environment_variable {
+      name  = "SECRET_ARN_DEV"
+      value = var.secret_arn_dev
+    }
+    environment_variable {
+      name  = "SECRET_KEYS_DEV"
+      value = var.secret_keys_dev
+    }
+    environment_variable {
+      name  = "SECRET_ARN_UAT"
+      value = var.secret_arn_uat
+    }
+    environment_variable {
+      name  = "SECRET_KEYS_UAT"
+      value = var.secret_keys_uat
+    }
+    environment_variable {
+      name  = "SECRET_ARN_PROD"
+      value = var.secret_arn_prod
+    }
+    environment_variable {
+      name  = "SECRET_KEYS_PROD"
+      value = var.secret_keys_prod
     }
   }
 

@@ -429,7 +429,10 @@ resource "aws_ecs_task_definition" "dev" {
   # rolling the dev service back to the httpd placeholder. Ignoring changes
   # here lets the pipeline's deployed image/task-def stick.
   lifecycle {
-    # # ignore_changes = [container_definitions]  # TEMP: re-enable after apply  # TEMP: re-enable after apply
+    # Terraform only bootstraps this task def once (placeholder image + secrets).
+    # CodePipeline owns all subsequent revisions — ignoring here prevents any
+    # unrelated `terraform apply` from reverting the live service back to httpd.
+    ignore_changes = [container_definitions]
   }
 }
 
@@ -491,7 +494,9 @@ resource "aws_ecs_task_definition" "uat" {
   # reverting the pipeline-deployed image/task-def back to the placeholder
   # on unrelated applies.
   lifecycle {
-    # # ignore_changes = [container_definitions]  # TEMP: re-enable after apply  # TEMP: re-enable after apply
+    # Same reasoning as dev: Terraform bootstraps once, CodePipeline owns the
+    # live revision. Ignoring changes here keeps UAT stable across unrelated applies.
+    ignore_changes = [container_definitions]
   }
 }
 
@@ -772,7 +777,10 @@ resource "aws_codepipeline" "main" {
       configuration = {
         ClusterName = var.ecs_cluster_name_non_prod
         ServiceName = var.dev_service_name
-        FileName    = "imagedefinitions.json"
+        # The buildspec registers a task def with secrets, then writes this file.
+        # The ECS deploy action updates the service image only; secrets are
+        # already in the registered task def.
+        FileName    = "imagedefinitions-dev.json"
       }
     }
   }
@@ -805,7 +813,7 @@ resource "aws_codepipeline" "main" {
       configuration = {
         ClusterName = var.ecs_cluster_name_non_prod
         ServiceName = var.uat_service_name
-        FileName    = "imagedefinitions.json"
+        FileName    = "imagedefinitions-uat.json"
       }
     }
   }
@@ -838,7 +846,7 @@ resource "aws_codepipeline" "main" {
       configuration = {
         ClusterName = var.ecs_cluster_name_prod
         ServiceName = var.prod_service_name
-        FileName    = "imagedefinitions.json"
+        FileName    = "imagedefinitions-prod.json"
       }
     }
   }

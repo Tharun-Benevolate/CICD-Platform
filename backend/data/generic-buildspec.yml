@@ -1,47 +1,62 @@
 version: 0.2
 
+# ─── SECRETS INJECTION STRATEGY ─────────────────────────────────────────────
+# For each environment (dev / uat / prod) this buildspec:
+#   1. Reads the current ECS task definition for the env's service
+#   2. Builds a new container def: fresh ECR image + per-env Secrets Manager refs
+#   3. Registers a new task definition revision
+#   4. If the secrets schema changed (new keys or new ARN), updates the service
+#      so the CodePipeline ECS deploy action inherits a task def WITH secrets
+#   5. Writes imagedefinitions-{env}.json for each pipeline deploy stage
+#
+# The register_taskdefs.py script is base64-embedded at __TASKDEF_SCRIPT_B64__
+# by resolveBuildspecForTerraform() before this YAML is uploaded to CodeBuild.
+#
+# Per-env env vars (SECRET_ARN_DEV/UAT/PROD, SECRET_KEYS_DEV/UAT/PROD,
+# ECS_CLUSTER_NAME_NON_PROD, ECS_CLUSTER_NAME_PROD, DEV/UAT/PROD_SERVICE_NAME,
+# EXECUTION_ROLE_ARN) are pushed by the admin platform via syncSecretsToCodeBuild
+# whenever secrets are saved or infra is provisioned.
+# ─────────────────────────────────────────────────────────────────────────────
+
 phases:
   pre_build:
     commands:
-      - |
-        [ -z "$AWS_REGION" ]     && echo "ERROR: AWS_REGION is not set."     >&2 && exit 1 || true
-        [ -z "$ECR_REPO_URI" ]   && echo "ERROR: ECR_REPO_URI is not set."   >&2 && exit 1 || true
-        [ -z "$CONTAINER_NAME" ] && echo "ERROR: CONTAINER_NAME is not set." >&2 && exit 1 || true
-        echo "All required environment variables are present."
-
-      - echo "Logging in to Amazon ECR..."
+      - >-
+        missing="";
+        [ -z "$AWS_REGION" ] && missing="$missing AWS_REGION";
+        [ -z "$ECR_REPO_URI" ] && missing="$missing ECR_REPO_URI";
+        [ -z "$CONTAINER_NAME" ] && missing="$missing CONTAINER_NAME";
+        [ -z "$EXECUTION_ROLE_ARN" ] && missing="$missing EXECUTION_ROLE_ARN";
+        if [ -n "$missing" ]; then echo "ERROR Missing:$missing" >&2 && exit 1; fi &&
+        echo "Required env vars present."
       - aws ecr get-login-password --region "$AWS_REGION" | docker login --username AWS --password-stdin "$ECR_REPO_URI"
-
-      - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}"
-      - echo "Image tag -> $IMAGE_TAG"
-
+      - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}" && echo "$IMAGE_TAG" > /tmp/image_tag.txt && echo "Image tag -> $IMAGE_TAG"
       - docker pull "$ECR_REPO_URI:latest" || true
 
   build:
     commands:
-      - echo "Building Docker image..."
-      - |
-        docker build \
-          --cache-from "$ECR_REPO_URI:latest" \
-          --build-arg BUILDKIT_INLINE_CACHE=1 \
-          -t "$ECR_REPO_URI:$IMAGE_TAG" \
-          -t "$ECR_REPO_URI:latest" \
-          .
+      - IMAGE_TAG=$(cat /tmp/image_tag.txt)
+      - docker build --cache-from "$ECR_REPO_URI:latest" --build-arg BUILDKIT_INLINE_CACHE=1 -t "$ECR_REPO_URI:$IMAGE_TAG" -t "$ECR_REPO_URI:latest" .
 
   post_build:
     commands:
-      - echo "Pushing images to ECR..."
+      - IMAGE_TAG=$(cat /tmp/image_tag.txt)
       - docker push "$ECR_REPO_URI:$IMAGE_TAG"
       - docker push "$ECR_REPO_URI:latest"
-
-      # CodePipeline V1 ECS deploy only accepts [{name, imageUri}] format.
-      # Secrets are carried by Terraform task definitions, not by this file.
-      - printf '[{"name":"%s","imageUri":"%s"}]' "$CONTAINER_NAME" "$ECR_REPO_URI:$IMAGE_TAG" > imagedefinitions.json
-      - cat imagedefinitions.json
-
+      - echo "__TASKDEF_SCRIPT_B64__" | base64 -d > /tmp/register_taskdefs.py
+      - IMAGE_TAG="$IMAGE_TAG" python3 /tmp/register_taskdefs.py || echo "WARN task-def registration had errors (non-fatal)"
+      - IMG="[{\"name\":\"${CONTAINER_NAME}\",\"imageUri\":\"${ECR_REPO_URI}:${IMAGE_TAG}\"}]"
+      - printf '%s' "$IMG" > imagedefinitions.json
+      - printf '%s' "$IMG" > imagedefinitions-dev.json
+      - printf '%s' "$IMG" > imagedefinitions-uat.json
+      - printf '%s' "$IMG" > imagedefinitions-prod.json
+      - ls -lh imagedefinitions*.json
       - docker rmi "$ECR_REPO_URI:$IMAGE_TAG" "$ECR_REPO_URI:latest" || true
 
 artifacts:
   files:
     - imagedefinitions.json
+    - imagedefinitions-dev.json
+    - imagedefinitions-uat.json
+    - imagedefinitions-prod.json
   discard-paths: yes

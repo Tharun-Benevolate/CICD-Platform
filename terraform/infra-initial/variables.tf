@@ -94,13 +94,51 @@ variable "buildspec" {
 }
 
 variable "secret_arn" {
-  description = "ARN of the AWS Secrets Manager secret for this project. Injected into CodeBuild env vars so the buildspec generates taskdef.json with Secrets Manager references."
+  description = "(Legacy) ARN of the Secrets Manager secret for this project. Use per-env vars below for new deployments."
   type        = string
   default     = ""
 }
 
 variable "secret_keys" {
-  description = "JSON array of secret key names stored in the secret. Must match the keys in the Secrets Manager secret JSON."
+  description = "(Legacy) JSON array of secret key names. Use per-env vars below for new deployments."
+  type        = string
+  default     = "[]"
+}
+
+# ─── Per-environment secrets (populated by syncSecretsToCodeBuild) ───────────
+
+variable "secret_arn_dev" {
+  description = "ARN of the Secrets Manager secret for the DEV environment."
+  type        = string
+  default     = ""
+}
+
+variable "secret_keys_dev" {
+  description = "JSON array of secret key names for DEV."
+  type        = string
+  default     = "[]"
+}
+
+variable "secret_arn_uat" {
+  description = "ARN of the Secrets Manager secret for the UAT environment."
+  type        = string
+  default     = ""
+}
+
+variable "secret_keys_uat" {
+  description = "JSON array of secret key names for UAT."
+  type        = string
+  default     = "[]"
+}
+
+variable "secret_arn_prod" {
+  description = "ARN of the Secrets Manager secret for the PROD environment."
+  type        = string
+  default     = ""
+}
+
+variable "secret_keys_prod" {
+  description = "JSON array of secret key names for PROD."
   type        = string
   default     = "[]"
 }

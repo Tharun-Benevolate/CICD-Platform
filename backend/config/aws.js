@@ -314,7 +314,11 @@ async function createPipeline(region, opts) {
           name: "DeployDev",
           actionTypeId: { category: "Deploy", owner: "AWS", provider: "ECS", version: "1" },
           inputArtifacts: [{ name: "BuildOutput" }],
-          configuration: { ClusterName: ecsClusterNameNonProd, ServiceName: devServiceName }
+          configuration: {
+            ClusterName: ecsClusterNameNonProd,
+            ServiceName: devServiceName,
+            FileName: "imagedefinitions-dev.json"
+          }
         }]
       },
       {
@@ -331,7 +335,11 @@ async function createPipeline(region, opts) {
           name: "DeployUAT",
           actionTypeId: { category: "Deploy", owner: "AWS", provider: "ECS", version: "1" },
           inputArtifacts: [{ name: "BuildOutput" }],
-          configuration: { ClusterName: ecsClusterNameNonProd, ServiceName: uatServiceName }
+          configuration: {
+            ClusterName: ecsClusterNameNonProd,
+            ServiceName: uatServiceName,
+            FileName: "imagedefinitions-uat.json"
+          }
         }]
       },
       {
@@ -348,7 +356,11 @@ async function createPipeline(region, opts) {
           name: "DeployProd",
           actionTypeId: { category: "Deploy", owner: "AWS", provider: "ECS", version: "1" },
           inputArtifacts: [{ name: "BuildOutput" }],
-          configuration: { ClusterName: ecsClusterNameProd, ServiceName: prodServiceName }
+          configuration: {
+            ClusterName: ecsClusterNameProd,
+            ServiceName: prodServiceName,
+            FileName: "imagedefinitions-prod.json"
+          }
         }]
       }
     ];

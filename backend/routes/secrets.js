@@ -11,7 +11,8 @@ const VALID_ENVS = ["dev", "uat", "prod"];
 
 // ── Push per-env secret ARNs + keys into CodeBuild env vars ────────────────
 // CodeBuild gets: SECRET_ARN_DEV, SECRET_KEYS_DEV, SECRET_ARN_UAT, etc.
-// The buildspec reads these to generate imagedefinitions-{env}.json per pipeline stage.
+// Also pushes cluster names and execution role so the buildspec can register
+// task def revisions with proper Secrets Manager references per env.
 async function syncSecretsToCodeBuild(project) {
   if (!project.buildProjectName) return;
   const envVars = {};
@@ -35,7 +36,23 @@ async function syncSecretsToCodeBuild(project) {
   envVars["SECRET_ARN"] = "";
   envVars["SECRET_KEYS"] = "[]";
 
-  if (!hasAny) return;
+  // Push cluster names so the buildspec can look up the current task def per env
+  if (project.ecsClusterNameNonProd) envVars["ECS_CLUSTER_NAME_NON_PROD"] = project.ecsClusterNameNonProd;
+  if (project.ecsClusterNameProd)    envVars["ECS_CLUSTER_NAME_PROD"]     = project.ecsClusterNameProd;
+
+  // Push service names so the buildspec can look up the correct service per env
+  if (project.devServiceName)  envVars["DEV_SERVICE_NAME"]  = project.devServiceName;
+  if (project.uatServiceName)  envVars["UAT_SERVICE_NAME"]  = project.uatServiceName;
+  if (project.prodServiceName) envVars["PROD_SERVICE_NAME"] = project.prodServiceName;
+
+  // Push execution role ARN (needed for RegisterTaskDefinition in buildspec)
+  if (project.ecsExecutionRoleArn) envVars["EXECUTION_ROLE_ARN"] = project.ecsExecutionRoleArn;
+
+  if (!hasAny) {
+    // Even with no secrets, push cluster/service/role names so the buildspec
+    // can still register task defs (with empty secrets array) correctly.
+    if (!project.ecsClusterNameNonProd && !project.ecsClusterNameProd) return;
+  }
 
   try {
     await updateBuildProjectEnvVars(project.region || "us-east-1", project.buildProjectName, envVars);
@@ -351,13 +368,19 @@ router.delete("/:projectId/:key", auth.requireRole(...auth.ADMIN_ROLES), async (
   return router.handle(req, res);
 });
 
-// ── POST /api/secrets/:projectId/restart — force-restarts ECS services ──
+// ── POST /api/secrets/:projectId/restart — force-restart ECS services with updated task defs ──
+// When secrets are updated (new keys added or values changed), running tasks need
+// to pick up the changes. For value-only changes, forceNewDeployment is enough
+// (ECS re-fetches from Secrets Manager on task start). For new keys, we must
+// register a new task def revision with the updated `secrets` array first.
 router.post("/:projectId/restart", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
   try {
     const project = await requireProject(req, res);
     if (!project) return;
 
-    const { ECSClient, UpdateServiceCommand } = require("@aws-sdk/client-ecs");
+    const {
+      ECSClient, UpdateServiceCommand, DescribeServicesCommand, DescribeTaskDefinitionCommand, RegisterTaskDefinitionCommand
+    } = require("@aws-sdk/client-ecs");
     const region = project.region || "us-east-1";
     const ecsClient = new ECSClient({ region });
 
@@ -372,17 +395,95 @@ router.post("/:projectId/restart", auth.requireRole(...auth.ADMIN_ROLES), async 
 
     for (const { cluster, service, env } of services) {
       if (!cluster || !service) { failed.push(`${env} (not provisioned)`); continue; }
-      // Only restart if this env has secrets configured
+
       const cfg = getSecretForEnv(project, env);
       if (!cfg || !cfg.arn) { failed.push(`${env} (no secrets configured)`); continue; }
+
       try {
-        await ecsClient.send(new UpdateServiceCommand({
-          cluster,
-          service,
-          forceNewDeployment: true
+        // ── Step 1: Read current task def for this service ──────────────────
+        const svcRes = await ecsClient.send(new DescribeServicesCommand({
+          cluster, services: [service]
         }));
+        const svc = svcRes.services?.[0];
+        if (!svc || !svc.taskDefinition) {
+          failed.push(`${env}: service not found or has no task definition`);
+          continue;
+        }
+
+        const tdRes = await ecsClient.send(new DescribeTaskDefinitionCommand({
+          taskDefinition: svc.taskDefinition
+        }));
+        const td = tdRes.taskDefinition;
+        const c0 = td?.containerDefinitions?.[0];
+        if (!td || !c0) {
+          failed.push(`${env}: could not read task definition`);
+          continue;
+        }
+
+        // ── Step 2: Build updated secrets array from current per-env config ─
+        // The cfg.keys list is always kept up to date by the secrets save route.
+        const secretsArray = (cfg.keys || []).map(key => ({
+          name: key,
+          valueFrom: `${cfg.arn}:${key}::`
+        }));
+
+        // ── Step 3: Compare with existing secrets in task def ──────────────
+        // Only register a new revision if the secrets array actually changed.
+        // This avoids unnecessary task def churn for pure value-only updates.
+        const existingSecrets = c0.secrets || [];
+        const existingKeys = existingSecrets.map(s => s.name).sort().join(",");
+        const newKeys      = secretsArray.map(s => s.name).sort().join(",");
+        const existingArns = [...new Set(existingSecrets.map(s => (s.valueFrom || "").split(":")[0]))].join(",");
+        const secretsChanged = existingKeys !== newKeys || existingArns !== cfg.arn;
+
+        if (secretsChanged) {
+          // ── Step 4a: Register new task def revision with updated secrets ──
+          console.log(`[secrets/restart] Registering new task def for ${env} (secrets changed)`);
+          const newContainerDef = {
+            ...c0,
+            image: c0.image,                           // keep current deployed image
+            secrets: secretsArray.length > 0 ? secretsArray : undefined
+          };
+          // Remove undefined fields that ECS API rejects
+          if (!newContainerDef.secrets) delete newContainerDef.secrets;
+
+          const registerRes = await ecsClient.send(new RegisterTaskDefinitionCommand({
+            family:                  td.family,
+            requiresCompatibilities: td.requiresCompatibilities || ["FARGATE"],
+            networkMode:             td.networkMode || "awsvpc",
+            cpu:                     td.cpu,
+            memory:                  td.memory,
+            executionRoleArn:        td.executionRoleArn,
+            taskRoleArn:             td.taskRoleArn || td.executionRoleArn,
+            volumes:                 td.volumes || [],
+            containerDefinitions:    [newContainerDef]
+          }));
+
+          const newTaskDefArn = registerRes.taskDefinition?.taskDefinitionArn;
+          console.log(`[secrets/restart] New task def for ${env}: ${newTaskDefArn}`);
+
+          // Update service to use new task def revision then force restart
+          await ecsClient.send(new UpdateServiceCommand({
+            cluster,
+            service,
+            taskDefinition:    newTaskDefArn,
+            forceNewDeployment: true
+          }));
+        } else {
+          // ── Step 4b: Secrets array unchanged — force restart only ──────────
+          // ECS re-fetches secret VALUES from Secrets Manager at task start,
+          // so this is sufficient for value-only updates.
+          console.log(`[secrets/restart] Secrets schema unchanged for ${env}, force-restarting only`);
+          await ecsClient.send(new UpdateServiceCommand({
+            cluster,
+            service,
+            forceNewDeployment: true
+          }));
+        }
+
         restarted.push(env);
       } catch (err) {
+        console.error(`[secrets/restart] Failed for ${env}:`, err);
         failed.push(`${env}: ${err.message}`);
       }
     }
@@ -432,3 +533,4 @@ router.delete("/:projectId/:env", auth.requireRole(...auth.ADMIN_ROLES), async (
 });
 
 module.exports = router;
+module.exports.syncSecretsToCodeBuild = syncSecretsToCodeBuild;

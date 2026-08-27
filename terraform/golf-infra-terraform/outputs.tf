@@ -91,3 +91,21 @@ output "efs_mount_path" {
   description = "Container path where EFS is mounted"
   value       = var.enable_efs ? var.efs_mount_path : ""
 }
+
+# ─── Per-environment secret ARNs (informational — populated by platform) ─────
+# These outputs let the admin platform verify which secret ARN is active per env
+# and are also used by syncSecretsToCodeBuild to push the right ARN to CodeBuild.
+output "secret_arn_dev" {
+  description = "Secrets Manager ARN for the dev environment"
+  value       = var.secret_arn_dev
+}
+
+output "secret_arn_uat" {
+  description = "Secrets Manager ARN for the uat environment"
+  value       = var.secret_arn_uat
+}
+
+output "secret_arn_prod" {
+  description = "Secrets Manager ARN for the prod environment"
+  value       = var.secret_arn_prod
+}
