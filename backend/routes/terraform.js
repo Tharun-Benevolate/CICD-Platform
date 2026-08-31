@@ -115,6 +115,7 @@ async function _saveRunOutputs(runId) {
       // Shared infra references — needed for on-demand beta provisioning
       vpcId: o.vpc_id,
       albListenerArn: o.alb_listener_arn,
+      albHttpsListenerArn: o.alb_https_listener_arn,
       codedeployAppName: o.codedeploy_app_name,
       codedeployDeploymentGroup: o.codedeploy_deployment_group,
       deploymentTfApplied: true,
@@ -478,6 +479,7 @@ router.post("/terraform/deployment/run", auth.requireRole(...auth.ADMIN_ROLES), 
       alb_dns_name: sfOutputs.alb_dns_name,
       alb_zone_id: sfOutputs.alb_zone_id,
       alb_listener_arn: sfOutputs.alb_listener_arn,
+      alb_https_listener_arn: sfOutputs.alb_https_listener_arn,
       manage_route53: true,
       // Per-environment secrets (keys must be JSON strings for Terraform string variable type)
       secret_arn_dev:  perEnvSecrets.dev.arn,
@@ -547,6 +549,7 @@ router.post("/terraform/deployment/destroy", auth.requireRole(...auth.ADMIN_ROLE
       alb_dns_name: sfOutputs.alb_dns_name || "shared-foundation-alb-737213570.us-east-1.elb.amazonaws.com",
       alb_zone_id: sfOutputs.alb_zone_id || "Z35SXDOTRQ7X7K",
       alb_listener_arn: sfOutputs.alb_listener_arn || "arn:aws:elasticloadbalancing:us-east-1:511974512004:listener/app/shared-foundation-alb/a36126009c7b192e/0eacc50cd4bf7e49",
+      alb_https_listener_arn: sfOutputs.alb_https_listener_arn || "",
       manage_route53: true,
       secret_arn: project.secretArn || "",
       secret_keys: "[]",
@@ -656,6 +659,7 @@ router.post("/terraform/deployment/reapply", auth.requireRole(...auth.ADMIN_ROLE
       alb_dns_name:           sfOutputs.alb_dns_name || "shared-foundation-alb-737213570.us-east-1.elb.amazonaws.com",
       alb_zone_id:            sfOutputs.alb_zone_id || "Z35SXDOTRQ7X7K",
       alb_listener_arn:       sfOutputs.alb_listener_arn || "arn:aws:elasticloadbalancing:us-east-1:511974512004:listener/app/shared-foundation-alb/a36126009c7b192e/0eacc50cd4bf7e49",
+      alb_https_listener_arn: sfOutputs.alb_https_listener_arn || "",
       manage_route53:         true,
       // Per-environment secrets
       secret_arn_dev:  perEnvSecrets.dev.arn,

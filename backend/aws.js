@@ -53,6 +53,7 @@ const {
 const { S3Client, CreateBucketCommand, HeadBucketCommand } = require("@aws-sdk/client-s3");
 const { DynamoDBClient, CreateTableCommand, DescribeTableCommand } = require("@aws-sdk/client-dynamodb");
 const { SecretsManagerClient, CreateSecretCommand, PutSecretValueCommand, DescribeSecretCommand, DeleteSecretCommand, RestoreSecretCommand } = require("@aws-sdk/client-secrets-manager");
+const { ACMClient, ListCertificatesCommand, DescribeCertificateCommand } = require("@aws-sdk/client-acm");
 
 function clients(region) {
   const config = { region };
@@ -74,7 +75,8 @@ function clients(region) {
     appscaling:  new ApplicationAutoScalingClient(config),
     elbv2:       new ElasticLoadBalancingV2Client(config),
     codedeploy:  new CodeDeployClient(config),
-    secrets:     new SecretsManagerClient(config)
+    secrets:     new SecretsManagerClient(config),
+    acm:         new ACMClient(config)
   };
 }
 
@@ -932,7 +934,21 @@ async function retryStage(region, pipelineName, stageName, pipelineExecutionId) 
   }));
 }
 
-// ─── CodeDeploy (Blue/Green) ──────────────────────────────────────────────
+// ─── ACM METHODS ──────────────────────────────────────────────────
+
+async function listCertificates(region) {
+  const { acm } = clients(region);
+  const data = await acm.send(new ListCertificatesCommand({}));
+  return data.CertificateSummaryList || [];
+}
+
+async function describeCertificate(region, certificateArn) {
+  const { acm } = clients(region);
+  const data = await acm.send(new DescribeCertificateCommand({ CertificateArn: certificateArn }));
+  return data.Certificate;
+}
+
+// ─── SECRETS MANAGER METHODS ──────────────────────────────────────────────
 
 async function createDeployment(region, { appName, deploymentGroupName, taskDefArn, containerName, containerPort, deploymentConfigName }) {
   const { codedeploy } = clients(region);
@@ -1397,5 +1413,7 @@ module.exports = {
   setBetaRoutingEnabled,
   upsertProjectSecret,
   listProjectSecretKeys,
-  deleteProjectSecret
+  deleteProjectSecret,
+  listCertificates,
+  describeCertificate
 };

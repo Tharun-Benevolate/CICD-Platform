@@ -43,6 +43,11 @@ output "alb_listener_arn" {
   value       = aws_lb_listener.http.arn
 }
 
+output "alb_https_listener_arn" {
+  description = "Shared ALB HTTPS listener ARN"
+  value       = aws_lb_listener.https.arn
+}
+
 output "nat_gateway_id" {
   description = "Shared NAT Gateway ID"
   value       = aws_nat_gateway.main.id

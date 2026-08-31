@@ -120,6 +120,7 @@ router.get("/monitoring", requireAuth, checkPageRole(), (req, res) => renderPage
 router.get("/audit-logs", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "audit-logs"));
 router.get("/pipelines", requireAuth, (req, res) => renderPage(res, req, "pipelines"));
 router.get("/build", requireAuth, (req, res) => renderPage(res, req, "build-logs"));
+router.get("/certificates", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "certificates"));
 
 const projectStore = require("../stores/projectStore");
 const repositoryStore = require("../stores/repositoryStore");

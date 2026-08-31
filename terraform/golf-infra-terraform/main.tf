@@ -109,7 +109,7 @@ resource "aws_lb_target_group" "prod_blue" {
 # Omitting listener priorities lets AWS allocate non-conflicting priorities
 # as projects are added to this shared listener.
 resource "aws_lb_listener_rule" "dev" {
-  listener_arn = var.alb_listener_arn
+  listener_arn = var.alb_https_listener_arn
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.dev.arn
@@ -122,7 +122,7 @@ resource "aws_lb_listener_rule" "dev" {
 }
 
 resource "aws_lb_listener_rule" "prod" {
-  listener_arn = var.alb_listener_arn
+  listener_arn = var.alb_https_listener_arn
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.prod_blue.arn
@@ -136,7 +136,7 @@ resource "aws_lb_listener_rule" "prod" {
 }
 
 resource "aws_lb_listener_rule" "uat" {
-  listener_arn = var.alb_listener_arn
+  listener_arn = var.alb_https_listener_arn
   action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.uat.arn
@@ -190,6 +190,53 @@ resource "aws_route53_record" "prod" {
     zone_id                = var.alb_zone_id
     evaluate_target_health = true
   }
+}
+
+# ─── 5a. AUTOMATED SSL CERTIFICATES (ACM) ────────────────────────────
+
+resource "aws_acm_certificate" "project_cert" {
+  count                     = var.manage_route53 ? 1 : 0
+  domain_name               = local.prod_host
+  subject_alternative_names = [local.dev_host, local.uat_host]
+  validation_method         = "DNS"
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name    = "${local.project_prefix}-cert"
+    Project = local.project_prefix
+  }
+}
+
+resource "aws_route53_record" "cert_validation" {
+  for_each = var.manage_route53 ? {
+    for dvo in aws_acm_certificate.project_cert[0].domain_validation_options : dvo.domain_name => {
+      name   = dvo.resource_record_name
+      record = dvo.resource_record_value
+      type   = dvo.resource_record_type
+    }
+  } : {}
+
+  allow_overwrite = true
+  name            = each.value.name
+  records         = [each.value.record]
+  ttl             = 60
+  type            = each.value.type
+  zone_id         = data.aws_route53_zone.main[0].zone_id
+}
+
+resource "aws_acm_certificate_validation" "project_cert" {
+  count                   = var.manage_route53 ? 1 : 0
+  certificate_arn         = aws_acm_certificate.project_cert[0].arn
+  validation_record_fqdns = [for record in aws_route53_record.cert_validation : record.fqdn]
+}
+
+resource "aws_lb_listener_certificate" "project_cert" {
+  count           = var.manage_route53 ? 1 : 0
+  listener_arn    = var.alb_https_listener_arn
+  certificate_arn = aws_acm_certificate_validation.project_cert[0].certificate_arn
 }
 
 # ─── 5b. EFS PERSISTENT STORAGE (optional, per-project) ─────────────

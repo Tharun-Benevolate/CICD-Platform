@@ -139,6 +139,13 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -219,6 +226,63 @@ resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.main.arn
   port              = 80
   protocol          = "HTTP"
+
+  default_action {
+    type = "redirect"
+
+    redirect {
+      port        = "443"
+      protocol    = "HTTPS"
+      status_code = "HTTP_301"
+    }
+  }
+}
+
+# ─── Dummy Certificate for Default HTTPS Listener ──────────────
+# AWS ALBs require a default certificate for HTTPS listeners.
+# We generate a self-signed one here. Individual projects will attach
+# their own valid ACM certificates via SNI.
+resource "tls_private_key" "dummy" {
+  algorithm = "RSA"
+  rsa_bits  = 2048
+}
+
+resource "tls_self_signed_cert" "dummy" {
+  private_key_pem = tls_private_key.dummy.private_key_pem
+
+  subject {
+    common_name  = "dummy.cicd-platform.local"
+    organization = "CICD Platform Default"
+  }
+
+  validity_period_hours = 8760 # 1 year
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth",
+  ]
+}
+
+resource "aws_acm_certificate" "dummy" {
+  private_key      = tls_private_key.dummy.private_key_pem
+  certificate_body = tls_self_signed_cert.dummy.cert_pem
+
+  tags = {
+    Name = "${local.foundation_name}-dummy-cert"
+  }
+  
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+# ─── HTTPS Listener ────────────────────────────────────────────
+resource "aws_lb_listener" "https" {
+  load_balancer_arn = aws_lb.main.arn
+  port              = 443
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = aws_acm_certificate.dummy.arn
 
   default_action {
     type = "fixed-response"

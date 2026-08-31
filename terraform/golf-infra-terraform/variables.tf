@@ -146,6 +146,11 @@ variable "alb_listener_arn" {
   type        = string
 }
 
+variable "alb_https_listener_arn" {
+  description = "ARN of the shared ALB's HTTPS listener (output of shared-foundation-terraform)."
+  type        = string
+}
+
 variable "manage_route53" {
   description = "Whether to create Route53 DNS alias records for the domain"
   type        = bool
