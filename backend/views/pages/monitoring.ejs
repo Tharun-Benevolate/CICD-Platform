@@ -45,6 +45,65 @@
       <div class="monitoring-card-value" id="mon-aws-status" style="color:var(--color-text-primary);">Checking...</div>
     </div>
   </div>
+
+  <!-- ECS Task Log Viewer -->
+  <div style="margin-top: 32px;">
+    <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+      <i data-lucide="terminal" style="width:18px;height:18px;color:var(--color-primary);"></i>
+      ECS Task Logs (Application & Server)
+    </h2>
+    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;height:600px;">
+      <!-- Log Controls -->
+      <div style="padding:12px 16px;background:var(--color-bg);border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="font-size:12px;font-weight:600;color:var(--color-text-secondary);">ENVIRONMENT:</span>
+          <div style="display:flex;gap:4px;background:var(--color-surface);padding:4px;border-radius:8px;border:1px solid var(--color-border);">
+            <button class="log-env-btn active" data-env="dev">Dev</button>
+            <button class="log-env-btn" data-env="uat">UAT</button>
+            <button class="log-env-btn" data-env="prod">Prod</button>
+            <button class="log-env-btn" data-env="beta">Beta</button>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span id="log-status-indicator" style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;gap:6px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:var(--color-text-tertiary);display:inline-block;"></span> Waiting...
+          </span>
+          <button id="logs-play-pause-btn" style="padding:6px 12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
+            <i data-lucide="pause" style="width:14px;height:14px;"></i> Pause
+          </button>
+          <button id="logs-clear-btn" style="padding:6px 12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
+            <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Clear
+          </button>
+        </div>
+      </div>
+      
+      <!-- Log Terminal -->
+      <div id="log-terminal" style="flex:1;background:#0d1117;color:#c9d1d9;padding:16px;font-family:monospace;font-size:13px;overflow-y:auto;white-space:pre-wrap;line-height:1.5;">
+        <div style="color:#8b949e;text-align:center;margin-top:40px;">Select an environment to view live ECS task logs...</div>
+      </div>
+    </div>
+  </div>
 <% } %>
 </div>
 
+<style>
+.log-env-btn {
+  padding: 6px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  transition: all 0.2s;
+}
+.log-env-btn:hover {
+  background: var(--color-bg);
+  color: var(--color-text-primary);
+}
+.log-env-btn.active {
+  background: var(--color-primary);
+  color: #fff;
+}
+</style>
