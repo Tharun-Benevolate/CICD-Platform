@@ -20,6 +20,7 @@ function getLogGroupName(project, env) {
 // GET /api/logs/:projectId/:env
 router.get("/:projectId/:env", auth.requireAuth, async (req, res) => {
   try {
+    req.query.projectId = req.params.projectId; // Required for requireProject helper
     const project = await requireProject(req, res);
     if (!project) return;
 

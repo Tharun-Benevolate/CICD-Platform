@@ -47,6 +47,7 @@ async function fetchHealthMetrics() {
 
 // ─── ECS Task Log Viewer Logic ───
 let currentLogEnv = 'dev';
+let currentLogType = 'all';
 let isLogPaused = false;
 let logPollInterval = null;
 let nextToken = null;
@@ -58,6 +59,16 @@ function initLogViewer() {
       envBtns.forEach(b => b.classList.remove('active'));
       e.target.classList.add('active');
       currentLogEnv = e.target.dataset.env;
+      resetLogViewer();
+    });
+  });
+
+  const typeBtns = document.querySelectorAll('.log-type-btn');
+  typeBtns.forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      typeBtns.forEach(b => b.classList.remove('active'));
+      e.target.classList.add('active');
+      currentLogType = e.target.dataset.type;
       resetLogViewer();
     });
   });
@@ -99,8 +110,25 @@ function resetLogViewer() {
 async function fetchLogs() {
   if (isLogPaused) return;
 
-  const projectId = document.getElementById('project-select')?.value;
-  if (!projectId) return;
+  // Resolve active project ID from backend API
+  let projectId = null;
+  try {
+    const projRes = await api.get('/api/projects');
+    if (projRes && projRes.projects && projRes.projects.length > 0) {
+      const activeP = projRes.projects.find(p => p.isActive) || projRes.projects[0];
+      projectId = activeP.id;
+    }
+  } catch (e) {
+    console.error("Failed to fetch active project", e);
+  }
+
+  if (!projectId) {
+    const term = document.getElementById('log-terminal');
+    if (term && term.innerHTML.includes("Fetching logs")) {
+      term.innerHTML = `<div style="color:#8b949e;text-align:center;margin-top:40px;">Please create or select a project first.</div>`;
+    }
+    return;
+  }
 
   const indicator = document.getElementById('log-status-indicator');
   if (indicator) {
@@ -145,6 +173,15 @@ function appendLogs(events) {
   const isScrolledToBottom = term.scrollHeight - term.clientHeight <= term.scrollTop + 10;
 
   events.forEach(e => {
+    const msgLower = e.message.toLowerCase();
+    
+    // Client-side filtering for App Errors
+    if (currentLogType === 'error') {
+      if (!msgLower.includes('error') && !msgLower.includes('exception') && !msgLower.includes('fail')) {
+        return; // skip non-errors
+      }
+    }
+
     const time = new Date(e.timestamp).toLocaleTimeString();
     const line = document.createElement('div');
     line.style.display = 'flex';
@@ -161,9 +198,9 @@ function appendLogs(events) {
     msgSpan.style.wordBreak = 'break-all';
     
     // Simple color coding for errors
-    if (e.message.toLowerCase().includes('error') || e.message.toLowerCase().includes('exception')) {
+    if (msgLower.includes('error') || msgLower.includes('exception') || msgLower.includes('fail')) {
       msgSpan.style.color = '#ff7b72';
-    } else if (e.message.toLowerCase().includes('warn')) {
+    } else if (msgLower.includes('warn')) {
       msgSpan.style.color = '#d2a8ff';
     }
     
