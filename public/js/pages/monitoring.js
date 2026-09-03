@@ -51,8 +51,9 @@ let currentLogType = 'all';
 let isLogPaused = false;
 let logPollInterval = null;
 let nextToken = null;
+let _cachedProjectId = null; // Cached once at init to avoid repeated /api/projects DB calls on every poll
 
-function initLogViewer() {
+async function initLogViewer() {
   const envBtns = document.querySelectorAll('.log-env-btn');
   envBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -90,6 +91,19 @@ function initLogViewer() {
     if (term) term.innerHTML = '';
   });
 
+  // Resolve project ID once at init — do NOT re-fetch on every poll cycle
+  // This prevents a /api/projects DB call firing every 3 seconds and
+  // clogging the Node.js event loop (which was causing Terraform SSE to stutter).
+  try {
+    const projRes = await api.get('/api/projects');
+    if (projRes && projRes.projects && projRes.projects.length > 0) {
+      const activeP = projRes.projects.find(p => p.isActive) || projRes.projects[0];
+      _cachedProjectId = activeP.id;
+    }
+  } catch (e) {
+    console.error('[monitor] Failed to resolve active project:', e);
+  }
+
   // Start polling
   if (logPollInterval) clearInterval(logPollInterval);
   logPollInterval = setInterval(fetchLogs, 3000);
@@ -110,18 +124,8 @@ function resetLogViewer() {
 async function fetchLogs() {
   if (isLogPaused) return;
 
-  // Resolve active project ID from backend API
-  let projectId = null;
-  try {
-    const projRes = await api.get('/api/projects');
-    if (projRes && projRes.projects && projRes.projects.length > 0) {
-      const activeP = projRes.projects.find(p => p.isActive) || projRes.projects[0];
-      projectId = activeP.id;
-    }
-  } catch (e) {
-    console.error("Failed to fetch active project", e);
-  }
-
+  // Use the project ID resolved once at init — never re-fetch on every cycle
+  const projectId = _cachedProjectId;
   if (!projectId) {
     const term = document.getElementById('log-terminal');
     if (term && term.innerHTML.includes("Fetching logs")) {
