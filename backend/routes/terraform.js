@@ -690,6 +690,7 @@ router.get("/terraform/:runId/logs", (req, res) => {
 
   const { runId } = req.params;
   let lastIdx = 0;
+  let silentSecs = 0; // seconds since last new log line
 
   const interval = setInterval(async () => {
     const run = tf.getRun(runId);
@@ -697,6 +698,20 @@ router.get("/terraform/:runId/logs", (req, res) => {
 
     const newLogs = run.logs.slice(lastIdx);
     newLogs.forEach(entry => res.write(`data: ${JSON.stringify(entry)}\n\n`));
+
+    if (newLogs.length > 0) {
+      silentSecs = 0; // reset silence counter when new logs arrive
+    } else {
+      silentSecs += 0.4; // each tick is 400ms
+      // Send a keepalive heartbeat every 15 seconds of silence so browser
+      // doesn't think the connection froze (AWS resources like ACM certs
+      // and ECS services can take 5-15 mins to delete with zero Terraform output).
+      if (silentSecs > 0 && Math.round(silentSecs) % 15 === 0 && Number.isInteger(Math.round(silentSecs))) {
+        const elapsed = Math.round(silentSecs);
+        res.write(`data: ${JSON.stringify({ ts: Date.now(), line: `⏳ Terraform is waiting for AWS to confirm resource deletion... (${elapsed}s elapsed)` })}\n\n`);
+      }
+    }
+
     lastIdx += newLogs.length;
 
     if (run.status !== "running") {
@@ -711,6 +726,7 @@ router.get("/terraform/:runId/logs", (req, res) => {
 
   req.on("close", () => clearInterval(interval));
 });
+
 
 // GET /api/terraform/foundation/status — checks if Shared Foundation is applied live from server VM
 router.get("/terraform/foundation/status", async (req, res) => {
