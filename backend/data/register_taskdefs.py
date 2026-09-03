@@ -78,7 +78,7 @@ def process(env, cluster, service, arn, keys_raw):
                   "--query", "taskDefinition.taskDefinitionArn", "--output", "text")
     print("  registered:", new_arn)
 
-    if changed:
+    if changed and env == "dev":
         cli("ecs", "update-service", "--cluster", cluster,
             "--service", service, "--task-definition", new_arn)
         print("  service updated (schema changed)")
