@@ -1,119 +1,483 @@
 <div class="monitoring-container">
-<% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
-  <div style="text-align:center;padding:80px 20px;">
-    <div style="width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-      <i data-lucide="shield-alert" style="width:28px;height:28px;"></i>
-    </div>
-    <h2 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px;">Access Restricted</h2>
-    <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">
-      You do not have permission to access this page. Please contact your organization administrator if you believe this is an error.
-    </p>
-  </div>
-<% } else { %>
-  <!-- Header -->
-  <div class="monitoring-header">
-    <div>
-      <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin-bottom:4px;">
-        Live Infrastructure Monitoring
-      </h1>
-      <p style="font-size:13px;color:var(--color-text-secondary);">
-        Real-time health, CPU/Memory utilization, and service metrics.
+  <% if (user.userType !=='devops' && user.userType !=='admin' && user.userType !=='super_admin' ) { %>
+    <div style="text-align:center;padding:80px 20px;">
+      <div
+        style="width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <i data-lucide="shield-alert" style="width:28px;height:28px;"></i>
+      </div>
+      <h2 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px;">Access Restricted
+      </h2>
+      <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">
+        You do not have permission to access this page. Please contact your organization administrator if you believe
+        this is an error.
       </p>
     </div>
-    <button onclick="fetchHealthMetrics()" id="refresh-monitoring-btn" style="padding:8px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;color:var(--color-text-primary);font-weight:600;">
-      <i data-lucide="refresh-cw" id="refresh-icon" style="width:14px;height:14px;"></i> Refresh
-    </button>
-  </div>
+    <% } else { %>
+      <!-- Header -->
+      <div class="monitoring-header">
+        <div>
+          <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin-bottom:4px;">
+            Live Infrastructure Monitoring
+          </h1>
+          <p style="font-size:13px;color:var(--color-text-secondary);">
+            Real-time health, CPU/Memory utilization, and service metrics.
+          </p>
+        </div>
+        <button onclick="fetchHealthMetrics()" id="refresh-monitoring-btn"
+          style="padding:8px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;color:var(--color-text-primary);font-weight:600;">
+          <i data-lucide="refresh-cw" id="refresh-icon" style="width:14px;height:14px;"></i> Refresh
+        </button>
+      </div>
 
-  <!-- Metric Cards Grid -->
-  <div class="monitoring-grid">
-    <!-- API Server Status -->
-    <div class="monitoring-card">
-      <div class="monitoring-card-label">API SERVER STATUS</div>
-      <div class="monitoring-card-value" style="color:var(--color-success);">ONLINE (200 OK)</div>
-    </div>
+      <!-- Metric Cards Grid -->
+      <div class="monitoring-grid">
+        <!-- API Server Status -->
+        <div class="monitoring-card">
+          <div class="monitoring-card-label">API SERVER STATUS</div>
+          <div class="monitoring-card-value" style="color:var(--color-success);">ONLINE (200 OK)</div>
+        </div>
 
-    <!-- Database Pool -->
-    <div class="monitoring-card">
-      <div class="monitoring-card-label">DATABASE POOL</div>
-      <div class="monitoring-card-value" id="mon-db-status" style="color:var(--color-text-primary);">Checking...</div>
-    </div>
-
-    <!-- AWS STS Identity -->
-    <div class="monitoring-card">
-      <div class="monitoring-card-label">AWS STS IDENTITY</div>
-      <div class="monitoring-card-value" id="mon-aws-status" style="color:var(--color-text-primary);">Checking...</div>
-    </div>
-  </div>
-
-  <!-- ECS Task Log Viewer -->
-  <div style="margin-top: 32px;">
-    <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
-      <i data-lucide="terminal" style="width:18px;height:18px;color:var(--color-primary);"></i>
-      ECS Task Logs (Application & Server)
-    </h2>
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;height:600px;">
-      <!-- Log Controls -->
-      <div style="padding:12px 16px;background:var(--color-bg);border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
-        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:12px;font-weight:600;color:var(--color-text-secondary);">ENV:</span>
-            <div style="display:flex;gap:4px;background:var(--color-surface);padding:4px;border-radius:8px;border:1px solid var(--color-border);">
-              <button class="log-env-btn active" data-env="dev">Dev</button>
-              <button class="log-env-btn" data-env="uat">UAT</button>
-              <button class="log-env-btn" data-env="prod">Prod</button>
-              <button class="log-env-btn" data-env="beta">Beta</button>
-            </div>
-          </div>
-          <div style="width:1px;height:24px;background:var(--color-border);"></div>
-          <div style="display:flex;align-items:center;gap:8px;">
-            <span style="font-size:12px;font-weight:600;color:var(--color-text-secondary);">LOG TYPE:</span>
-            <div style="display:flex;gap:4px;background:var(--color-surface);padding:4px;border-radius:8px;border:1px solid var(--color-border);">
-              <button class="log-type-btn active" data-type="all">Server Logs (All)</button>
-              <button class="log-type-btn" data-type="error">App Errors</button>
-            </div>
+        <!-- Database Pool -->
+        <div class="monitoring-card">
+          <div class="monitoring-card-label">DATABASE POOL</div>
+          <div class="monitoring-card-value" id="mon-db-status" style="color:var(--color-text-primary);">Checking...
           </div>
         </div>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <span id="log-status-indicator" style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;gap:6px;">
-            <span style="width:8px;height:8px;border-radius:50%;background:var(--color-text-tertiary);display:inline-block;"></span> Waiting...
-          </span>
-          <button id="logs-play-pause-btn" style="padding:6px 12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
-            <i data-lucide="pause" style="width:14px;height:14px;"></i> Pause
-          </button>
-          <button id="logs-clear-btn" style="padding:6px 12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
-            <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Clear
-          </button>
+
+        <!-- AWS STS Identity -->
+        <div class="monitoring-card">
+          <div class="monitoring-card-label">AWS STS IDENTITY</div>
+          <div class="monitoring-card-value" id="mon-aws-status" style="color:var(--color-text-primary);">Checking...
+          </div>
         </div>
       </div>
-      
-      <!-- Log Terminal -->
-      <div id="log-terminal" style="flex:1;background:#0d1117;color:#c9d1d9;padding:16px;font-family:monospace;font-size:13px;overflow-y:auto;white-space:pre-wrap;line-height:1.5;">
-        <div style="color:#8b949e;text-align:center;margin-top:40px;">Select an environment to view live ECS task logs...</div>
+
+      <!-- ECS Task Log Viewer -->
+      <div style="margin-top: 32px;">
+        <h2
+          style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-bottom:12px;display:flex;align-items:center;gap:8px;">
+          <i data-lucide="terminal" style="width:18px;height:18px;color:var(--color-primary);"></i>
+          ECS Task Logs (Application & Server)
+        </h2>
+        <div
+          style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;height:600px;">
+          <!-- Log Controls -->
+          <div
+            style="padding:12px 16px;background:var(--color-bg);border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:12px;font-weight:600;color:var(--color-text-secondary);">ENV:</span>
+                <div
+                  style="display:flex;gap:4px;background:var(--color-surface);padding:4px;border-radius:8px;border:1px solid var(--color-border);">
+                  <button class="log-env-btn active" data-env="dev">Dev</button>
+                  <button class="log-env-btn" data-env="uat">UAT</button>
+                  <button class="log-env-btn" data-env="prod">Prod</button>
+                  <button class="log-env-btn" data-env="beta">Beta</button>
+                </div>
+              </div>
+              <div style="width:1px;height:24px;background:var(--color-border);"></div>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:12px;font-weight:600;color:var(--color-text-secondary);">LOG TYPE:</span>
+                <div
+                  style="display:flex;gap:4px;background:var(--color-surface);padding:4px;border-radius:8px;border:1px solid var(--color-border);">
+                  <button class="log-type-btn active" data-type="all">Server Logs (All)</button>
+                  <button class="log-type-btn" data-type="error">App Errors</button>
+                </div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:12px;">
+              <span id="log-status-indicator"
+                style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;gap:6px;">
+                <span
+                  style="width:8px;height:8px;border-radius:50%;background:var(--color-text-tertiary);display:inline-block;"></span>
+                Waiting...
+              </span>
+              <button id="logs-play-pause-btn"
+                style="padding:6px 12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
+                <i data-lucide="pause" style="width:14px;height:14px;"></i> Pause
+              </button>
+              <button id="logs-clear-btn"
+                style="padding:6px 12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;cursor:pointer;font-size:12px;font-weight:600;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
+                <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Clear
+              </button>
+            </div>
+          </div>
+
+          <!-- Log Terminal -->
+          <div id="log-terminal"
+            style="flex:1;background:#0d1117;color:#c9d1d9;padding:16px;font-family:monospace;font-size:13px;overflow-y:auto;white-space:pre-wrap;line-height:1.5;">
+            <div style="color:#8b949e;text-align:center;margin-top:40px;">Select an environment to view live ECS task
+              logs...</div>
+          </div>
+        </div>
       </div>
-    </div>
-  </div>
-<% } %>
+      </div>
+
+      <!-- ─── Log Search ──────────────────────────────────────────────────── -->
+      <div style="margin-top:40px;">
+        <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-bottom:4px;display:flex;align-items:center;gap:8px;">
+          <i data-lucide="search" style="width:18px;height:18px;color:var(--color-primary);"></i>
+          Log Search
+        </h2>
+        <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:16px;">
+          Search historical logs by environment, date range, category, and keyword.
+        </p>
+
+        <!-- Search Card -->
+        <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:12px;overflow:hidden;">
+
+          <!-- Environment Tabs -->
+          <div style="display:flex;border-bottom:1px solid var(--color-border);">
+            <button class="ls-env-tab active" data-env="dev">Dev</button>
+            <button class="ls-env-tab" data-env="uat">UAT</button>
+            <button class="ls-env-tab" data-env="prod">Prod</button>
+            <button class="ls-env-tab" data-env="beta">Beta</button>
+          </div>
+
+          <!-- Filters Row -->
+          <div style="padding:16px 20px;display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;border-bottom:1px solid var(--color-border);">
+            <!-- Date From -->
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;">From</label>
+              <input type="datetime-local" id="ls-from"
+                style="padding:8px 10px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:8px;color:var(--color-text-primary);font-size:13px;font-family:var(--font-family);outline:none;cursor:pointer;">
+            </div>
+            <!-- Date To -->
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;">To</label>
+              <input type="datetime-local" id="ls-to"
+                style="padding:8px 10px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:8px;color:var(--color-text-primary);font-size:13px;font-family:var(--font-family);outline:none;cursor:pointer;">
+            </div>
+            <!-- Category -->
+            <div style="display:flex;flex-direction:column;gap:5px;">
+              <label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;">Category</label>
+              <select id="ls-category" style="padding:8px 10px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:8px;color:var(--color-text-primary);font-size:13px;font-family:var(--font-family);outline:none;cursor:pointer;min-width:120px;">
+                <option value="">All</option>
+                <option value="error">Error</option>
+                <option value="warn">Warning</option>
+                <option value="info">Info</option>
+              </select>
+            </div>
+            <!-- Text Search -->
+            <div style="display:flex;flex-direction:column;gap:5px;flex:1;min-width:200px;">
+              <label style="font-size:11px;font-weight:600;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;">Search</label>
+              <div style="position:relative;">
+                <i data-lucide="search" style="width:14px;height:14px;position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--color-text-tertiary);pointer-events:none;"></i>
+                <input type="text" id="ls-text" placeholder="Filter by keyword, route, message..."
+                  style="width:100%;padding:8px 10px 8px 32px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:8px;color:var(--color-text-primary);font-size:13px;font-family:var(--font-family);outline:none;box-sizing:border-box;">
+              </div>
+            </div>
+            <!-- Search Button -->
+            <button id="ls-search-btn" onclick="runLogSearch()"
+              style="padding:9px 20px;background:var(--color-primary);border:none;border-radius:8px;color:#fff;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;white-space:nowrap;transition:opacity 0.2s;">
+              <i data-lucide="search" style="width:14px;height:14px;"></i> Search Logs
+            </button>
+          </div>
+
+          <!-- Results Area -->
+          <div id="ls-results-area" style="min-height:200px;">
+            <div id="ls-placeholder" style="text-align:center;padding:60px 20px;color:var(--color-text-tertiary);">
+              <i data-lucide="file-search" style="width:36px;height:36px;margin-bottom:12px;opacity:0.4;"></i>
+              <div style="font-size:14px;">Set your filters above and click <strong>Search Logs</strong></div>
+            </div>
+
+            <!-- Loading State -->
+            <div id="ls-loading" style="display:none;text-align:center;padding:60px 20px;color:var(--color-text-secondary);">
+              <div style="width:32px;height:32px;border:3px solid var(--color-border);border-top-color:var(--color-primary);border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 12px;"></div>
+              <div style="font-size:13px;">Querying CloudWatch logs...</div>
+            </div>
+
+            <!-- Results Table -->
+            <div id="ls-table-wrap" style="display:none;">
+              <div style="padding:12px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--color-border);">
+                <span id="ls-result-count" style="font-size:13px;font-weight:600;color:var(--color-text-secondary);"></span>
+                <button id="ls-load-more-btn" onclick="loadMoreLogs()" style="display:none;padding:6px 14px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:6px;font-size:12px;font-weight:600;color:var(--color-text-primary);cursor:pointer;">
+                  Load More
+                </button>
+              </div>
+              <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;">
+                  <thead>
+                    <tr style="background:var(--color-bg);">
+                      <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap;border-bottom:1px solid var(--color-border);">Timestamp</th>
+                      <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--color-border);">Cat</th>
+                      <th style="padding:10px 12px;text-align:left;font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--color-border);">Stream</th>
+                      <th style="padding:10px 16px;text-align:left;font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.05em;border-bottom:1px solid var(--color-border);">Message</th>
+                    </tr>
+                  </thead>
+                  <tbody id="ls-table-body"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- No Results -->
+            <div id="ls-empty" style="display:none;text-align:center;padding:60px 20px;color:var(--color-text-tertiary);">
+              <i data-lucide="inbox" style="width:36px;height:36px;margin-bottom:12px;opacity:0.4;"></i>
+              <div style="font-size:14px;">No logs matched your search.</div>
+              <div style="font-size:12px;margin-top:4px;">Try widening the date range or clearing the keyword filter.</div>
+            </div>
+
+            <!-- Error -->
+            <div id="ls-error" style="display:none;text-align:center;padding:40px 20px;color:var(--color-danger);">
+              <i data-lucide="alert-triangle" style="width:30px;height:30px;margin-bottom:10px;"></i>
+              <div id="ls-error-msg" style="font-size:13px;"></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <% } %>
 </div>
 
+
 <style>
-.log-env-btn, .log-type-btn {
-  padding: 6px 16px;
-  background: transparent;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--color-text-secondary);
-  transition: all 0.2s;
-}
-.log-env-btn:hover, .log-type-btn:hover {
-  background: var(--color-bg);
-  color: var(--color-text-primary);
-}
-.log-env-btn.active, .log-type-btn.active {
-  background: var(--color-primary);
-  color: #fff;
-}
+  .log-env-btn,
+  .log-type-btn {
+    padding: 6px 16px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    transition: all 0.2s;
+  }
+
+  .log-env-btn:hover,
+  .log-type-btn:hover {
+    background: var(--color-bg);
+    color: var(--color-text-primary);
+  }
+
+  .log-env-btn.active,
+  .log-type-btn.active {
+    background: var(--color-primary);
+    color: #fff;
+  }
+
+  /* Log Search tabs */
+  .ls-env-tab {
+    padding: 11px 20px;
+    background: transparent;
+    border: none;
+    border-right: 1px solid var(--color-border);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    transition: all 0.15s;
+  }
+  .ls-env-tab:last-child { border-right: none; }
+  .ls-env-tab:hover { background: var(--color-bg); color: var(--color-text-primary); }
+  .ls-env-tab.active {
+    background: var(--color-bg);
+    color: var(--color-primary);
+    border-bottom: 2px solid var(--color-primary);
+  }
+
+  /* Table rows */
+  #ls-table-body tr { border-bottom: 1px solid var(--color-border); transition: background 0.1s; }
+  #ls-table-body tr:hover { background: rgba(99,102,241,0.04); }
+  #ls-table-body td { padding: 10px 12px; font-size: 12.5px; vertical-align: top; }
+  #ls-table-body td:first-child { padding-left: 16px; white-space: nowrap; color: var(--color-text-secondary); font-family: monospace; }
+  #ls-table-body td:last-child { padding-right: 16px; word-break: break-all; color: var(--color-text-primary); font-family: monospace; line-height: 1.5; }
+
+  /* Category badge */
+  .ls-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+  }
+  .ls-badge-error  { background: rgba(239,68,68,0.15);  color: #f87171; }
+  .ls-badge-warn   { background: rgba(245,158,11,0.15); color: #fbbf24; }
+  .ls-badge-info   { background: rgba(99,102,241,0.15); color: #818cf8; }
+  .ls-badge-other  { background: rgba(148,163,184,0.12); color: #94a3b8; }
+
+  /* Stream chip */
+  .ls-stream {
+    display: inline-block;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--color-text-tertiary);
+    font-family: monospace;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* datetime-local dark fix */
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(0.6); cursor: pointer; }
+  input[type="text"]:focus, input[type="datetime-local"]:focus, select:focus {
+    border-color: var(--color-primary) !important;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.15);
+  }
 </style>
+
+<script>
+// ─── Log Search ────────────────────────────────────────────────────────────
+let _lsEnv       = 'dev';
+let _lsNextToken = null;
+let _lsTotalRows = 0;
+let _lsLastParams = null;
+
+// Default date range: last 24 hours
+(function initLsDefaults() {
+  const now   = new Date();
+  const from  = new Date(now - 24 * 60 * 60 * 1000);
+  const fmt   = d => d.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:MM"
+  const fromEl = document.getElementById('ls-from');
+  const toEl   = document.getElementById('ls-to');
+  if (fromEl) fromEl.value = fmt(from);
+  if (toEl)   toEl.value   = fmt(now);
+})();
+
+// Env tab switching
+document.querySelectorAll('.ls-env-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.ls-env-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _lsEnv = btn.dataset.env;
+  });
+});
+
+// Enter key triggers search from text input
+document.getElementById('ls-text')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') runLogSearch();
+});
+
+function _lsShowOnly(id) {
+  ['ls-placeholder','ls-loading','ls-table-wrap','ls-empty','ls-error'].forEach(el => {
+    const node = document.getElementById(el);
+    if (node) node.style.display = (el === id) ? '' : 'none';
+  });
+}
+
+function _lsGetCategory(msg) {
+  const m = msg.toLowerCase();
+  if (m.includes('error') || m.includes('exception') || m.includes('fatal') || m.includes('fail')) return 'error';
+  if (m.includes('warn') || m.includes('warning') || m.includes('deprecated')) return 'warn';
+  if (m.includes('info') || m.includes('notice') || m.includes('listening') || m.includes('started')) return 'info';
+  return 'other';
+}
+
+function _lsBadge(cat) {
+  return `<span class="ls-badge ls-badge-${cat}">${cat}</span>`;
+}
+
+function _lsRenderRows(events, append) {
+  const tbody = document.getElementById('ls-table-body');
+  if (!tbody) return;
+  if (!append) tbody.innerHTML = '';
+
+  events.forEach(e => {
+    const cat = _lsGetCategory(e.message);
+
+    // Client-side category filter (dropdown)
+    const catFilter = document.getElementById('ls-category')?.value || '';
+    if (catFilter && cat !== catFilter) return;
+
+    const ts   = new Date(e.timestamp).toLocaleString(undefined, { month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false });
+    // Shorten stream: take last segment after /
+    const streamShort = (e.logStreamName || '').split('/').pop() || e.logStreamName || '—';
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${ts}</td>
+      <td>${_lsBadge(cat)}</td>
+      <td><span class="ls-stream" title="${e.logStreamName || ''}">${streamShort}</span></td>
+      <td>${e.message.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</td>
+    `;
+    tbody.appendChild(tr);
+    _lsTotalRows++;
+  });
+}
+
+async function runLogSearch(append) {
+  if (!append) {
+    _lsNextToken = null;
+    _lsTotalRows = 0;
+  }
+
+  // Resolve project ID (cached from live terminal init)
+  const projectId = _cachedProjectId;
+  if (!projectId) {
+    _lsShowOnly('ls-error');
+    document.getElementById('ls-error-msg').textContent = 'No active project selected. Please switch to a project from the top-left dropdown.';
+    return;
+  }
+
+  const fromVal = document.getElementById('ls-from')?.value;
+  const toVal   = document.getElementById('ls-to')?.value;
+  const text    = (document.getElementById('ls-text')?.value || '').trim();
+
+  const params = new URLSearchParams();
+  if (fromVal) params.set('startTime', new Date(fromVal).getTime());
+  if (toVal)   params.set('endTime',   new Date(toVal).getTime());
+  if (text)    params.set('filterPattern', text);
+  if (_lsNextToken) params.set('nextToken', _lsNextToken);
+
+  _lsLastParams = params.toString();
+
+  // Show loading (only on fresh search)
+  if (!append) {
+    _lsShowOnly('ls-loading');
+    document.getElementById('ls-search-btn').style.opacity = '0.6';
+    document.getElementById('ls-search-btn').disabled = true;
+  }
+  const lmbtn = document.getElementById('ls-load-more-btn');
+  if (lmbtn) { lmbtn.style.display = 'none'; lmbtn.disabled = true; }
+
+  try {
+    const url  = `/api/logs/search/${projectId}/${_lsEnv}?${params}`;
+    const data = await api.get(url);
+
+    if (!data || !data.ok) throw new Error(data?.error || 'Unknown error from server');
+    if (data.notFound) {
+      _lsShowOnly('ls-empty');
+      return;
+    }
+
+    const events = data.events || [];
+    if (events.length === 0 && !append) {
+      _lsShowOnly('ls-empty');
+      return;
+    }
+
+    _lsNextToken = data.nextToken || null;
+    _lsRenderRows(events, append);
+    _lsShowOnly('ls-table-wrap');
+
+    // Update result count
+    const countEl = document.getElementById('ls-result-count');
+    if (countEl) {
+      const moreText = _lsNextToken ? ' (more available)' : '';
+      countEl.textContent = `${_lsTotalRows} result${_lsTotalRows !== 1 ? 's' : ''}${moreText}`;
+    }
+
+    // Show "Load More" if there's a next token
+    if (lmbtn) {
+      lmbtn.style.display = _lsNextToken ? '' : 'none';
+      lmbtn.disabled = false;
+    }
+  } catch (err) {
+    _lsShowOnly('ls-error');
+    document.getElementById('ls-error-msg').textContent = `Search failed: ${err.message}`;
+  } finally {
+    document.getElementById('ls-search-btn').style.opacity = '1';
+    document.getElementById('ls-search-btn').disabled = false;
+  }
+}
+
+function loadMoreLogs() {
+  if (_lsNextToken) runLogSearch(true);
+}
+</script>
