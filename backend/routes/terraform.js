@@ -703,12 +703,11 @@ router.get("/terraform/:runId/logs", (req, res) => {
       silentSecs = 0; // reset silence counter when new logs arrive
     } else {
       silentSecs += 0.4; // each tick is 400ms
-      // Send a keepalive heartbeat every 15 seconds of silence so browser
-      // doesn't think the connection froze (AWS resources like ACM certs
-      // and ECS services can take 5-15 mins to delete with zero Terraform output).
+      // Send a silent SSE comment ping every 15 seconds of silence to keep
+      // the browser connection alive (SSE comment lines starting with ":" are
+      // invisible to the client but prevent proxy/browser connection timeouts).
       if (silentSecs > 0 && Math.round(silentSecs) % 15 === 0 && Number.isInteger(Math.round(silentSecs))) {
-        const elapsed = Math.round(silentSecs);
-        res.write(`data: ${JSON.stringify({ ts: Date.now(), line: `⏳ Terraform is waiting for AWS to confirm resource deletion... (${elapsed}s elapsed)` })}\n\n`);
+        res.write(`: keepalive\n\n`);
       }
     }
 
