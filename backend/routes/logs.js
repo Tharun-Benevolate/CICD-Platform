@@ -146,7 +146,14 @@ router.get("/:projectId/:env", auth.requireAuth, async (req, res) => {
     if (nextToken) {
       params.nextToken = nextToken;
     } else {
-      params.startTime = startTime ? parseInt(startTime, 10) : Date.now() - (2 * 60 * 60 * 1000);
+      // Default lookback bumped from 2h -> 24h (matches Search Logs' default).
+      // With only a 2h window, any tab that hadn't been polling continuously
+      // (e.g. you just switched envs, or the only matching event — like a
+      // one-off startup warning — is a few hours old) would silently show
+      // "no matching activity" even though the event is sitting right there
+      // in CloudWatch. Combined with the per-tab cache below, this is now
+      // only paid once per tab (first visit), not on every switch.
+      params.startTime = startTime ? parseInt(startTime, 10) : Date.now() - (24 * 60 * 60 * 1000);
     }
 
     const pattern = buildFilterPattern({ category: type });

@@ -89,25 +89,51 @@ let _cachedProjectId = null; // Cached once at init to avoid repeated /api/proje
 let liveLineCount = 0;
 let liveErrorCount = 0;
 
+// ─── Per-(env,type) tab cache ────────────────────────────────────────────
+// Previously, switching env/type tabs called resetLogViewer(), which wiped
+// nextToken and the terminal and re-asked CloudWatch a brand-new "now minus
+// a couple hours" question every single time. That meant: (a) anything you'd
+// already found (like a single warning line) vanished the moment you looked
+// away and came back once it aged out of the window, and (b) DEV/UAT, which
+// are already running and have history, never got a real backfill — you were
+// always just tailing forward from the moment you clicked. This cache keeps
+// each tab's terminal contents + CloudWatch pagination cursor around for the
+// life of the page, so switching tabs restores exactly what you had and just
+// polls forward from there, instead of starting over.
+const _logTabCache = new Map(); // key: "env|type" -> { html, nextToken, lineCount, errorCount }
+function _logTabKey(env, type) { return `${env}|${type}`; }
+
+function _saveCurrentLogTab() {
+  const term = document.getElementById('log-terminal');
+  _logTabCache.set(_logTabKey(currentLogEnv, currentLogType), {
+    html: term ? term.innerHTML : '',
+    nextToken,
+    lineCount: liveLineCount,
+    errorCount: liveErrorCount
+  });
+}
+
 // Setup UI bindings only (no network calls)
 function setupLogViewer() {
   const envBtns = document.querySelectorAll('.log-env-btn');
   envBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
+      _saveCurrentLogTab();
       envBtns.forEach(b => b.classList.remove('active'));
       e.target.classList.add('active');
       currentLogEnv = e.target.dataset.env;
-      resetLogViewer();
+      switchToLogTab();
     });
   });
 
   const typeBtns = document.querySelectorAll('.log-type-btn');
   typeBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
+      _saveCurrentLogTab();
       typeBtns.forEach(b => b.classList.remove('active'));
       e.target.classList.add('active');
       currentLogType = e.target.dataset.type;
-      resetLogViewer();
+      switchToLogTab();
     });
   });
 
@@ -129,6 +155,9 @@ function setupLogViewer() {
     liveLineCount = 0;
     liveErrorCount = 0;
     updateLiveCountBadge();
+    // Clear should stay cleared if the user hops to another tab and back,
+    // so drop any cached snapshot for the tab being cleared right now.
+    _logTabCache.delete(_logTabKey(currentLogEnv, currentLogType));
   });
 }
 
@@ -136,22 +165,38 @@ function setupLogViewer() {
 function startLogPolling() {
   if (logPollInterval) clearInterval(logPollInterval);
   logPollInterval = setInterval(fetchLogs, 3000);
-  resetLogViewer();
+  switchToLogTab();
 }
 
-function resetLogViewer() {
-  nextToken = null;
+// Switch into the (currentLogEnv, currentLogType) tab: restore it from cache
+// if we've visited it before this session (and just poll forward from where
+// we left off), or do a fresh backfill if this is the first visit.
+function switchToLogTab() {
   isLogPaused = false;
-  liveLineCount = 0;
-  liveErrorCount = 0;
-  updateLiveCountBadge();
-  const term = document.getElementById('log-terminal');
-  if (term) term.innerHTML = `<div style="color:#8b949e;text-align:center;margin-top:40px;">Fetching ${logTypeLabel(currentLogType)} logs for ${currentLogEnv.toUpperCase()}...</div>`;
   const btn = document.getElementById('logs-play-pause-btn');
   if (btn) btn.innerHTML = '<i data-lucide="pause" style="width:14px;height:14px;"></i> Pause';
+
+  const term = document.getElementById('log-terminal');
+  const cached = _logTabCache.get(_logTabKey(currentLogEnv, currentLogType));
+
+  if (cached) {
+    if (term) term.innerHTML = cached.html;
+    nextToken = cached.nextToken;
+    liveLineCount = cached.lineCount;
+    liveErrorCount = cached.errorCount;
+  } else {
+    nextToken = null;
+    liveLineCount = 0;
+    liveErrorCount = 0;
+    if (term) term.innerHTML = `<div style="color:#8b949e;text-align:center;margin-top:40px;">Fetching ${logTypeLabel(currentLogType)} logs for ${currentLogEnv.toUpperCase()}...</div>`;
+  }
+
+  updateLiveCountBadge();
   if (window.lucide) window.lucide.createIcons();
-  fetchLogs();
+  fetchLogs(); // either the initial backfill, or a catch-up poll on a restored tab
 }
+// Kept as an alias for any other callers expecting the old name.
+function resetLogViewer() { switchToLogTab(); }
 
 function logTypeLabel(type) {
   if (type === 'error') return 'error & fail';
@@ -211,7 +256,7 @@ async function fetchLogs() {
           // simply waiting, rather than leaving a stale "Fetching..." message.
           const term = document.getElementById('log-terminal');
           if (term && term.innerHTML.includes('Fetching')) {
-            term.innerHTML = `<div style="color:#8b949e;text-align:center;margin-top:60px;font-size:13px;">Listening for new ${logTypeLabel(currentLogType)} logs on ${currentLogEnv.toUpperCase()}… no matching activity in the last 2 hours yet.</div>`;
+            term.innerHTML = `<div style="color:#8b949e;text-align:center;margin-top:60px;font-size:13px;">Listening for new ${logTypeLabel(currentLogType)} logs on ${currentLogEnv.toUpperCase()}… no matching activity in the last 24 hours yet.</div>`;
           }
         }
         if (res.nextToken) nextToken = res.nextToken;
