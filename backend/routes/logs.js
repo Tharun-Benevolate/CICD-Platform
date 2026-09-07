@@ -93,29 +93,47 @@ function cacheSet(key, value) {
 }
 
 // Shared helper to call FilterLogEvents
-async function filterLogs(client, logGroupName, params, cacheKey, category) {
+async function filterLogs(client, logGroupName, params, cacheKey, category, searchText) {
   if (cacheKey) {
     const cached = cacheGet(cacheKey);
     if (cached) return { ...cached, cached: true };
   }
 
   try {
-    const command = new FilterLogEventsCommand({ logGroupName, interleaved: true, ...params });
-    const response = await client.send(command);
     const requestedCategory = normaliseCategory(category);
-    const events = (response.events || []).map(e => ({
-      timestamp: e.timestamp,
-      message: e.message,
-      logStreamName: e.logStreamName
-    }));
+    const searchNeedle = String(searchText || "").trim().toLocaleLowerCase();
+    let requestParams = { ...params };
+    let response;
+    let events = [];
+    let scannedPages = 0;
+
+    // CloudWatch FilterLogEvents text matching is case-sensitive. For a
+    // search-box query, fetch pages without a native text pattern and compare
+    // the full phrase ourselves. Continue through empty pages so a valid
+    // match is not hidden merely because it was not in the first page.
+    do {
+      const command = new FilterLogEventsCommand({ logGroupName, interleaved: true, ...requestParams });
+      response = await client.send(command);
+      const pageEvents = (response.events || []).map(e => ({
+        timestamp: e.timestamp,
+        message: e.message,
+        logStreamName: e.logStreamName
+      })).filter(event => {
+        if (isRoutineRuntimeNoise(event.message)) return false;
+        if (requestedCategory && classifyLogLevel(event.message) !== requestedCategory) return false;
+        return !searchNeedle || String(event.message || "").toLocaleLowerCase().includes(searchNeedle);
+      });
+      events.push(...pageEvents);
+      if (!searchNeedle || events.length || !response.nextToken) break;
+      requestParams = { ...params, nextToken: response.nextToken };
+      scannedPages++;
+    } while (scannedPages < 25);
+
     const result = {
       ok: true,
       // Verify the category after AWS responds as a safety net. A warning
       // must never appear in Errors & Fails, even if a log format is unusual.
-      events: events.filter(event => {
-        if (isRoutineRuntimeNoise(event.message)) return false;
-        return !requestedCategory || classifyLogLevel(event.message) === requestedCategory;
-      }),
+      events,
       nextToken: response.nextToken,
       logGroupName
     };
@@ -157,15 +175,16 @@ router.get("/search/:projectId/:env", auth.requireAuth, async (req, res) => {
     };
     if (nextToken) params.nextToken = nextToken;
 
-    // CloudWatch filterPattern: empty string means "all logs"
-    const pattern = buildFilterPattern({ category, filterPattern });
+    // Free-text CloudWatch filters are case-sensitive. Keep category filters
+    // native, but compare an entered text phrase case-insensitively below.
+    const pattern = buildFilterPattern({ category });
     if (pattern) params.filterPattern = pattern;
 
     const cacheKey = !nextToken
-      ? `search:${logGroupName}:${JSON.stringify(params)}`
+      ? `search:${logGroupName}:${filterPattern || ""}:${JSON.stringify(params)}`
       : null; // never cache paginated "load more" calls — nextToken is one-shot
 
-    res.json(await filterLogs(client, logGroupName, params, cacheKey, category));
+    res.json(await filterLogs(client, logGroupName, params, cacheKey, category, filterPattern));
   } catch (err) {
     console.error("[logs] Search error:", err);
     res.status(500).json({ ok: false, error: err.message });
