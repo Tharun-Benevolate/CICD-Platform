@@ -131,6 +131,7 @@ app.use("/api", require("./routes/deploy"));
 app.use("/api/secrets", require("./routes/secrets"));
 app.use("/api", require("./routes/certificates"));
 app.use("/api/logs", require("./routes/logs"));
+app.use("/api/monitoring", require("./routes/monitoring"));
 
 // Source control
 app.use("/api", require("./routes/repos"));

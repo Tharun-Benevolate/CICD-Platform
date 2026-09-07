@@ -1,6 +1,11 @@
+let metricsPollInterval = null;
+let metricsPaused = false;
+
 function initMonitoringPage() {
   fetchHealthMetrics();
   initLogViewer();
+  fetchEcsMetrics();
+  startMetricsPolling();
 }
 
 window.initMonitoringPage = initMonitoringPage;
@@ -39,7 +44,7 @@ async function fetchHealthMetrics() {
   }
 
   if (icon) {
-    setTimeout(function() {
+    setTimeout(function () {
       icon.classList.remove('animate-spin');
     }, 500);
   }
@@ -142,7 +147,7 @@ async function fetchLogs() {
   try {
     let url = `/api/logs/${projectId}/${currentLogEnv}`;
     if (nextToken) url += `?nextToken=${encodeURIComponent(nextToken)}`;
-    
+
     const res = await api.get(url);
     if (res && res.ok) {
       if (res.notFound) {
@@ -152,7 +157,7 @@ async function fetchLogs() {
         appendLogs(res.events);
         nextToken = res.nextToken;
       }
-      
+
       if (indicator) {
         indicator.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:var(--color-success);display:inline-block;"></span> Connected`;
       }
@@ -178,7 +183,7 @@ function appendLogs(events) {
 
   events.forEach(e => {
     const msgLower = e.message.toLowerCase();
-    
+
     // Client-side filtering for App Errors
     if (currentLogType === 'error') {
       if (!msgLower.includes('error') && !msgLower.includes('exception') && !msgLower.includes('fail')) {
@@ -191,25 +196,25 @@ function appendLogs(events) {
     line.style.display = 'flex';
     line.style.gap = '12px';
     line.style.marginBottom = '2px';
-    
+
     const timeSpan = document.createElement('span');
     timeSpan.style.color = '#8b949e';
     timeSpan.style.flexShrink = '0';
     timeSpan.textContent = `[${time}]`;
-    
+
     const msgSpan = document.createElement('span');
     msgSpan.style.color = '#c9d1d9';
     msgSpan.style.wordBreak = 'break-all';
-    
+
     // Simple color coding for errors
     if (msgLower.includes('error') || msgLower.includes('exception') || msgLower.includes('fail')) {
       msgSpan.style.color = '#ff7b72';
     } else if (msgLower.includes('warn')) {
       msgSpan.style.color = '#d2a8ff';
     }
-    
+
     msgSpan.textContent = e.message.trimEnd();
-    
+
     line.appendChild(timeSpan);
     line.appendChild(msgSpan);
     term.appendChild(line);
@@ -229,5 +234,111 @@ function appendLogs(events) {
 document.addEventListener('projectChanged', () => {
   if (window.location.pathname.includes('/monitoring')) {
     resetLogViewer();
+    fetchEcsMetrics();
   }
 });
+
+// ─── ECS Service Metrics (CPU / Memory per environment) ───────────────────
+
+function startMetricsPolling() {
+  if (metricsPollInterval) clearInterval(metricsPollInterval);
+  metricsPollInterval = setInterval(() => {
+    if (!metricsPaused) fetchEcsMetrics();
+  }, 30000); // every 30 seconds
+}
+
+function toggleMetricsPause() {
+  metricsPaused = !metricsPaused;
+  const btn = document.getElementById('metrics-pause-btn');
+  if (!btn) return;
+  if (metricsPaused) {
+    btn.innerHTML = '<i data-lucide="play" style="width:12px;height:12px;"></i> Resume';
+  } else {
+    btn.innerHTML = '<i data-lucide="pause" style="width:12px;height:12px;"></i> Pause';
+    fetchEcsMetrics();
+  }
+  if (window.lucide) window.lucide.createIcons();
+}
+window.toggleMetricsPause = toggleMetricsPause;
+
+async function fetchEcsMetrics() {
+  const projectId = _cachedProjectId;
+  if (!projectId) return;
+
+  try {
+    const data = await api.get('/api/monitoring/' + projectId + '/metrics');
+    if (!data || !data.ok) return;
+
+    const metrics = data.metrics || {};
+    const envs = ['dev', 'uat', 'prod', 'beta'];
+
+    envs.forEach(env => {
+      const m = metrics[env];
+      const card = document.getElementById('env-card-' + env);
+      if (!card) return;
+
+      // Show beta card only if data exists
+      if (env === 'beta') {
+        card.style.display = m ? '' : 'none';
+        if (!m) return;
+      }
+
+      // CPU gauge
+      const cpuVal = m.cpu && m.cpu.avg != null ? m.cpu.avg : null;
+      const cpuBar = document.getElementById('gauge-cpu-' + env);
+      const cpuText = document.getElementById('val-cpu-' + env);
+      if (cpuBar) {
+        const pct = cpuVal != null ? Math.min(cpuVal, 100) : 0;
+        cpuBar.style.width = pct + '%';
+        cpuBar.style.background = getGaugeColor(cpuVal);
+      }
+      if (cpuText) cpuText.textContent = cpuVal != null ? cpuVal.toFixed(1) + '%' : '—';
+
+      // Memory gauge
+      const memVal = m.memory && m.memory.avg != null ? m.memory.avg : null;
+      const memBar = document.getElementById('gauge-mem-' + env);
+      const memText = document.getElementById('val-mem-' + env);
+      if (memBar) {
+        const pct = memVal != null ? Math.min(memVal, 100) : 0;
+        memBar.style.width = pct + '%';
+        memBar.style.background = getGaugeColor(memVal);
+      }
+      if (memText) memText.textContent = memVal != null ? memVal.toFixed(1) + '%' : '—';
+
+      // Service status badge
+      const statusEl = document.getElementById('env-status-' + env);
+      if (statusEl && m.service) {
+        const svc = m.service;
+        const isUp = svc.runningCount > 0 && svc.runningCount >= svc.desiredCount;
+        const dotColor = isUp ? '#22c55e' : (svc.runningCount > 0 ? '#eab308' : '#ef4444');
+        const statusText = isUp ? 'Healthy' : (svc.runningCount > 0 ? 'Degraded' : (svc.status === 'unconfigured' ? 'Not deployed' : 'Down'));
+        statusEl.innerHTML = '<span class="status-dot" style="background:' + dotColor + ';"></span> ' + statusText;
+      }
+
+      // Footer: task counts
+      const footer = document.getElementById('env-footer-' + env);
+      if (footer && m.service) {
+        const svc = m.service;
+        footer.textContent = 'Tasks: ' + (svc.runningCount || 0) + ' / ' + (svc.desiredCount || 0) + ' running' + ((svc.pendingCount || 0) > 0 ? ' (' + svc.pendingCount + ' pending)' : '');
+      }
+    });
+
+    // Update refresh badge timestamp
+    const badge = document.getElementById('metrics-refresh-badge');
+    if (badge) {
+      const now = new Date();
+      badge.textContent = 'Updated: ' + now.toLocaleTimeString();
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  } catch (err) {
+    console.error('[monitoring] Failed to fetch ECS metrics:', err);
+  }
+}
+
+function getGaugeColor(value) {
+  if (value == null) return '#6b7280';
+  if (value < 50) return '#22c55e';     // green
+  if (value < 75) return '#eab308';     // yellow
+  return '#ef4444';                      // red
+}
