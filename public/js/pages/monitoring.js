@@ -1,11 +1,24 @@
 let metricsPollInterval = null;
 let metricsPaused = false;
 
-function initMonitoringPage() {
+async function initMonitoringPage() {
+  // Resolve project ID FIRST — all other fetches depend on it
+  try {
+    const projRes = await api.get('/api/projects');
+    if (projRes && projRes.projects && projRes.projects.length > 0) {
+      const activeP = projRes.projects.find(p => p.isActive) || projRes.projects[0];
+      _cachedProjectId = activeP.id;
+    }
+  } catch (e) {
+    console.error('[monitor] Failed to resolve active project:', e);
+  }
+
+  // Now fire ALL fetches in parallel — no dependencies
   fetchHealthMetrics();
-  initLogViewer();
+  setupLogViewer(); // just binds UI, no fetches
   fetchEcsMetrics();
   startMetricsPolling();
+  startLogPolling();
 }
 
 window.initMonitoringPage = initMonitoringPage;
@@ -58,7 +71,8 @@ let logPollInterval = null;
 let nextToken = null;
 let _cachedProjectId = null; // Cached once at init to avoid repeated /api/projects DB calls on every poll
 
-async function initLogViewer() {
+// Setup UI bindings only (no network calls)
+function setupLogViewer() {
   const envBtns = document.querySelectorAll('.log-env-btn');
   envBtns.forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -86,7 +100,7 @@ async function initLogViewer() {
       btn.innerHTML = '<i data-lucide="play" style="width:14px;height:14px;"></i> Resume';
     } else {
       btn.innerHTML = '<i data-lucide="pause" style="width:14px;height:14px;"></i> Pause';
-      fetchLogs(); // immediately fetch when resumed
+      fetchLogs();
     }
     if (window.lucide) window.lucide.createIcons();
   });
@@ -95,21 +109,10 @@ async function initLogViewer() {
     const term = document.getElementById('log-terminal');
     if (term) term.innerHTML = '';
   });
+}
 
-  // Resolve project ID once at init — do NOT re-fetch on every poll cycle
-  // This prevents a /api/projects DB call firing every 3 seconds and
-  // clogging the Node.js event loop (which was causing Terraform SSE to stutter).
-  try {
-    const projRes = await api.get('/api/projects');
-    if (projRes && projRes.projects && projRes.projects.length > 0) {
-      const activeP = projRes.projects.find(p => p.isActive) || projRes.projects[0];
-      _cachedProjectId = activeP.id;
-    }
-  } catch (e) {
-    console.error('[monitor] Failed to resolve active project:', e);
-  }
-
-  // Start polling
+// Start log polling (called after project ID is resolved)
+function startLogPolling() {
   if (logPollInterval) clearInterval(logPollInterval);
   logPollInterval = setInterval(fetchLogs, 3000);
   resetLogViewer();
