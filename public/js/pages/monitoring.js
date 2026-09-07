@@ -283,27 +283,29 @@ async function fetchEcsMetrics() {
         if (!m) return;
       }
 
-      // CPU gauge
+      // CPU gauge — show as ECS units (256 units = 0.25 vCPU)
       const cpuVal = m.cpu && m.cpu.avg != null ? m.cpu.avg : null;
       const cpuBar = document.getElementById('gauge-cpu-' + env);
       const cpuText = document.getElementById('val-cpu-' + env);
       if (cpuBar) {
-        const pct = cpuVal != null ? Math.min(cpuVal, 100) : 0;
-        cpuBar.style.width = pct + '%';
-        cpuBar.style.background = getGaugeColor(cpuVal);
+        const vcpu = cpuVal != null ? cpuVal / 1024 : 0;
+        const pct = Math.min((vcpu / 4) * 100, 100); // scale: 4 vCPU = 100%
+        cpuBar.style.width = (cpuVal != null ? Math.max(pct, 3) : 0) + '%';
+        cpuBar.style.background = cpuVal != null ? 'var(--color-primary)' : '#6b7280';
       }
-      if (cpuText) cpuText.textContent = cpuVal != null ? cpuVal.toFixed(1) + '%' : '—';
+      if (cpuText) cpuText.textContent = cpuVal != null ? (cpuVal / 1024).toFixed(2) + ' vCPU' : '—';
 
-      // Memory gauge
+      // Memory gauge — show as MiB
       const memVal = m.memory && m.memory.avg != null ? m.memory.avg : null;
       const memBar = document.getElementById('gauge-mem-' + env);
       const memText = document.getElementById('val-mem-' + env);
       if (memBar) {
-        const pct = memVal != null ? Math.min(memVal, 100) : 0;
-        memBar.style.width = pct + '%';
-        memBar.style.background = getGaugeColor(memVal);
+        const gb = memVal != null ? memVal / 1024 : 0;
+        const pct = Math.min((gb / 8) * 100, 100); // scale: 8 GB = 100%
+        memBar.style.width = (memVal != null ? Math.max(pct, 3) : 0) + '%';
+        memBar.style.background = memVal != null ? '#a78bfa' : '#6b7280';
       }
-      if (memText) memText.textContent = memVal != null ? memVal.toFixed(1) + '%' : '—';
+      if (memText) memText.textContent = memVal != null ? (memVal >= 1024 ? (memVal / 1024).toFixed(1) + ' GB' : memVal + ' MiB') : '—';
 
       // Service status badge
       const statusEl = document.getElementById('env-status-' + env);
