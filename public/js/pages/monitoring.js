@@ -195,9 +195,26 @@ async function fetchLogs() {
       if (res.notFound) {
         const term = document.getElementById('log-terminal');
         term.innerHTML = `<div style="color:#8b949e;text-align:center;margin-top:40px;">No logs found yet. Log group ${res.logGroupName} does not exist or has no events.</div>`;
-      } else if (res.events && res.events.length > 0) {
-        appendLogs(res.events);
-        nextToken = res.nextToken;
+      } else {
+        // BUG FIX: nextToken must advance on every response, even when this
+        // particular poll matched zero lines. It used to only advance inside
+        // the "events.length > 0" branch, so a single quiet/empty poll left
+        // nextToken stuck at null forever — every subsequent 3s poll re-asked
+        // CloudWatch the exact same "2h ago → now" question instead of moving
+        // the window forward, which is exactly the "stuck on Fetching..."
+        // symptom. CloudWatch always hands back a token to continue from,
+        // whether or not that particular page had matches.
+        if (res.events && res.events.length > 0) {
+          appendLogs(res.events);
+        } else if (!nextToken) {
+          // First poll came back empty — let the person know we're live and
+          // simply waiting, rather than leaving a stale "Fetching..." message.
+          const term = document.getElementById('log-terminal');
+          if (term && term.innerHTML.includes('Fetching')) {
+            term.innerHTML = `<div style="color:#8b949e;text-align:center;margin-top:60px;font-size:13px;">Listening for new ${logTypeLabel(currentLogType)} logs on ${currentLogEnv.toUpperCase()}… no matching activity in the last 2 hours yet.</div>`;
+          }
+        }
+        if (res.nextToken) nextToken = res.nextToken;
       }
 
       if (indicator) {
@@ -217,7 +234,7 @@ function appendLogs(events) {
   if (!term) return;
 
   // Clear placeholder text if it exists
-  if (term.innerHTML.includes("Fetching") || term.innerHTML.includes("Select an environment") || term.innerHTML.includes("No logs found")) {
+  if (term.innerHTML.includes("Fetching") || term.innerHTML.includes("Select an environment") || term.innerHTML.includes("No logs found") || term.innerHTML.includes("Listening for")) {
     term.innerHTML = '';
   }
 
