@@ -25,10 +25,11 @@ async function initMonitoringPage() {
 
 window.initMonitoringPage = initMonitoringPage;
 
+// A full page load needs to initialise after the DOM exists. SPA navigation
+// calls initMonitoringPage from router.js, so do not auto-run in an already
+// loaded document or the same page would bind and poll twice.
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initMonitoringPage);
-} else {
-  initMonitoringPage();
 }
 
 async function fetchHealthMetrics() {
@@ -88,6 +89,7 @@ let nextToken = null;
 let _cachedProjectId = null; // Cached once at init to avoid repeated /api/projects DB calls on every poll
 let liveLineCount = 0;
 let liveErrorCount = 0;
+let activeLogRequest = 0;
 
 // ─── Per-(env,type) tab cache ────────────────────────────────────────────
 // Previously, switching env/type tabs called resetLogViewer(), which wiped
@@ -225,6 +227,9 @@ async function fetchLogs() {
     }
     return;
   }
+  // A request can finish after the user has switched environment/filter (or
+  // project). Only the latest request is allowed to alter the visible tab.
+  const requestId = ++activeLogRequest;
 
   const indicator = document.getElementById('log-status-indicator');
   if (indicator) {
@@ -236,6 +241,7 @@ async function fetchLogs() {
     if (nextToken) url += `&nextToken=${encodeURIComponent(nextToken)}`;
 
     const res = await api.get(url);
+    if (requestId !== activeLogRequest || projectId !== _cachedProjectId) return;
     if (res && res.ok) {
       if (res.notFound) {
         const term = document.getElementById('log-terminal');
@@ -267,6 +273,7 @@ async function fetchLogs() {
       }
     }
   } catch (err) {
+    if (requestId !== activeLogRequest || projectId !== _cachedProjectId) return;
     console.error("Log fetch error:", err);
     if (indicator) {
       indicator.innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:var(--color-danger);display:inline-block;"></span> Error`;
@@ -328,8 +335,22 @@ function appendLogs(events) {
 // Override project selector to refresh logs when project changes
 document.addEventListener('projectChanged', () => {
   if (window.location.pathname.includes('/monitoring')) {
-    resetLogViewer();
-    fetchEcsMetrics();
+    // Do not retain the previous project's ID after the selector changes.
+    (async () => {
+      try {
+        const res = await api.get('/api/projects');
+        const project = res?.projects?.find(p => p.isActive) || res?.projects?.[0];
+        _cachedProjectId = project?.id || null;
+      } catch (_) {
+        _cachedProjectId = null;
+      }
+      _logTabCache.clear();
+      nextToken = null;
+      liveLineCount = 0;
+      liveErrorCount = 0;
+      resetLogViewer();
+      fetchEcsMetrics();
+    })();
   }
 });
 
@@ -453,7 +474,6 @@ function getGaugeColor(value) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 let _lsEnv = 'dev', _lsNextToken = null, _lsTotalRows = 0, _lsErrorRows = 0;
-let _lsBound = false;
 
 function switchLogMode(mode) {
   const live = mode === 'live';
@@ -474,9 +494,8 @@ function _lsInitDefaults() {
 }
 
 function setupLogSearch() {
-  if (_lsBound) return; // guard against double-binding if init ever runs twice
-  _lsBound = true;
-
+  // The SPA replaces these controls on every navigation, so bind the current
+  // page's elements every time monitoring is shown.
   document.querySelectorAll('.ls-env-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       document.querySelectorAll('.ls-env-btn').forEach(b => b.classList.remove('active'));

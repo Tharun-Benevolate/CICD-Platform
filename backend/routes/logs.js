@@ -26,23 +26,48 @@ const CATEGORY_PATTERNS = {
 // ── Housekeeping noise to always mute ───────────────────────────────────────
 // Apache (and similar servers) log its own routine worker-recycling chatter
 // at "notice" level — caught SIGWINCH, "resuming normal operations", the
-// command-line echo — which otherwise floods every view every few minutes
-// with zero signal. These are excluded from every preset category *and* from
-// the default "All" view. An explicit typed search (Search Logs text box)
-// always overrides this, since that's the user deliberately asking to see
-// something specific.
+// command-line echo — which otherwise floods the default "All" view every
+// few minutes with zero signal. Preset categories cannot combine exclusions
+// with CloudWatch optional terms, so those views use their strict severity
+// match instead. The response-level check below suppresses this runtime noise
+// consistently for all views, including explicit searches.
 const NOISE_EXCLUDE_TERMS = [
   '-SIGWINCH',
   '-"resuming normal operations"',
   '-"Command line:"',
 ];
 
+// These are Apache/httpd process-management notices, not application events.
+// They are repeatedly emitted when the container's parent process cycles and
+// otherwise drown out the actual task output in every environment.
+function isRoutineRuntimeNoise(message) {
+  const text = String(message || "").toLowerCase();
+  return text.includes("caught sigwinch") ||
+    text.includes("resuming normal operations") ||
+    text.includes("command line: 'httpd -d foreground'");
+}
+
+function normaliseCategory(category) {
+  const value = (category || "").toLowerCase();
+  return ["error", "warn", "info"].includes(value) ? value : "";
+}
+
+function classifyLogLevel(message) {
+  const text = String(message || "").toLowerCase();
+  if (/\b(error|exception|fatal|fail(?:ed|ure)?|panic)\b/.test(text) || /\b500\b/.test(text)) return "error";
+  if (/\b(warn(?:ing)?|deprecated)\b/.test(text) || /\b429\b/.test(text)) return "warn";
+  if (/\b(info|notice|listening|started|healthy)\b/.test(text)) return "info";
+  return "other";
+}
+
 function buildFilterPattern({ category, filterPattern }) {
   const custom = (filterPattern || "").trim();
-  if (custom) return custom; // explicit text search always wins — never mute what the user typed
-  const preset = CATEGORY_PATTERNS[(category || "").toLowerCase()];
+  if (custom) return custom; // explicit text search controls the CloudWatch query
+  const preset = CATEGORY_PATTERNS[normaliseCategory(category)];
   const noise = NOISE_EXCLUDE_TERMS.join(" ");
-  return preset ? `${preset} ${noise}` : noise;
+  // CloudWatch ignores optional (`?`) terms when they are combined with
+  // exclusions. Do not combine them: doing so returns unrelated log lines.
+  return preset || noise;
 }
 
 // ── Tiny short-lived response cache ─────────────────────────────────────────
@@ -68,7 +93,7 @@ function cacheSet(key, value) {
 }
 
 // Shared helper to call FilterLogEvents
-async function filterLogs(client, logGroupName, params, cacheKey) {
+async function filterLogs(client, logGroupName, params, cacheKey, category) {
   if (cacheKey) {
     const cached = cacheGet(cacheKey);
     if (cached) return { ...cached, cached: true };
@@ -77,13 +102,20 @@ async function filterLogs(client, logGroupName, params, cacheKey) {
   try {
     const command = new FilterLogEventsCommand({ logGroupName, interleaved: true, ...params });
     const response = await client.send(command);
+    const requestedCategory = normaliseCategory(category);
+    const events = (response.events || []).map(e => ({
+      timestamp: e.timestamp,
+      message: e.message,
+      logStreamName: e.logStreamName
+    }));
     const result = {
       ok: true,
-      events: (response.events || []).map(e => ({
-        timestamp: e.timestamp,
-        message: e.message,
-        logStreamName: e.logStreamName
-      })),
+      // Verify the category after AWS responds as a safety net. A warning
+      // must never appear in Errors & Fails, even if a log format is unusual.
+      events: events.filter(event => {
+        if (isRoutineRuntimeNoise(event.message)) return false;
+        return !requestedCategory || classifyLogLevel(event.message) === requestedCategory;
+      }),
       nextToken: response.nextToken,
       logGroupName
     };
@@ -133,7 +165,7 @@ router.get("/search/:projectId/:env", auth.requireAuth, async (req, res) => {
       ? `search:${logGroupName}:${JSON.stringify(params)}`
       : null; // never cache paginated "load more" calls — nextToken is one-shot
 
-    res.json(await filterLogs(client, logGroupName, params, cacheKey));
+    res.json(await filterLogs(client, logGroupName, params, cacheKey, category));
   } catch (err) {
     console.error("[logs] Search error:", err);
     res.status(500).json({ ok: false, error: err.message });
@@ -180,7 +212,7 @@ router.get("/:projectId/:env", auth.requireAuth, async (req, res) => {
       ? `live:${logGroupName}:${type || "all"}:${params.startTime}`
       : null;
 
-    res.json(await filterLogs(client, logGroupName, params, cacheKey));
+    res.json(await filterLogs(client, logGroupName, params, cacheKey, type));
   } catch (err) {
     console.error("[logs] Live fetch error:", err);
     res.status(500).json({ ok: false, error: err.message });

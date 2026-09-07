@@ -160,10 +160,22 @@
   }
 
   function loadJS(src, callback) {
-    var cleanSrc = src.split('?')[0] + '?t=' + Date.now();
+    var baseSrc = src.split('?')[0];
+    // Page scripts expose init functions globally. Reloading one on return
+    // redeclares top-level let/const state and can stop the page from loading.
+    // Reuse the loaded script and initialise the replacement DOM fragment.
+    // The first page's script is included by layout.ejs rather than this
+    // loader, so recognise that existing script too.
+    if (loadedJS[baseSrc] || document.querySelector('script[src^="' + baseSrc + '"]')) {
+      loadedJS[baseSrc] = true;
+      Promise.resolve().then(function() { if (callback) callback(); });
+      return;
+    }
+    var cleanSrc = baseSrc + '?t=' + Date.now();
     var script = document.createElement('script');
     script.src = cleanSrc;
     script.onload = function() {
+      loadedJS[baseSrc] = true;
       if (callback) callback();
     };
     document.body.appendChild(script);
