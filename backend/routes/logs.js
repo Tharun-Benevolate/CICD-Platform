@@ -23,11 +23,26 @@ const CATEGORY_PATTERNS = {
   info:  '?INFO ?Info ?info ?notice ?Notice ?listening ?Listening ?started ?Started ?healthy ?Healthy',
 };
 
+// ── Housekeeping noise to always mute ───────────────────────────────────────
+// Apache (and similar servers) log its own routine worker-recycling chatter
+// at "notice" level — caught SIGWINCH, "resuming normal operations", the
+// command-line echo — which otherwise floods every view every few minutes
+// with zero signal. These are excluded from every preset category *and* from
+// the default "All" view. An explicit typed search (Search Logs text box)
+// always overrides this, since that's the user deliberately asking to see
+// something specific.
+const NOISE_EXCLUDE_TERMS = [
+  '-SIGWINCH',
+  '-"resuming normal operations"',
+  '-"Command line:"',
+];
+
 function buildFilterPattern({ category, filterPattern }) {
   const custom = (filterPattern || "").trim();
-  if (custom) return custom; // explicit text search always wins
+  if (custom) return custom; // explicit text search always wins — never mute what the user typed
   const preset = CATEGORY_PATTERNS[(category || "").toLowerCase()];
-  return preset || "";
+  const noise = NOISE_EXCLUDE_TERMS.join(" ");
+  return preset ? `${preset} ${noise}` : noise;
 }
 
 // ── Tiny short-lived response cache ─────────────────────────────────────────
