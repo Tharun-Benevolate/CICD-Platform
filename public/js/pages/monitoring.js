@@ -15,7 +15,9 @@ async function initMonitoringPage() {
 
   // Now fire ALL fetches in parallel — no dependencies
   fetchHealthMetrics();
-  setupLogViewer(); // just binds UI, no fetches
+  setupLogViewer();   // Live-mode UI bindings
+  setupLogSearch();   // Search-mode UI bindings (moved here so it actually
+                       // runs on client-side SPA navigation, not just hard reload)
   fetchEcsMetrics();
   startMetricsPolling();
   startLogPolling();
@@ -62,14 +64,30 @@ async function fetchHealthMetrics() {
     }, 500);
   }
 }
+window.fetchHealthMetrics = fetchHealthMetrics;
 
-// ─── ECS Task Log Viewer Logic ───
+// ─── Shared log-level classifier (used by both Live terminal & Search table) ─
+// This is only for visual badges now — the actual All/Application/Warnings/
+// Errors filtering happens server-side in CloudWatch (see backend/routes/logs.js),
+// which is both faster (smaller payloads) and more accurate (scans the full
+// time range, not just whatever page happened to be fetched).
+function classifyLogLevel(msg) {
+  const m = (msg || '').toLowerCase();
+  if (m.includes('error') || m.includes('exception') || m.includes('fatal') || m.includes('fail') || m.includes('panic')) return 'error';
+  if (m.includes('warn') || m.includes('deprecated')) return 'warn';
+  if (m.includes('info') || m.includes('notice') || m.includes('listening') || m.includes('started') || m.includes('healthy')) return 'info';
+  return 'other';
+}
+
+// ─── ECS Task Log Viewer Logic (Live Stream mode) ───
 let currentLogEnv = 'dev';
-let currentLogType = 'all';
+let currentLogType = 'all'; // all | info | warn | error
 let isLogPaused = false;
 let logPollInterval = null;
 let nextToken = null;
 let _cachedProjectId = null; // Cached once at init to avoid repeated /api/projects DB calls on every poll
+let liveLineCount = 0;
+let liveErrorCount = 0;
 
 // Setup UI bindings only (no network calls)
 function setupLogViewer() {
@@ -108,6 +126,9 @@ function setupLogViewer() {
   document.getElementById('logs-clear-btn')?.addEventListener('click', () => {
     const term = document.getElementById('log-terminal');
     if (term) term.innerHTML = '';
+    liveLineCount = 0;
+    liveErrorCount = 0;
+    updateLiveCountBadge();
   });
 }
 
@@ -121,12 +142,30 @@ function startLogPolling() {
 function resetLogViewer() {
   nextToken = null;
   isLogPaused = false;
+  liveLineCount = 0;
+  liveErrorCount = 0;
+  updateLiveCountBadge();
   const term = document.getElementById('log-terminal');
-  if (term) term.innerHTML = `<div style="color:#8b949e;text-align:center;margin-top:40px;">Fetching logs for ${currentLogEnv.toUpperCase()}...</div>`;
+  if (term) term.innerHTML = `<div style="color:#8b949e;text-align:center;margin-top:40px;">Fetching ${logTypeLabel(currentLogType)} logs for ${currentLogEnv.toUpperCase()}...</div>`;
   const btn = document.getElementById('logs-play-pause-btn');
   if (btn) btn.innerHTML = '<i data-lucide="pause" style="width:14px;height:14px;"></i> Pause';
   if (window.lucide) window.lucide.createIcons();
   fetchLogs();
+}
+
+function logTypeLabel(type) {
+  if (type === 'error') return 'error & fail';
+  if (type === 'warn') return 'warning';
+  if (type === 'info') return 'application';
+  return 'all';
+}
+
+function updateLiveCountBadge() {
+  const el = document.getElementById('log-line-count');
+  if (!el) return;
+  el.textContent = liveErrorCount > 0
+    ? `${liveLineCount} lines · ${liveErrorCount} errors`
+    : (liveLineCount > 0 ? `${liveLineCount} lines` : '');
 }
 
 async function fetchLogs() {
@@ -136,7 +175,7 @@ async function fetchLogs() {
   const projectId = _cachedProjectId;
   if (!projectId) {
     const term = document.getElementById('log-terminal');
-    if (term && term.innerHTML.includes("Fetching logs")) {
+    if (term && term.innerHTML.includes("Fetching")) {
       term.innerHTML = `<div style="color:#8b949e;text-align:center;margin-top:40px;">Please create or select a project first.</div>`;
     }
     return;
@@ -148,8 +187,8 @@ async function fetchLogs() {
   }
 
   try {
-    let url = `/api/logs/${projectId}/${currentLogEnv}`;
-    if (nextToken) url += `?nextToken=${encodeURIComponent(nextToken)}`;
+    let url = `/api/logs/${projectId}/${currentLogEnv}?type=${encodeURIComponent(currentLogType)}`;
+    if (nextToken) url += `&nextToken=${encodeURIComponent(nextToken)}`;
 
     const res = await api.get(url);
     if (res && res.ok) {
@@ -177,22 +216,17 @@ function appendLogs(events) {
   const term = document.getElementById('log-terminal');
   if (!term) return;
 
-  // Clear "Fetching..." placeholder if it exists
-  if (term.innerHTML.includes("Fetching logs") || term.innerHTML.includes("Select an environment") || term.innerHTML.includes("No logs found")) {
+  // Clear placeholder text if it exists
+  if (term.innerHTML.includes("Fetching") || term.innerHTML.includes("Select an environment") || term.innerHTML.includes("No logs found")) {
     term.innerHTML = '';
   }
 
   const isScrolledToBottom = term.scrollHeight - term.clientHeight <= term.scrollTop + 10;
 
   events.forEach(e => {
-    const msgLower = e.message.toLowerCase();
-
-    // Client-side filtering for App Errors
-    if (currentLogType === 'error') {
-      if (!msgLower.includes('error') && !msgLower.includes('exception') && !msgLower.includes('fail')) {
-        return; // skip non-errors
-      }
-    }
+    const level = classifyLogLevel(e.message);
+    liveLineCount++;
+    if (level === 'error') liveErrorCount++;
 
     const time = new Date(e.timestamp).toLocaleTimeString();
     const line = document.createElement('div');
@@ -206,16 +240,10 @@ function appendLogs(events) {
     timeSpan.textContent = `[${time}]`;
 
     const msgSpan = document.createElement('span');
-    msgSpan.style.color = '#c9d1d9';
     msgSpan.style.wordBreak = 'break-all';
-
-    // Simple color coding for errors
-    if (msgLower.includes('error') || msgLower.includes('exception') || msgLower.includes('fail')) {
-      msgSpan.style.color = '#ff7b72';
-    } else if (msgLower.includes('warn')) {
-      msgSpan.style.color = '#d2a8ff';
-    }
-
+    if (level === 'error') msgSpan.style.color = '#ff7b72';
+    else if (level === 'warn') msgSpan.style.color = '#d2a8ff';
+    else msgSpan.style.color = '#c9d1d9';
     msgSpan.textContent = e.message.trimEnd();
 
     line.appendChild(timeSpan);
@@ -227,6 +255,8 @@ function appendLogs(events) {
   while (term.children.length > 1000) {
     term.removeChild(term.firstChild);
   }
+
+  updateLiveCountBadge();
 
   if (isScrolledToBottom) {
     term.scrollTop = term.scrollHeight;
@@ -347,3 +377,165 @@ function getGaugeColor(value) {
   if (value < 75) return '#eab308';     // yellow
   return '#ef4444';                      // red
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Search Logs mode
+// NOTE: this used to live in an inline <script> at the bottom of the
+// monitoring.ejs partial. That worked on a hard page reload, but this app's
+// SPA router (public/js/router.js) swaps pages in via `innerHTML`, and
+// browsers never execute <script> tags inserted that way — so navigating to
+// Monitoring from the sidebar silently left every Search Logs handler
+// undefined ("Search Logs is not working"). Living in this page-JS file
+// fixes that: the router always loads it with a real <script src="...">,
+// which does execute, on every navigation.
+// ═══════════════════════════════════════════════════════════════════════════
+
+let _lsEnv = 'dev', _lsNextToken = null, _lsTotalRows = 0, _lsErrorRows = 0;
+let _lsBound = false;
+
+function switchLogMode(mode) {
+  const live = mode === 'live';
+  document.getElementById('panel-live').style.display   = live ? '' : 'none';
+  document.getElementById('panel-search').style.display = live ? 'none' : '';
+  document.getElementById('mode-live-btn').classList.toggle('active', live);
+  document.getElementById('mode-search-btn').classList.toggle('active', !live);
+  if (!live) _lsInitDefaults();
+}
+window.switchLogMode = switchLogMode;
+
+function _lsInitDefaults() {
+  const now = new Date(), from = new Date(now - 864e5);
+  const fmt = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const fe = document.getElementById('ls-from'), te = document.getElementById('ls-to');
+  if (fe && !fe.value) fe.value = fmt(from);
+  if (te && !te.value) te.value = fmt(now);
+}
+
+function setupLogSearch() {
+  if (_lsBound) return; // guard against double-binding if init ever runs twice
+  _lsBound = true;
+
+  document.querySelectorAll('.ls-env-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.ls-env-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _lsEnv = btn.dataset.env;
+    });
+  });
+  document.getElementById('ls-text')?.addEventListener('keydown', e => { if (e.key === 'Enter') runLogSearch(); });
+}
+
+function _lsShowOnly(id) {
+  ['ls-placeholder', 'ls-loading', 'ls-table-wrap', 'ls-empty', 'ls-error'].forEach(el => {
+    const node = document.getElementById(el);
+    if (!node) return;
+    const flex = ['ls-loading', 'ls-empty', 'ls-error'].includes(el);
+    node.style.display = el === id ? (flex ? 'flex' : '') : 'none';
+  });
+}
+
+function _lsRenderRows(events, append) {
+  const tbody = document.getElementById('ls-table-body');
+  if (!tbody) return;
+  if (!append) { tbody.innerHTML = ''; }
+  // Filtering by category already happened server-side (CloudWatch native
+  // filter pattern) — here we only classify for the colored badge, we don't
+  // re-filter, so results always match what the count says.
+  events.forEach(e => {
+    const cat = classifyLogLevel(e.message);
+    if (cat === 'error') _lsErrorRows++;
+    const ts     = new Date(e.timestamp).toLocaleString(undefined, { month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    const stream = (e.logStreamName || '').split('/').pop() || '—';
+    const msg    = e.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${ts}</td><td><span class="ls-badge ls-badge-${cat}">${cat}</span></td><td><span class="ls-stream" title="${e.logStreamName || ''}">${stream}</span></td><td>${msg}</td>`;
+    tbody.appendChild(tr);
+    _lsTotalRows++;
+  });
+}
+
+async function runLogSearch(append) {
+  if (!append) { _lsNextToken = null; _lsTotalRows = 0; _lsErrorRows = 0; }
+  const projectId = _cachedProjectId;
+  if (!projectId) {
+    _lsShowOnly('ls-error');
+    document.getElementById('ls-error-msg').textContent = 'No active project. Switch from the top-left dropdown.';
+    return;
+  }
+  const fromVal  = document.getElementById('ls-from')?.value;
+  const toVal    = document.getElementById('ls-to')?.value;
+  const text     = (document.getElementById('ls-text')?.value || '').trim();
+  const category = document.getElementById('ls-category')?.value || '';
+  const params   = new URLSearchParams();
+  if (fromVal)  params.set('startTime', new Date(fromVal).getTime());
+  if (toVal)    params.set('endTime', new Date(toVal).getTime());
+  if (text)     params.set('filterPattern', text);
+  else if (category) params.set('category', category);
+  if (_lsNextToken) params.set('nextToken', _lsNextToken);
+
+  const btn = document.getElementById('ls-search-btn');
+  const lmb = document.getElementById('ls-load-more-btn');
+  if (!append) { _lsShowOnly('ls-loading'); if (btn) btn.disabled = true; }
+  if (lmb) { lmb.style.display = 'none'; lmb.disabled = true; }
+
+  try {
+    const data = await api.get(`/api/logs/search/${projectId}/${_lsEnv}?${params}`);
+    if (!data?.ok) throw new Error(data?.error || 'Server error');
+    if (data.notFound || (!data.events?.length && !append)) { _lsShowOnly('ls-empty'); return; }
+    _lsNextToken = data.nextToken || null;
+    _lsRenderRows(data.events || [], append);
+    _lsShowOnly('ls-table-wrap');
+    const countEl = document.getElementById('ls-result-count');
+    if (countEl) countEl.textContent = `${_lsTotalRows} result${_lsTotalRows !== 1 ? 's' : ''}${_lsNextToken ? ' · more available' : ''}`;
+    const errEl = document.getElementById('ls-error-count');
+    if (errEl) {
+      if (_lsErrorRows > 0) { errEl.style.display = ''; errEl.textContent = `${_lsErrorRows} error${_lsErrorRows !== 1 ? 's' : ''} in view`; }
+      else { errEl.style.display = 'none'; }
+    }
+    if (lmb) { lmb.style.display = _lsNextToken ? '' : 'none'; lmb.disabled = false; }
+  } catch (err) {
+    _lsShowOnly('ls-error');
+    document.getElementById('ls-error-msg').textContent = `Search failed: ${err.message}`;
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+window.runLogSearch = runLogSearch;
+
+function loadMoreLogs() { if (_lsNextToken) runLogSearch(true); }
+window.loadMoreLogs = loadMoreLogs;
+
+function lsReset() {
+  ['ls-from', 'ls-to', 'ls-text'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  const ca = document.getElementById('ls-category'); if (ca) ca.value = '';
+  _lsNextToken = null; _lsTotalRows = 0; _lsErrorRows = 0;
+  _lsInitDefaults();
+  _lsShowOnly('ls-placeholder');
+  const lmb = document.getElementById('ls-load-more-btn'); if (lmb) lmb.style.display = 'none';
+  const errEl = document.getElementById('ls-error-count'); if (errEl) errEl.style.display = 'none';
+}
+window.lsReset = lsReset;
+
+// Export currently-rendered search results as a plain-text .log file
+function exportLogResults() {
+  const rows = document.querySelectorAll('#ls-table-body tr');
+  if (!rows.length) return;
+  const lines = Array.from(rows).map(tr => {
+    const cells = tr.querySelectorAll('td');
+    const when   = cells[0]?.textContent || '';
+    const cat    = cells[1]?.textContent.trim() || '';
+    const stream = cells[2]?.textContent.trim() || '';
+    const msg    = cells[3]?.textContent || '';
+    return `[${when}] [${cat.toUpperCase()}] [${stream}] ${msg}`;
+  });
+  const blob = new Blob([lines.join('\n')], { type: 'text/plain' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${_lsEnv}-logs-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.log`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+window.exportLogResults = exportLogResults;

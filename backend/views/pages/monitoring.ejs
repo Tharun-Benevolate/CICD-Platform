@@ -182,10 +182,13 @@
               <span style="font-size:11px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.05em;">FILTER</span>
               <div class="log-pill-group">
                 <button class="log-type-btn active" data-type="all">All</button>
-                <button class="log-type-btn" data-type="error">App Errors</button>
+                <button class="log-type-btn" data-type="info">Application</button>
+                <button class="log-type-btn" data-type="warn">Warnings</button>
+                <button class="log-type-btn" data-type="error">Errors &amp; Fails</button>
               </div>
             </div>
             <div style="display:flex;align-items:center;gap:8px;">
+              <span id="log-line-count" style="font-size:11.5px;color:var(--color-text-tertiary);"></span>
               <span id="log-status-indicator" style="font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;gap:5px;">
                 <span style="width:7px;height:7px;border-radius:50%;background:var(--color-text-tertiary);display:inline-block;"></span>Waiting...
               </span>
@@ -220,20 +223,20 @@
             <!-- Input fields row -->
             <div style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;">
               <div class="ls-field">
-                <label class="ls-label">FROM (CST)</label>
+                <label class="ls-label">FROM (Local time)</label>
                 <input type="datetime-local" id="ls-from" class="ls-input">
               </div>
               <div class="ls-field">
-                <label class="ls-label">TO (CST)</label>
+                <label class="ls-label">TO (Local time)</label>
                 <input type="datetime-local" id="ls-to" class="ls-input">
               </div>
               <div class="ls-field">
                 <label class="ls-label">Category</label>
-                <select id="ls-category" class="ls-input" style="min-width:110px;cursor:pointer;">
+                <select id="ls-category" class="ls-input" style="min-width:130px;cursor:pointer;">
                   <option value="">All</option>
-                  <option value="error">Error</option>
+                  <option value="info">Application</option>
                   <option value="warn">Warning</option>
-                  <option value="info">Info</option>
+                  <option value="error">Errors &amp; Fails</option>
                 </select>
               </div>
               <div class="ls-field" style="flex:1;min-width:220px;">
@@ -267,8 +270,16 @@
             </div>
             <div id="ls-table-wrap" style="display:none;">
               <div style="padding:10px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--color-border);background:var(--color-bg);">
-                <span id="ls-result-count" style="font-size:12px;font-weight:600;color:var(--color-text-secondary);"></span>
-                <button id="ls-load-more-btn" onclick="loadMoreLogs()" style="display:none;padding:5px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:6px;font-size:12px;font-weight:600;color:var(--color-text-primary);cursor:pointer;">Load More</button>
+                <div style="display:flex;align-items:center;gap:14px;">
+                  <span id="ls-result-count" style="font-size:12px;font-weight:600;color:var(--color-text-secondary);"></span>
+                  <span id="ls-error-count" style="font-size:11.5px;font-weight:700;color:#f87171;display:none;"></span>
+                </div>
+                <div style="display:flex;gap:8px;">
+                  <button id="ls-export-btn" onclick="exportLogResults()" style="padding:5px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:6px;font-size:12px;font-weight:600;color:var(--color-text-primary);cursor:pointer;display:flex;align-items:center;gap:5px;">
+                    <i data-lucide="download" style="width:12px;height:12px;"></i> Export
+                  </button>
+                  <button id="ls-load-more-btn" onclick="loadMoreLogs()" style="display:none;padding:5px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:6px;font-size:12px;font-weight:600;color:var(--color-text-primary);cursor:pointer;">Load More</button>
+                </div>
               </div>
               <div style="overflow-x:auto;">
                 <table class="ls-table">
@@ -383,6 +394,10 @@
   #ls-loading, #ls-empty, #ls-error { display: flex; }
   input[type="datetime-local"]::-webkit-calendar-picker-indicator { filter: invert(.6); cursor: pointer; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  .ls-badge-active-filter {
+    font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+    background: var(--color-primary-ghost, rgba(99,102,241,.12)); color: var(--color-primary);
+  }
 
   /* ── ECS Metric Cards ─────────────────────────────────────────────── */
   .env-metric-card {
@@ -434,120 +449,3 @@
   }
 </style>
 
-<script>
-// ── Mode Switch ────────────────────────────────────────────────────────────
-function switchLogMode(mode) {
-  const live = mode === 'live';
-  document.getElementById('panel-live').style.display   = live ? '' : 'none';
-  document.getElementById('panel-search').style.display = live ? 'none' : '';
-  document.getElementById('mode-live-btn').classList.toggle('active', live);
-  document.getElementById('mode-search-btn').classList.toggle('active', !live);
-  if (!live) _lsInitDefaults();
-}
-
-// ── Log Search ─────────────────────────────────────────────────────────────
-let _lsEnv = 'dev', _lsNextToken = null, _lsTotalRows = 0;
-
-function _lsInitDefaults() {
-  const now = new Date(), from = new Date(now - 864e5);
-  const fmt = d => d.toISOString().slice(0, 16);
-  const fe = document.getElementById('ls-from'), te = document.getElementById('ls-to');
-  if (fe && !fe.value) fe.value = fmt(from);
-  if (te && !te.value) te.value = fmt(now);
-}
-
-document.querySelectorAll('.ls-env-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.ls-env-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    _lsEnv = btn.dataset.env;
-  });
-});
-document.getElementById('ls-text')?.addEventListener('keydown', e => { if (e.key === 'Enter') runLogSearch(); });
-
-function _lsShowOnly(id) {
-  ['ls-placeholder','ls-loading','ls-table-wrap','ls-empty','ls-error'].forEach(el => {
-    const node = document.getElementById(el);
-    if (!node) return;
-    const flex = ['ls-loading','ls-empty','ls-error'].includes(el);
-    node.style.display = el === id ? (flex ? 'flex' : '') : 'none';
-  });
-}
-
-function _lsCat(msg) {
-  const m = msg.toLowerCase();
-  if (m.includes('error') || m.includes('exception') || m.includes('fatal') || m.includes('fail')) return 'error';
-  if (m.includes('warn') || m.includes('warning') || m.includes('deprecated')) return 'warn';
-  if (m.includes('info') || m.includes('notice') || m.includes('listening') || m.includes('started')) return 'info';
-  return 'other';
-}
-
-function _lsRenderRows(events, append) {
-  const tbody = document.getElementById('ls-table-body');
-  if (!tbody) return;
-  if (!append) tbody.innerHTML = '';
-  const catFilter = document.getElementById('ls-category')?.value || '';
-  events.forEach(e => {
-    const cat = _lsCat(e.message);
-    if (catFilter && cat !== catFilter) return;
-    const ts     = new Date(e.timestamp).toLocaleString(undefined, { month:'short', day:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit', hour12: false });
-    const stream = (e.logStreamName || '').split('/').pop() || '—';
-    const msg    = e.message.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${ts}</td><td><span class="ls-badge ls-badge-${cat}">${cat}</span></td><td><span class="ls-stream" title="${e.logStreamName||''}">${stream}</span></td><td>${msg}</td>`;
-    tbody.appendChild(tr);
-    _lsTotalRows++;
-  });
-}
-
-async function runLogSearch(append) {
-  if (!append) { _lsNextToken = null; _lsTotalRows = 0; }
-  const projectId = _cachedProjectId;
-  if (!projectId) {
-    _lsShowOnly('ls-error');
-    document.getElementById('ls-error-msg').textContent = 'No active project. Switch from the top-left dropdown.';
-    return;
-  }
-  const fromVal = document.getElementById('ls-from')?.value;
-  const toVal   = document.getElementById('ls-to')?.value;
-  const text    = (document.getElementById('ls-text')?.value || '').trim();
-  const params  = new URLSearchParams();
-  if (fromVal) params.set('startTime', new Date(fromVal).getTime());
-  if (toVal)   params.set('endTime',   new Date(toVal).getTime());
-  if (text)    params.set('filterPattern', text);
-  if (_lsNextToken) params.set('nextToken', _lsNextToken);
-
-  const btn = document.getElementById('ls-search-btn');
-  const lmb = document.getElementById('ls-load-more-btn');
-  if (!append) { _lsShowOnly('ls-loading'); if (btn) btn.disabled = true; }
-  if (lmb) { lmb.style.display = 'none'; lmb.disabled = true; }
-
-  try {
-    const data = await api.get(`/api/logs/search/${projectId}/${_lsEnv}?${params}`);
-    if (!data?.ok) throw new Error(data?.error || 'Server error');
-    if (data.notFound || (!data.events?.length && !append)) { _lsShowOnly('ls-empty'); return; }
-    _lsNextToken = data.nextToken || null;
-    _lsRenderRows(data.events || [], append);
-    _lsShowOnly('ls-table-wrap');
-    const countEl = document.getElementById('ls-result-count');
-    if (countEl) countEl.textContent = `${_lsTotalRows} result${_lsTotalRows !== 1 ? 's' : ''}${_lsNextToken ? ' · more available' : ''}`;
-    if (lmb) { lmb.style.display = _lsNextToken ? '' : 'none'; lmb.disabled = false; }
-  } catch (err) {
-    _lsShowOnly('ls-error');
-    document.getElementById('ls-error-msg').textContent = `Search failed: ${err.message}`;
-  } finally {
-    if (btn) btn.disabled = false;
-  }
-}
-
-function loadMoreLogs() { if (_lsNextToken) runLogSearch(true); }
-
-function lsReset() {
-  ['ls-from','ls-to','ls-text'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-  const ca = document.getElementById('ls-category'); if (ca) ca.value = '';
-  _lsNextToken = null; _lsTotalRows = 0;
-  _lsInitDefaults();
-  _lsShowOnly('ls-placeholder');
-  const lmb = document.getElementById('ls-load-more-btn'); if (lmb) lmb.style.display = 'none';
-}
-</script>
