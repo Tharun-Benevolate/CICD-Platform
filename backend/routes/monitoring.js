@@ -2,10 +2,6 @@ const router = require("express").Router();
 const auth = require("../middleware/auth");
 const { requireProject } = require("./projects");
 const {
-  CloudWatchClient, GetMetricStatisticsCommand,
-  ListMetricsCommand
-} = require("@aws-sdk/client-cloudwatch");
-const {
   ECSClient, DescribeServicesCommand, ListTasksCommand,
   DescribeTasksCommand
 } = require("@aws-sdk/client-ecs");
@@ -24,41 +20,11 @@ function resolveEnvConfig(project, env) {
   return { cluster, service: serviceMap[env] || "" };
 }
 
-// ─── Helper: fetch CloudWatch metric for an ECS service ────────────────────
-async function fetchEcsMetric(cwClient, namespace, metricName, cluster, service, periodSec = 60) {
-  const now = new Date();
-  const start = new Date(now.getTime() - 5 * 60 * 1000); // last 5 min
-  const params = {
-    Namespace:  namespace,
-    MetricName: metricName,
-    Dimensions: [
-      { Name: "ClusterName",  Value: cluster },
-      { Name: "ServiceName",  Value: service },
-    ],
-    StartTime: start,
-    EndTime:   now,
-    Period:     periodSec,
-    Statistics: ["Average", "Maximum"],
-  };
-  try {
-    const resp = await cwClient.send(new GetMetricStatisticsCommand(params));
-    const datapoints = (resp.Datapoints || []).sort((a, b) => a.Timestamp - b.Timestamp);
-    if (datapoints.length === 0) return { avg: null, max: null, unit: null };
-    const latest = datapoints[datapoints.length - 1];
-    return {
-      avg:   latest.Average   != null ? Math.round(latest.Average * 100) / 100 : null,
-      max:   latest.Maximum   != null ? Math.round(latest.Maximum * 100) / 100 : null,
-      unit:  latest.Unit || "None",
-      timestamp: latest.Timestamp,
-    };
-  } catch (err) {
-    // Metrics may not exist yet if service just launched
-    return { avg: null, max: null, unit: null, error: err.message };
-  }
-}
-
 // ─── GET /api/monitoring/:projectId/metrics ──────────────────────────────
-// Returns CPU/Memory utilization for all environments of the active project
+// Returns service health + task resource allocations for all envs
+// NOTE: CPU/Memory *utilization percentages* require @aws-sdk/client-cloudwatch
+// which is not yet installed. We show service health + task resource reservations.
+// Once client-cloudwatch is added, we can fetch real utilization.
 router.get("/:projectId/metrics", auth.requireAuth, async (req, res) => {
   try {
     req.query.projectId = req.params.projectId;
@@ -66,7 +32,6 @@ router.get("/:projectId/metrics", auth.requireAuth, async (req, res) => {
     if (!project) return;
 
     const region = project.region || "us-east-1";
-    const cwClient = new CloudWatchClient({ region });
     const ecsClient = new ECSClient({ region });
 
     const envs = ["dev", "uat", "prod"];
@@ -83,14 +48,9 @@ router.get("/:projectId/metrics", auth.requireAuth, async (req, res) => {
         continue;
       }
 
-      // Fetch CPU & Memory metrics in parallel
-      const [cpu, memory] = await Promise.all([
-        fetchEcsMetric(cwClient, "AWS/ECS", "CPUUtilization", cluster, service),
-        fetchEcsMetric(cwClient, "AWS/ECS", "MemoryUtilization", cluster, service),
-      ]);
-
       // Get service health (running vs desired)
       let serviceInfo = { desiredCount: 0, runningCount: 0, status: "unknown", taskCount: 0 };
+      let taskDetails = [];
       try {
         const svcResp = await ecsClient.send(new DescribeServicesCommand({
           cluster: cluster,
@@ -99,20 +59,73 @@ router.get("/:projectId/metrics", auth.requireAuth, async (req, res) => {
         const svc = (svcResp.services || [])[0];
         if (svc) {
           serviceInfo = {
-            desiredCount:  svc.desiredCount  || 0,
-            runningCount:  svc.runningCount  ||  0,
-            pendingCount:  svc.pendingCount  ||  0,
-            status:        svc.status        || "UNKNOWN",
-            launchType:    svc.launchType    || "FARGATE",
+            desiredCount:   svc.desiredCount   || 0,
+            runningCount:   svc.runningCount   || 0,
+            pendingCount:   svc.pendingCount   || 0,
+            status:         svc.status         || "UNKNOWN",
+            launchType:     svc.launchType     || "FARGATE",
             taskDefinition: svc.taskDefinition || "",
-            healthCheckGrace: svc.healthCheckGroupConfiguration || null,
           };
         }
       } catch (svcErr) {
         serviceInfo.error = svcErr.message;
       }
 
-      results[env] = { cpu, memory, service: serviceInfo };
+      // Get running tasks and their CPU/memory reservations
+      if (serviceInfo.runningCount > 0) {
+        try {
+          const listResp = await ecsClient.send(new ListTasksCommand({
+            cluster,
+            serviceName: service,
+            desiredStatus: "RUNNING",
+          }));
+          const taskArns = listResp.taskArns || [];
+          if (taskArns.length > 0) {
+            const descResp = await ecsClient.send(new DescribeTasksCommand({
+              cluster,
+              tasks: taskArns,
+            }));
+            taskDetails = (descResp.tasks || []).map(t => ({
+              taskArn:        t.taskArn || "",
+              lastStatus:     t.lastStatus || "",
+              healthStatus:   t.healthStatus || "UNKNOWN",
+              cpu:            t.cpu || "",
+              memory:         t.memory || "",
+              launchType:     t.launchType || "",
+              createdAt:      t.createdAt || null,
+              containers:     (t.containers || []).map(c => ({
+                name:         c.name || "",
+                lastStatus:   c.lastStatus || "",
+                healthStatus: c.healthStatus || "UNKNOWN",
+              })),
+            }));
+          }
+        } catch (_) {}
+      }
+
+      // Compute total CPU/memory reservations across tasks
+      let totalCpu = 0, totalMemory = 0;
+      taskDetails.forEach(t => {
+        totalCpu    += parseInt(t.cpu, 10)    || 0;
+        totalMemory += parseInt(t.memory, 10) || 0;
+      });
+
+      results[env] = {
+        cpu: {
+          avg: serviceInfo.runningCount > 0 ? totalCpu : null,
+          max: totalCpu,
+          unit: "units",
+          note: "ECS task CPU reservations (not utilization %)",
+        },
+        memory: {
+          avg: serviceInfo.runningCount > 0 ? totalMemory : null,
+          max: totalMemory,
+          unit: "MiB",
+          note: "ECS task memory reservations (not utilization %)",
+        },
+        service: serviceInfo,
+        tasks: taskDetails,
+      };
     }
 
     // Also check beta if configured
@@ -120,11 +133,8 @@ router.get("/:projectId/metrics", auth.requireAuth, async (req, res) => {
       const cluster = project.ecsClusterNameProd || project.ecsClusterName || "";
       const service = project.prodBetaServiceName;
       if (cluster && service) {
-        const [cpu, memory] = await Promise.all([
-          fetchEcsMetric(cwClient, "AWS/ECS", "CPUUtilization", cluster, service),
-          fetchEcsMetric(cwClient, "AWS/ECS", "MemoryUtilization", cluster, service),
-        ]);
         let serviceInfo = { desiredCount: 0, runningCount: 0, status: "unknown" };
+        let taskDetails = [];
         try {
           const svcResp = await ecsClient.send(new DescribeServicesCommand({
             cluster, services: [service],
@@ -139,7 +149,46 @@ router.get("/:projectId/metrics", auth.requireAuth, async (req, res) => {
             };
           }
         } catch (_) {}
-        results.beta = { cpu, memory, service: serviceInfo };
+
+        if (serviceInfo.runningCount > 0) {
+          try {
+            const listResp = await ecsClient.send(new ListTasksCommand({
+              cluster, serviceName: service, desiredStatus: "RUNNING",
+            }));
+            const taskArns = listResp.taskArns || [];
+            if (taskArns.length > 0) {
+              const descResp = await ecsClient.send(new DescribeTasksCommand({
+                cluster, tasks: taskArns,
+              }));
+              taskDetails = (descResp.tasks || []).map(t => ({
+                taskArn: t.taskArn || "",
+                lastStatus: t.lastStatus || "",
+                healthStatus: t.healthStatus || "UNKNOWN",
+                cpu: t.cpu || "",
+                memory: t.memory || "",
+                containers: (t.containers || []).map(c => ({
+                  name: c.name || "", lastStatus: c.lastStatus || "",
+                  healthStatus: c.healthStatus || "UNKNOWN",
+                })),
+              }));
+            }
+          } catch (_) {}
+        }
+
+        let totalCpu = 0, totalMemory = 0;
+        taskDetails.forEach(t => {
+          totalCpu    += parseInt(t.cpu, 10)    || 0;
+          totalMemory += parseInt(t.memory, 10) || 0;
+        });
+
+        results.beta = {
+          cpu: { avg: totalCpu || null, max: totalCpu, unit: "units",
+            note: "ECS task CPU reservations (not utilization %)" },
+          memory: { avg: totalMemory || null, max: totalMemory, unit: "MiB",
+            note: "ECS task memory reservations (not utilization %)" },
+          service: serviceInfo,
+          tasks: taskDetails,
+        };
       }
     }
 
@@ -151,7 +200,7 @@ router.get("/:projectId/metrics", auth.requireAuth, async (req, res) => {
 });
 
 // ─── GET /api/monitoring/:projectId/services ─────────────────────────────
-// Quick service health check (no CloudWatch, just ECS API)
+// Quick service health check (just ECS API, no CloudWatch)
 router.get("/:projectId/services", auth.requireAuth, async (req, res) => {
   try {
     req.query.projectId = req.params.projectId;
