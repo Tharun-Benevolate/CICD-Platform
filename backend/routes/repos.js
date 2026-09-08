@@ -845,7 +845,7 @@ router.get("/branches/compare", async (req, res) => {
 });
 
 // POST /api/branches/merge
-router.post("/branches/merge", async (req, res) => {
+router.post("/branches/merge", auth.requireRole("super_admin", "devops", "admin"), async (req, res) => {
   try {
     const { repositoryId, baseBranch, headBranch, commitMessage } = req.body;
     if (!repositoryId || !baseBranch || !headBranch) {

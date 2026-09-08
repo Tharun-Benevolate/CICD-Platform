@@ -29,8 +29,6 @@ window.initBranchesPage = initBranchesPage;
 
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', initBranchesPageRunner);
-} else {
-  initBranchesPageRunner();
 }
 
 async function initBranchesPage() {
@@ -53,6 +51,8 @@ async function initBranchesPage() {
   if (loadingEl) loadingEl.style.display = 'none';
   if (listEl) { listEl.innerHTML = ''; listEl.style.display = 'none'; }
   if (countBadge) countBadge.textContent = '';
+  var graphCard = document.getElementById('git-graph-card');
+  if (graphCard) graphCard.style.display = 'none';
 
   var projects = [];
   try {
@@ -229,6 +229,9 @@ async function fetchBranches() {
 
       renderBranchList();
 
+      var mergeButton = document.getElementById('btn-open-merge');
+      if (mergeButton) mergeButton.disabled = _branches.length < 2;
+
       var def = _branches.find(function(b) { return b.isDefault; }) || _branches[0];
       if (def) selectBranch(def.name || def);
     } else if (res && res.authRequired) {
@@ -334,7 +337,10 @@ async function fetchCommits() {
     if (res && res.ok && res.commits && res.commits.length > 0) {
       _commits = res.commits;
       renderCommitsList();
+      renderGitGraph();
     } else {
+      _commits = [];
+      renderGitGraph();
       showCommitsEmptyState((res && res.error) || 'No commits found for branch');
     }
   } catch (err) {
@@ -414,6 +420,107 @@ function relTime(dateStr) {
   var d = Math.floor(h / 24);
   if (d < 30) return d + 'd ago';
   return new Date(dateStr).toLocaleDateString();
+}
+
+// ── Visual Git workspace ──────────────────────────────────────────────────
+// This intentionally sits alongside the CLI runner. It turns common remote
+// Git work into guided project-scoped actions, while the terminal remains
+// available for advanced commands.
+function escapeGitText(value) {
+  return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderGitGraph() {
+  var card = document.getElementById('git-graph-card');
+  var branchEl = document.getElementById('git-graph-branches');
+  var graphEl = document.getElementById('git-graph');
+  if (!card || !branchEl || !graphEl) return;
+  card.style.display = _selectedBranch ? 'block' : 'none';
+  if (!_selectedBranch) return;
+
+  branchEl.innerHTML = _branches.map(function(branch, index) {
+    var name = branch.name || branch;
+    var selected = name === _selectedBranch;
+    var isDefault = branch.isDefault || name === _defaultBranch;
+    var color = selected ? '#6366f1' : ['#22c55e', '#f59e0b', '#a78bfa', '#38bdf8'][index % 4];
+    return '<button type="button" onclick="selectBranch(\'' + escapeGitText(name).replace(/'/g, '\\&#39;') + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid ' + (selected ? color : 'var(--color-border)') + ';border-radius:999px;background:' + (selected ? 'rgba(99,102,241,.12)' : 'var(--color-bg)') + ';color:' + (selected ? color : 'var(--color-text-secondary)') + ';font-size:11px;font-weight:700;cursor:pointer;"><i style="width:7px;height:7px;display:inline-block;border-radius:50%;background:' + color + ';"></i>' + escapeGitText(name) + (isDefault ? ' <span style="opacity:.7;">default</span>' : '') + '</button>';
+  }).join('');
+
+  if (!_commits.length) {
+    graphEl.innerHTML = '<div style="padding:20px;color:var(--color-text-tertiary);font-size:13px;">No history available for this branch.</div>';
+    return;
+  }
+  graphEl.innerHTML = _commits.map(function(commit) {
+    var sha = commit.sha || commit.commitId || '';
+    var message = (commit.message || 'No commit message').split('\n')[0];
+    var parents = commit.parents || commit.commit?.parents || [];
+    var merge = parents.length > 1;
+    return '<div class="git-graph-row"><div class="git-graph-lane">' + (merge ? '<i class="git-graph-merge-line"></i>' : '') + '<i class="git-graph-dot' + (merge ? ' merge' : '') + '"></i></div><div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeGitText(message) + '</div><div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px;">' + (merge ? 'Merge commit · ' : '') + escapeGitText(relTime(commit.date)) + '</div></div><code style="font-size:11px;color:var(--color-text-tertiary);">' + escapeGitText(sha.slice(0, 7)) + '</code></div>';
+  }).join('');
+}
+
+function openMergeModal() {
+  if (!_selectedRepoId || _branches.length < 2) return;
+  var source = document.getElementById('merge-source-branch');
+  var target = document.getElementById('merge-target-branch');
+  var error = document.getElementById('merge-branch-error');
+  var preview = document.getElementById('merge-preview');
+  if (!source || !target) return;
+  var options = _branches.map(function(branch) {
+    var name = branch.name || branch;
+    return '<option value="' + escapeGitText(name) + '">' + escapeGitText(name) + '</option>';
+  }).join('');
+  source.innerHTML = options;
+  target.innerHTML = options;
+  source.value = _selectedBranch || (_branches[0].name || _branches[0]);
+  target.value = _defaultBranch;
+  if (source.value === target.value) source.selectedIndex = 1;
+  error.style.display = 'none';
+  preview.style.display = 'none';
+  document.getElementById('merge-message').value = '';
+  document.getElementById('modal-merge-branch').style.display = 'flex';
+  updateMergePreview();
+  source.onchange = updateMergePreview;
+  target.onchange = updateMergePreview;
+  if (window.lucide) lucide.createIcons();
+}
+
+function closeMergeModal() { document.getElementById('modal-merge-branch').style.display = 'none'; }
+
+async function updateMergePreview() {
+  var source = document.getElementById('merge-source-branch')?.value;
+  var target = document.getElementById('merge-target-branch')?.value;
+  var preview = document.getElementById('merge-preview');
+  if (!source || !target || source === target || !preview) return;
+  preview.style.display = 'block';
+  preview.textContent = 'Comparing branches…';
+  try {
+    var query = new URLSearchParams({ repositoryId: _selectedRepoId, base: target, head: source });
+    var res = await api.get('/api/branches/compare?' + query);
+    var diff = res?.diff || {};
+    var ahead = diff.aheadBy || 0;
+    preview.textContent = res?.ok ? (ahead + ' commit' + (ahead === 1 ? '' : 's') + ' to merge · ' + (diff.files?.length || 0) + ' changed file' + ((diff.files?.length || 0) === 1 ? '' : 's')) : (res?.error || 'Unable to compare branches.');
+  } catch (_) { preview.textContent = 'Unable to compare branches right now.'; }
+}
+
+async function handleMergeBranchSubmit(event) {
+  event.preventDefault();
+  var source = document.getElementById('merge-source-branch').value;
+  var target = document.getElementById('merge-target-branch').value;
+  var message = document.getElementById('merge-message').value.trim();
+  var error = document.getElementById('merge-branch-error');
+  var button = document.getElementById('btn-submit-merge');
+  if (!source || !target || source === target) { error.textContent = 'Choose two different branches.'; error.style.display = 'block'; return; }
+  if (!window.confirm('Merge "' + source + '" into "' + target + '"? This creates a remote merge commit.')) return;
+  button.disabled = true; button.textContent = 'Merging…'; error.style.display = 'none';
+  try {
+    var res = await api.post('/api/branches/merge', { repositoryId: _selectedRepoId, baseBranch: target, headBranch: source, commitMessage: message || undefined });
+    if (!res?.ok) throw new Error(res?.error || 'Merge failed');
+    closeMergeModal();
+    _selectedBranch = target;
+    await fetchBranches();
+  } catch (err) { error.textContent = err.message || 'Merge failed'; error.style.display = 'block'; }
+  finally { button.disabled = false; button.textContent = 'Merge branches'; }
 }
 
 // ── Server Git CLI Runner ──────────────────────────────────────────────────

@@ -4,7 +4,7 @@
     <div>
       <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin-bottom:2px;">Branches &amp; Commits</h1>
       <p style="font-size:13px;color:var(--color-text-secondary);">
-        Select a repository to manage branches and view commit history.
+        A visual, project-scoped workspace for branches, commits, comparisons, and merges.
       </p>
     </div>
 
@@ -29,6 +29,14 @@
           <i data-lucide="terminal" style="width:14px;height:14px;"></i> Git CLI Terminal
         </button>
 
+        <a href="/file-browser" class="btn-cli-header" style="text-decoration:none;">
+          <i data-lucide="git-commit" style="width:14px;height:14px;"></i> Commit Changes
+        </a>
+
+        <button onclick="openMergeModal()" id="btn-open-merge" disabled class="btn-cli-header">
+          <i data-lucide="git-merge" style="width:14px;height:14px;"></i> Compare &amp; Merge
+        </button>
+
         <button onclick="openCreateBranchModal()" id="btn-open-create-branch" disabled class="btn-create-branch-header">
           <i data-lucide="plus" style="width:16px;height:16px;"></i> Create Branch
         </button>
@@ -42,13 +50,8 @@
       <i data-lucide="terminal" style="width:16px;height:16px;color:#6366f1;"></i> Server Git CLI Runner
     </div>
     <form onsubmit="handleExecCli(event)" style="display:flex;gap:10px;margin-bottom:12px;">
-      <input
-        type="text" id="cli-cmd-input" value="git status" placeholder="e.g. git log -n 5 --oneline"
-        style="flex:1;padding:8px 12px;background:#161b22;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-family:monospace;font-size:13px;outline:none;"
-      />
-      <button type="submit" id="btn-run-cli" style="padding:8px 16px;background:#6366f1;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;">
-        Run
-      </button>
+      <input type="text" id="cli-cmd-input" value="git status" placeholder="e.g. git log -n 5 --oneline" style="flex:1;padding:8px 12px;background:#161b22;border:1px solid #30363d;border-radius:8px;color:#e6edf3;font-family:monospace;font-size:13px;outline:none;" />
+      <button type="submit" id="btn-run-cli" style="padding:8px 16px;background:#6366f1;color:white;border:none;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px;">Run</button>
     </form>
     <pre id="cli-output-pre" style="display:none;background:#161b22;padding:14px;border-radius:8px;font-family:monospace;font-size:12px;overflow-x:auto;color:#7ee787;margin:0;border:1px solid #30363d;"></pre>
   </div>
@@ -144,6 +147,18 @@
 
   </div>
 
+  <section id="git-graph-card" style="display:none;margin-top:20px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;overflow:hidden;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;">
+      <div>
+        <h2 style="font-size:15px;font-weight:700;margin:0 0 3px;color:var(--color-text-primary);display:flex;gap:8px;align-items:center;"><i data-lucide="git-graph" style="width:17px;height:17px;color:#6366f1;"></i> Visual history</h2>
+        <p style="margin:0;font-size:12px;color:var(--color-text-tertiary);">Branch heads, commits, and merge commits for the selected branch.</p>
+      </div>
+      <div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-tertiary);"><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6366f1;"></i> Commit</span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#a78bfa;"></i> Merge</span></div>
+    </div>
+    <div id="git-graph-branches" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;"></div>
+    <div id="git-graph" class="git-graph" aria-label="Visual Git commit history"></div>
+  </section>
+
   <!-- ── CREATE BRANCH MODAL ── -->
   <div id="modal-create-branch" class="setup-modal-overlay" style="display:none;">
     <div class="setup-modal-box" style="max-width:440px;">
@@ -186,6 +201,21 @@
             <i data-lucide="plus" style="width:14px;height:14px;"></i> Create Branch
           </button>
         </div>
+      </form>
+    </div>
+  </div>
+
+  <div id="modal-merge-branch" class="setup-modal-overlay" style="display:none;">
+    <div class="setup-modal-box" style="max-width:480px;">
+      <button onclick="closeMergeModal()" style="position:absolute;top:20px;right:20px;background:none;border:none;color:var(--color-text-tertiary);cursor:pointer;padding:4px;"><i data-lucide="x" style="width:20px;height:20px;"></i></button>
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;"><div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#8b5cf6);display:flex;align-items:center;justify-content:center;"><i data-lucide="git-merge" style="width:18px;height:18px;color:white;"></i></div><div><h3 style="font-size:16px;font-weight:700;margin:0;color:var(--color-text-primary);">Compare &amp; Merge</h3><p style="font-size:12px;color:var(--color-text-tertiary);margin:3px 0 0;">Review the branch direction before creating a merge commit.</p></div></div>
+      <form onsubmit="handleMergeBranchSubmit(event)">
+        <label class="workspace-label">SOURCE BRANCH</label><select id="merge-source-branch" class="workspace-select"></select>
+        <label class="workspace-label" style="margin-top:14px;">MERGE INTO</label><select id="merge-target-branch" class="workspace-select"></select>
+        <label class="workspace-label" style="margin-top:14px;">MERGE COMMIT MESSAGE</label><input id="merge-message" class="workspace-select" type="text" placeholder="Merge feature branch into main">
+        <div id="merge-preview" style="display:none;margin-top:14px;padding:10px 12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:8px;font-size:12px;color:var(--color-text-secondary);"></div>
+        <div id="merge-branch-error" style="display:none;margin-top:14px;" class="msg-box error"></div>
+        <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;"><button type="button" onclick="closeMergeModal()" class="btn-secondary" style="padding:9px 16px;border-radius:9px;font-size:13px;font-weight:600;">Cancel</button><button type="submit" id="btn-submit-merge" style="padding:9px 18px;background:#6366f1;color:#fff;border:0;border-radius:9px;font-weight:700;cursor:pointer;">Merge branches</button></div>
       </form>
     </div>
   </div>

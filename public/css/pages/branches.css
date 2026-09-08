@@ -106,6 +106,17 @@
   background: #4f46e5;
 }
 
+.workspace-label { display:block;font-size:11px;font-weight:700;color:var(--color-text-secondary);letter-spacing:.06em;margin-bottom:6px; }
+.workspace-select { width:100%;padding:9px 12px;border-radius:9px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none; }
+.workspace-select:focus { border-color:#6366f1;box-shadow:0 0 0 3px rgba(99,102,241,.12); }
+.git-graph { min-height:64px;max-height:310px;overflow-y:auto;border-top:1px solid var(--color-border); }
+.git-graph-row { display:grid;grid-template-columns:48px 1fr auto;gap:10px;align-items:center;min-height:42px;border-bottom:1px solid var(--color-border-subtle); }
+.git-graph-lane { position:relative;height:42px;display:flex;align-items:center;justify-content:center; }
+.git-graph-lane::before { content:'';position:absolute;width:2px;height:100%;background:#6366f1;left:23px;top:0; }
+.git-graph-dot { position:relative;width:13px;height:13px;border-radius:50%;background:#6366f1;border:3px solid var(--color-surface);z-index:1; }
+.git-graph-dot.merge { background:#a78bfa;box-shadow:0 0 0 3px rgba(167,139,250,.18); }
+.git-graph-merge-line { position:absolute;width:25px;height:2px;background:#a78bfa;transform:rotate(-28deg);left:24px;top:12px; }
+
 .cli-panel-box {
   background: #0d1117;
   border: 1px solid #30363d;
