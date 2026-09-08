@@ -502,49 +502,84 @@ function renderGitGraph() {
   }
   var bySha = new Map();
   commits.forEach(function(commit) { var sha = commit.sha || commit.commitId; if (sha) bySha.set(sha, commit); });
-  var headOrder = _branches.slice().sort(function(a, b) {
-    var an = a.name || a, bn = b.name || b;
-    return (an === _selectedBranch ? -1 : 0) - (bn === _selectedBranch ? -1 : 0);
-  }).map(function(branch) { return branch.sha; }).filter(function(sha) { return bySha.has(sha); });
-  var ordered = [], visited = new Set();
-  function visit(sha) {
-    if (!sha || visited.has(sha) || !bySha.has(sha)) return;
-    visited.add(sha);
-    var commit = bySha.get(sha);
-    ordered.push(commit);
-    (commit.parents || []).forEach(visit);
+  var selectedRef = _branches.find(function(branch) { return (branch.name || branch) === _selectedBranch; });
+  var selectedHead = selectedRef?.sha;
+  if (!selectedHead || !bySha.has(selectedHead)) {
+    graphEl.innerHTML = '<div style="padding:20px;color:var(--color-text-tertiary);font-size:13px;">The selected branch head is outside the retrieved history window. Refresh to try again.</div>';
+    return;
   }
-  headOrder.forEach(visit);
-  commits.sort(function(a, b) { return new Date(b.date || 0) - new Date(a.date || 0); }).forEach(function(commit) { visit(commit.sha || commit.commitId); });
 
-  var lanes = headOrder.slice();
+  // Restrict the graph to the selected ref's ancestry. Other branches are
+  // shown as labels only when their head points at an exact commit in this
+  // path. This is how an IDE graph avoids unrelated branch heads becoming
+  // phantom parallel lanes.
+  var reachable = new Set();
+  function markReachable(sha) {
+    if (!sha || reachable.has(sha) || !bySha.has(sha)) return;
+    reachable.add(sha);
+    (bySha.get(sha).parents || []).forEach(markReachable);
+  }
+  markReachable(selectedHead);
+  var childCount = new Map();
+  reachable.forEach(function(sha) { childCount.set(sha, 0); });
+  reachable.forEach(function(sha) {
+    (bySha.get(sha).parents || []).forEach(function(parent) {
+      if (reachable.has(parent)) childCount.set(parent, (childCount.get(parent) || 0) + 1);
+    });
+  });
+  var ready = Array.from(reachable).filter(function(sha) { return childCount.get(sha) === 0; });
+  var ordered = [];
+  while (ready.length) {
+    ready.sort(function(a, b) { return new Date(bySha.get(b).date || 0) - new Date(bySha.get(a).date || 0); });
+    var sha = ready.shift(), commit = bySha.get(sha);
+    ordered.push(commit);
+    (commit.parents || []).forEach(function(parent) {
+      if (!reachable.has(parent)) return;
+      childCount.set(parent, childCount.get(parent) - 1);
+      if (childCount.get(parent) === 0) ready.push(parent);
+    });
+  }
+
+  var refColors = new Map();
+  _branches.forEach(function(branch, index) {
+    if (branch.sha) refColors.set(branch.sha, palette[index % palette.length]);
+  });
+  var lanes = [{ sha: selectedHead, color: refColors.get(selectedHead) || palette[0] }];
   var rows = ordered.map(function(commit) {
     var sha = commit.sha || commit.commitId;
-    var lane = lanes.indexOf(sha);
-    if (lane < 0) { lanes.push(sha); lane = lanes.length - 1; }
+    var lane = lanes.findIndex(function(item) { return item.sha === sha; });
+    if (lane < 0) { lanes.push({ sha: sha, color: refColors.get(sha) || palette[lanes.length % palette.length] }); lane = lanes.length - 1; }
     var before = lanes.slice();
     var parents = (commit.parents || []).filter(function(parent) { return bySha.has(parent); });
     var next = before.slice();
-    next.splice(lane, 1);
     var parentLanes = parents.map(function(parent, index) {
-      var target = next.indexOf(parent);
-      if (target < 0) { next.splice(Math.min(lane + index, next.length), 0, parent); target = next.indexOf(parent); }
+      var target = next.findIndex(function(item) { return item.sha === parent; });
+      if (target < 0) {
+        var item = { sha: parent, color: refColors.get(parent) || (index === 0 ? before[lane].color : palette[(lane + index + 1) % palette.length]) };
+        if (index === 0) { next[lane] = item; target = lane; }
+        else { next.splice(lane + index, 0, item); target = lane + index; }
+      } else if (index === 0 && target !== lane) {
+        next.splice(lane, 1);
+        if (target > lane) target--;
+      }
       return target;
     });
+    if (!parents.length) next.splice(lane, 1);
     lanes = next;
-    return { commit: commit, lane: lane, before: before, parentLanes: parentLanes, laneCount: Math.max(before.length, next.length, 1) };
+    return { commit: commit, lane: lane, before: before, after: next, parentLanes: parentLanes, laneCount: Math.max(before.length, next.length, 1) };
   });
-  if (subtitle) subtitle.textContent = 'Actual parent relationships from the latest 30 commits reachable from each branch; selected: ' + _selectedBranch + '.';
+  if (subtitle) subtitle.textContent = 'Actual parent relationships reachable from ' + _selectedBranch + '; branch labels appear at their exact head commit.';
   if (syncEl) syncEl.textContent = _graphSyncedAt ? 'Synced ' + _graphSyncedAt.toLocaleTimeString() : '';
   graphEl.innerHTML = rows.map(function(row) {
     var width = Math.max(48, row.laneCount * 22 + 18);
     var x = function(index) { return 11 + index * 22; };
-    var laneColor = function(index) { return palette[index % palette.length]; };
+    var laneColor = function(index) { return row.before[index]?.color || palette[index % palette.length]; };
     var lines = row.before.map(function(_, index) { return '<line x1="' + x(index) + '" y1="0" x2="' + x(index) + '" y2="42" stroke="' + laneColor(index) + '" stroke-opacity=".72" stroke-width="1.8" />'; }).join('');
-    var links = row.parentLanes.map(function(parentLane) { return '<line x1="' + x(row.lane) + '" y1="21" x2="' + x(parentLane) + '" y2="42" stroke="' + laneColor(parentLane) + '" stroke-width="2.2" />'; }).join('');
+    var links = row.parentLanes.map(function(parentLane) { return '<line x1="' + x(row.lane) + '" y1="21" x2="' + x(parentLane) + '" y2="42" stroke="' + (row.after[parentLane]?.color || palette[parentLane % palette.length]) + '" stroke-width="2.2" />'; }).join('');
     var merge = row.parentLanes.length > 1;
     var commit = row.commit, sha = commit.sha || commit.commitId || '', message = (commit.message || 'No commit message').split('\n')[0];
-    return '<div class="git-graph-row"><svg width="' + width + '" height="42" viewBox="0 0 ' + width + ' 42" aria-hidden="true">' + lines + links + '<circle cx="' + x(row.lane) + '" cy="21" r="' + (merge ? '7' : '5') + '" fill="' + (merge ? '#a78bfa' : laneColor(row.lane)) + '" stroke="var(--color-surface)" stroke-width="3" /></svg><div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeGitText(message) + '</div><div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px;">' + (merge ? 'Merge commit · ' : '') + escapeGitText(relTime(commit.date)) + '</div></div><code style="font-size:11px;color:var(--color-text-tertiary);">' + escapeGitText(sha.slice(0, 7)) + '</code></div>';
+    var refsHere = _branches.filter(function(branch) { return branch.sha === sha; }).map(function(branch, index) { var name = branch.name || branch; return '<span style="display:inline-block;margin-left:5px;padding:1px 5px;border-radius:6px;background:rgba(99,102,241,.12);color:' + (refColors.get(sha) || palette[index % palette.length]) + ';font-size:10px;">' + escapeGitText(name) + '</span>'; }).join('');
+    return '<div class="git-graph-row"><svg width="' + width + '" height="42" viewBox="0 0 ' + width + ' 42" aria-hidden="true">' + lines + links + '<circle cx="' + x(row.lane) + '" cy="21" r="' + (merge ? '7' : '5') + '" fill="' + (merge ? '#a78bfa' : laneColor(row.lane)) + '" stroke="var(--color-surface)" stroke-width="3" /></svg><div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeGitText(message) + refsHere + '</div><div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px;">' + (merge ? 'Merge commit · ' : '') + escapeGitText(relTime(commit.date)) + '</div></div><code style="font-size:11px;color:var(--color-text-tertiary);">' + escapeGitText(sha.slice(0, 7)) + '</code></div>';
   }).join('');
 }
 
