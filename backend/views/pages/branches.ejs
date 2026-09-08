@@ -153,12 +153,12 @@
         <h2 style="font-size:15px;font-weight:700;margin:0 0 3px;color:var(--color-text-primary);display:flex;gap:8px;align-items:center;"><i data-lucide="git-graph" style="width:17px;height:17px;color:#6366f1;"></i> Visual history</h2>
         <p id="git-graph-subtitle" style="margin:0;font-size:12px;color:var(--color-text-tertiary);">Loading the remote commit graph…</p>
       </div>
-      <div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-tertiary);"><span id="git-graph-sync"></span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6366f1;"></i> Commit</span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#a78bfa;"></i> Merge</span></div>
+      <div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-tertiary);"><span id="git-graph-sync"></span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6366f1;"></i> Commit</span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#a78bfa;"></i> Verified merge</span></div>
     </div>
     <div id="git-graph-branches" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;"></div>
     <div id="git-branch-relationship" style="display:none;margin-bottom:12px;padding:10px 12px;border-radius:8px;background:rgba(99,102,241,.07);border:1px solid rgba(99,102,241,.2);font-size:12px;color:var(--color-text-secondary);"></div>
     <div style="margin-bottom:12px;padding:9px 11px;border-radius:8px;background:var(--color-bg);border:1px solid var(--color-border);font-size:11px;color:var(--color-text-tertiary);">
-      Merge and parent links come from Git commit data. Rebase, reset, and force-push are shown only when recorded by the platform, because Git history alone cannot reconstruct a rewritten ref accurately.
+      Lines trace commit-to-parent ancestry, not named branches. A branch badge only marks a ref pointing at that exact commit. Only a purple <strong>Verified merge</strong> node has multiple Git parents; ordinary line bends or joins mean shared ancestry/lane layout, not a merge. Rebase, reset, and force-push are shown only when recorded by the platform, because final Git history alone cannot reconstruct a rewritten ref accurately.
     </div>
     <div id="git-graph" class="git-graph" aria-label="Visual Git commit history"></div>
     <div id="git-activity-feed" style="display:none;margin-top:14px;border-top:1px solid var(--color-border);padding-top:14px;"></div>

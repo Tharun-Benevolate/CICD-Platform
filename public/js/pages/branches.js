@@ -646,16 +646,18 @@ function renderGitGraph() {
     var merge = row.parentLanes.length > 1;
     var commit = row.commit, sha = commit.sha || commit.commitId || '', message = (commit.message || 'No commit message').split('\n')[0];
     var refNames = _branches.filter(function(branch) { return branch.sha === sha; }).map(function(branch) { return branch.name || branch; });
-    var refsHere = refNames.map(function(name, index) { return '<span style="display:inline-block;margin-left:5px;padding:1px 5px;border-radius:6px;background:rgba(99,102,241,.12);color:' + (refColors.get(sha) || palette[index % palette.length]) + ';font-size:10px;">' + escapeGitText(name) + '</span>'; }).join('');
+    // A badge is deliberately called a "ref": it says where a branch points,
+    // rather than implying the branch was merged into the selected one.
+    var refsHere = refNames.map(function(name, index) { return '<span title="Branch ref pointing at this commit" style="display:inline-block;margin-left:5px;padding:1px 5px;border-radius:6px;background:rgba(99,102,241,.12);color:' + (refColors.get(sha) || palette[index % palette.length]) + ';font-size:10px;">ref: ' + escapeGitText(name) + '</span>'; }).join('');
     var explanation;
     if (merge) {
-      explanation = 'Merge commit: ' + row.parentLanes.length + ' parent paths converge here. The original parent histories remain intact.';
+      explanation = 'Verified merge: ' + row.parentLanes.length + ' Git parent paths converge here. The original parent histories remain intact.';
     } else if (!row.parentLanes.length) {
       explanation = 'Initial commit: this starts the displayed history.';
     } else if (/^revert\b/i.test(message)) {
       explanation = 'Commit message declares a revert: it is a new compensating commit and does not remove history.';
     } else {
-      explanation = 'Commit continues one parent path without rewriting history.';
+      explanation = 'One Git parent: this continues history. Any ordinary line bend is graph layout/shared ancestry, not a merge.';
     }
     if (refNames.length) explanation += ' Ref points here: ' + refNames.join(', ') + '.';
     return '<div class="git-graph-row"><svg width="' + width + '" height="42" viewBox="0 0 ' + width + ' 42" aria-hidden="true">' + lines + links + '<circle cx="' + x(row.lane) + '" cy="21" r="' + (merge ? '7' : '5') + '" fill="' + (merge ? '#a78bfa' : laneColor(row.lane)) + '" stroke="var(--color-surface)" stroke-width="3" /></svg><div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeGitText(message) + refsHere + '</div><div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px;">' + (merge ? 'Merge commit · ' : '') + escapeGitText(relTime(commit.date)) + '</div></div><div style="font-size:11px;line-height:1.4;color:var(--color-text-secondary);padding:6px 8px;border-radius:7px;background:var(--color-bg);border:1px solid var(--color-border);">' + escapeGitText(explanation) + '</div><code style="font-size:11px;color:var(--color-text-tertiary);">' + escapeGitText(sha.slice(0, 7)) + '</code></div>';
