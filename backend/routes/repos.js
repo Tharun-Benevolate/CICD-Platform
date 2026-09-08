@@ -817,6 +817,40 @@ router.post("/branches/create-for-repo", async (req, res) => {
   }
 });
 
+// GET /api/branches/activity — platform-recorded operations for this repo.
+// Commit topology cannot reveal an old reset/rebase after refs were rewritten,
+// so this feed intentionally reports only actions the platform actually logged.
+router.get("/branches/activity", async (req, res) => {
+  try {
+    const { repositoryId, projectId } = req.query;
+    if (!repositoryId) return res.status(400).json({ ok: false, error: "repositoryId is required" });
+    const repo = await repoStore.getRepository(repositoryId);
+    if (!repo) return res.status(404).json({ ok: false, error: "Repository not found" });
+    const project = projectId ? await projectStore.getProject(projectId) : null;
+    const auditStore = require("../stores/auditStore");
+    const logs = await auditStore.getAuditLogs({
+      projectNames: [project?.name, repo.repo_name || repo.repoName],
+      limit: 100
+    });
+    const activity = logs.map(log => {
+      const action = log.action || "";
+      const command = (action.match(/Executed git command:\s*(.+)$/i) || [])[1] || "";
+      let type = "";
+      if (/\bgit\s+rebase\b/i.test(command)) type = "rebase";
+      else if (/\bgit\s+reset\b/i.test(command)) type = "reset";
+      else if (/\bgit\s+revert\b/i.test(command)) type = "revert";
+      else if (/\bgit\s+merge\b/i.test(command) || /^Merged branch/i.test(action)) type = "merge";
+      else if (/\bgit\s+push\b/i.test(command)) type = "push";
+      else if (/\bgit\s+commit\b/i.test(command)) type = "commit";
+      else if (/Created GitHub branch|Deleted GitHub branch/i.test(action)) type = "branch";
+      return { ...log, type, command };
+    }).filter(item => item.type && /success|completed/i.test(item.result || ""));
+    res.json({ ok: true, activity });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 router.resolveGithubTokenForRepo = resolveGithubTokenForRepo;
 router.resolveGithubToken = resolveGithubToken;
 module.exports = router;
@@ -834,7 +868,9 @@ router.get("/branches/compare", async (req, res) => {
     const repo = await repoStore.getRepository(repositoryId);
     if (!repo) return res.status(404).json({ ok: false, error: "Repository not found" });
 
-    const { token } = await resolveGithubToken(req);
+    // Use the repository-aware fallback so comparisons work for repositories
+    // that are accessible through the repository owner's or system credential.
+    const { token } = await resolveGithubTokenForRepo(req, repo);
     const { getProvider } = require("../services/gitProvider");
     const provider = getProvider(repo.provider);
     const diff = await provider.compareBranches(repo.owner, repo.repo_name, base, head, token);

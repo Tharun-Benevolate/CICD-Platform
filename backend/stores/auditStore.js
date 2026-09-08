@@ -94,6 +94,13 @@ async function getAuditLogs(filters = {}) {
       conditions.push("category = ?");
       params.push(filters.category);
     }
+    if (Array.isArray(filters.projectNames) && filters.projectNames.length) {
+      const names = filters.projectNames.filter(Boolean);
+      if (names.length) {
+        conditions.push(`project_name IN (${names.map(() => "?").join(",")})`);
+        params.push(...names);
+      }
+    }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
     const limit = Number.isInteger(filters.limit) ? filters.limit : 50;

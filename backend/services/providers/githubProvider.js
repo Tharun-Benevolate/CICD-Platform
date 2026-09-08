@@ -244,6 +244,7 @@ async function compareBranches(ownerArg, repoArg, base, head, token) {
     aheadBy: cmp.ahead_by,
     behindBy: cmp.behind_by,
     status: cmp.status,
+    mergeBaseSha: cmp.merge_base_commit?.sha || null,
     totalCommits: cmp.total_commits,
     commits: (cmp.commits || []).map(c => ({
       sha: c.sha, message: c.commit.message,

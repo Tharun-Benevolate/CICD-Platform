@@ -9,6 +9,8 @@ var _commits = [];
 var _graphCommits = [];
 var _graphSyncedAt = null;
 var _branchesSyncInterval = null;
+var _gitActivity = [];
+var _relationshipRequest = 0;
 
 var _branchesClickListenerAdded = false;
 
@@ -43,6 +45,7 @@ async function initBranchesPage() {
   _commits = [];
   _graphCommits = [];
   _graphSyncedAt = null;
+  _gitActivity = [];
   _defaultBranch = 'main';
 
   // Reset UI to clean slate
@@ -320,7 +323,37 @@ function selectBranch(bName) {
 
   renderBranchList();
   renderGitGraph();
+  fetchBranchRelationship();
   fetchCommits();
+}
+
+async function fetchBranchRelationship() {
+  var el = document.getElementById('git-branch-relationship');
+  if (!el) return;
+  if (!_selectedBranch || _selectedBranch === _defaultBranch) {
+    el.style.display = 'none';
+    return;
+  }
+  var requestId = ++_relationshipRequest;
+  el.style.display = 'block';
+  el.textContent = 'Comparing ' + _selectedBranch + ' with ' + _defaultBranch + '…';
+  try {
+    var query = new URLSearchParams({ repositoryId: _selectedRepoId, base: _defaultBranch, head: _selectedBranch });
+    var result = await api.get('/api/branches/compare?' + query);
+    if (requestId !== _relationshipRequest || _selectedBranch === _defaultBranch) return;
+    var diff = result?.diff;
+    if (!result?.ok || !diff) throw new Error(result?.error || 'Comparison unavailable');
+    var ahead = diff.aheadBy || 0, behind = diff.behindBy || 0;
+    var relation;
+    if (ahead === 0 && behind === 0) relation = '<strong>' + escapeGitText(_selectedBranch) + '</strong> and <strong>' + escapeGitText(_defaultBranch) + '</strong> point to the same commit.';
+    else if (ahead > 0 && behind === 0) relation = '<strong>' + escapeGitText(_selectedBranch) + '</strong> contains the current <strong>' + escapeGitText(_defaultBranch) + '</strong> history plus <strong>' + ahead + '</strong> commit' + (ahead === 1 ? '' : 's') + '.';
+    else if (ahead === 0) relation = '<strong>' + escapeGitText(_selectedBranch) + '</strong> is <strong>' + behind + '</strong> commit' + (behind === 1 ? '' : 's') + ' behind <strong>' + escapeGitText(_defaultBranch) + '</strong>.';
+    else relation = '<strong>' + escapeGitText(_selectedBranch) + '</strong> and <strong>' + escapeGitText(_defaultBranch) + '</strong> have diverged: ' + ahead + ' ahead, ' + behind + ' behind.';
+    if (diff.mergeBaseSha) relation += ' Shared base: <code>' + escapeGitText(diff.mergeBaseSha.slice(0, 7)) + '</code>.';
+    el.innerHTML = relation + ' Ref labels in the graph are pointers to historical commits; they are not claims that those branches merged into this branch.';
+  } catch (_) {
+    if (requestId === _relationshipRequest) el.textContent = 'Branch relationship is unavailable right now; the commit graph remains limited to verified parent links.';
+  }
 }
 
 async function fetchCommits() {
@@ -468,6 +501,40 @@ async function fetchGitGraph() {
   _graphCommits = Array.from(bySha.values());
   _graphSyncedAt = new Date();
   renderGitGraph();
+  fetchGitActivity(requestedRepoId);
+}
+
+async function fetchGitActivity(requestedRepoId) {
+  var params = new URLSearchParams({ repositoryId: requestedRepoId || _selectedRepoId });
+  if (_activeProject) params.set('projectId', _activeProject.id);
+  try {
+    var response = await api.get('/api/branches/activity?' + params.toString());
+    if ((requestedRepoId || _selectedRepoId) !== _selectedRepoId) return;
+    _gitActivity = response?.ok ? (response.activity || []) : [];
+  } catch (_) {
+    _gitActivity = [];
+  }
+  renderGitActivity();
+}
+
+function renderGitActivity() {
+  var feed = document.getElementById('git-activity-feed');
+  if (!feed) return;
+  if (!_gitActivity.length) { feed.style.display = 'none'; return; }
+  var descriptions = {
+    merge: 'Merge recorded: the graph shows the resulting parent convergence.',
+    rebase: 'Rebase recorded: commits were rewritten into a new linear sequence; prior commits may no longer be reachable.',
+    reset: 'Reset recorded: a branch ref moved; commits removed from reachability cannot be reconstructed from the final graph.',
+    revert: 'Revert recorded: this creates a compensating change and preserves the original history.',
+    push: 'Push recorded: remote refs were updated.',
+    commit: 'Commit recorded: a new commit was created.',
+    branch: 'Branch operation recorded.'
+  };
+  feed.style.display = 'block';
+  feed.innerHTML = '<div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Platform-recorded Git actions</div>' +
+    _gitActivity.slice(0, 8).map(function(item) {
+      return '<div style="display:flex;gap:9px;padding:8px 0;border-top:1px solid var(--color-border-subtle);font-size:12px;"><span style="min-width:56px;text-transform:uppercase;font-weight:800;color:#a78bfa;">' + escapeGitText(item.type) + '</span><span style="flex:1;color:var(--color-text-secondary);">' + escapeGitText(descriptions[item.type] || item.action) + '</span><span style="color:var(--color-text-tertiary);white-space:nowrap;">' + escapeGitText(relTime(item.timestamp)) + '</span></div>';
+    }).join('');
 }
 
 function renderGitGraph() {
@@ -578,8 +645,20 @@ function renderGitGraph() {
     var links = row.parentLanes.map(function(parentLane) { return '<line x1="' + x(row.lane) + '" y1="21" x2="' + x(parentLane) + '" y2="42" stroke="' + (row.after[parentLane]?.color || palette[parentLane % palette.length]) + '" stroke-width="2.2" />'; }).join('');
     var merge = row.parentLanes.length > 1;
     var commit = row.commit, sha = commit.sha || commit.commitId || '', message = (commit.message || 'No commit message').split('\n')[0];
-    var refsHere = _branches.filter(function(branch) { return branch.sha === sha; }).map(function(branch, index) { var name = branch.name || branch; return '<span style="display:inline-block;margin-left:5px;padding:1px 5px;border-radius:6px;background:rgba(99,102,241,.12);color:' + (refColors.get(sha) || palette[index % palette.length]) + ';font-size:10px;">' + escapeGitText(name) + '</span>'; }).join('');
-    return '<div class="git-graph-row"><svg width="' + width + '" height="42" viewBox="0 0 ' + width + ' 42" aria-hidden="true">' + lines + links + '<circle cx="' + x(row.lane) + '" cy="21" r="' + (merge ? '7' : '5') + '" fill="' + (merge ? '#a78bfa' : laneColor(row.lane)) + '" stroke="var(--color-surface)" stroke-width="3" /></svg><div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeGitText(message) + refsHere + '</div><div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px;">' + (merge ? 'Merge commit · ' : '') + escapeGitText(relTime(commit.date)) + '</div></div><code style="font-size:11px;color:var(--color-text-tertiary);">' + escapeGitText(sha.slice(0, 7)) + '</code></div>';
+    var refNames = _branches.filter(function(branch) { return branch.sha === sha; }).map(function(branch) { return branch.name || branch; });
+    var refsHere = refNames.map(function(name, index) { return '<span style="display:inline-block;margin-left:5px;padding:1px 5px;border-radius:6px;background:rgba(99,102,241,.12);color:' + (refColors.get(sha) || palette[index % palette.length]) + ';font-size:10px;">' + escapeGitText(name) + '</span>'; }).join('');
+    var explanation;
+    if (merge) {
+      explanation = 'Merge commit: ' + row.parentLanes.length + ' parent paths converge here. The original parent histories remain intact.';
+    } else if (!row.parentLanes.length) {
+      explanation = 'Initial commit: this starts the displayed history.';
+    } else if (/^revert\b/i.test(message)) {
+      explanation = 'Commit message declares a revert: it is a new compensating commit and does not remove history.';
+    } else {
+      explanation = 'Commit continues one parent path without rewriting history.';
+    }
+    if (refNames.length) explanation += ' Ref points here: ' + refNames.join(', ') + '.';
+    return '<div class="git-graph-row"><svg width="' + width + '" height="42" viewBox="0 0 ' + width + ' 42" aria-hidden="true">' + lines + links + '<circle cx="' + x(row.lane) + '" cy="21" r="' + (merge ? '7' : '5') + '" fill="' + (merge ? '#a78bfa' : laneColor(row.lane)) + '" stroke="var(--color-surface)" stroke-width="3" /></svg><div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeGitText(message) + refsHere + '</div><div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px;">' + (merge ? 'Merge commit · ' : '') + escapeGitText(relTime(commit.date)) + '</div></div><div style="font-size:11px;line-height:1.4;color:var(--color-text-secondary);padding:6px 8px;border-radius:7px;background:var(--color-bg);border:1px solid var(--color-border);">' + escapeGitText(explanation) + '</div><code style="font-size:11px;color:var(--color-text-tertiary);">' + escapeGitText(sha.slice(0, 7)) + '</code></div>';
   }).join('');
 }
 
