@@ -6,6 +6,9 @@ var _branches = [];
 var _defaultBranch = 'main';
 var _selectedBranch = null;
 var _commits = [];
+var _graphCommits = [];
+var _graphSyncedAt = null;
+var _branchesSyncInterval = null;
 
 var _branchesClickListenerAdded = false;
 
@@ -38,6 +41,8 @@ async function initBranchesPage() {
   _selectedBranch = null;
   _selectedRepoId = null;
   _commits = [];
+  _graphCommits = [];
+  _graphSyncedAt = null;
   _defaultBranch = 'main';
 
   // Reset UI to clean slate
@@ -53,6 +58,11 @@ async function initBranchesPage() {
   if (countBadge) countBadge.textContent = '';
   var graphCard = document.getElementById('git-graph-card');
   if (graphCard) graphCard.style.display = 'none';
+
+  if (_branchesSyncInterval) clearInterval(_branchesSyncInterval);
+  _branchesSyncInterval = setInterval(function() {
+    if (window.location.pathname === '/branches' && _selectedRepoId) fetchBranches();
+  }, 60000);
 
   var projects = [];
   try {
@@ -234,6 +244,7 @@ async function fetchBranches() {
 
       var def = _branches.find(function(b) { return b.isDefault; }) || _branches[0];
       if (def) selectBranch(def.name || def);
+      fetchGitGraph();
     } else if (res && res.authRequired) {
       if (authEl) authEl.style.display = 'block';
       var btnCreate = document.getElementById('btn-open-create-branch');
@@ -308,6 +319,7 @@ function selectBranch(bName) {
   if (titleEl) titleEl.textContent = bName;
 
   renderBranchList();
+  renderGitGraph();
   fetchCommits();
 }
 
@@ -430,32 +442,109 @@ function escapeGitText(value) {
   return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+async function fetchGitGraph() {
+  if (!_selectedRepoId || !_branches.length) return;
+  var requestedRepoId = _selectedRepoId;
+  var graphEl = document.getElementById('git-graph');
+  if (graphEl) graphEl.innerHTML = '<div style="padding:20px;color:var(--color-text-tertiary);font-size:13px;">Syncing branch heads and parent relationships from the remote…</div>';
+  var requests = _branches.slice(0, 20).map(async function(branch) {
+    var name = branch.name || branch;
+    var params = new URLSearchParams({ repositoryId: _selectedRepoId, branch: name, limit: '30' });
+    if (_activeProject) params.set('projectId', _activeProject.id);
+    try {
+      var result = await api.get('/api/commits/by-repo?' + params.toString());
+      return result?.ok ? (result.commits || []) : [];
+    } catch (_) { return []; }
+  });
+  var histories = await Promise.all(requests);
+  if (requestedRepoId !== _selectedRepoId) return;
+  var bySha = new Map();
+  histories.forEach(function(history) {
+    history.forEach(function(commit) {
+      var sha = commit.sha || commit.commitId;
+      if (sha && !bySha.has(sha)) bySha.set(sha, commit);
+    });
+  });
+  _graphCommits = Array.from(bySha.values());
+  _graphSyncedAt = new Date();
+  renderGitGraph();
+}
+
 function renderGitGraph() {
   var card = document.getElementById('git-graph-card');
   var branchEl = document.getElementById('git-graph-branches');
   var graphEl = document.getElementById('git-graph');
+  var subtitle = document.getElementById('git-graph-subtitle');
+  var syncEl = document.getElementById('git-graph-sync');
   if (!card || !branchEl || !graphEl) return;
   card.style.display = _selectedBranch ? 'block' : 'none';
   if (!_selectedBranch) return;
 
-  branchEl.innerHTML = _branches.map(function(branch, index) {
+  var palette = ['#6366f1', '#22c55e', '#f59e0b', '#a78bfa', '#38bdf8', '#f472b6'];
+  branchEl.innerHTML = '';
+  _branches.forEach(function(branch, index) {
     var name = branch.name || branch;
     var selected = name === _selectedBranch;
     var isDefault = branch.isDefault || name === _defaultBranch;
-    var color = selected ? '#6366f1' : ['#22c55e', '#f59e0b', '#a78bfa', '#38bdf8'][index % 4];
-    return '<button type="button" onclick="selectBranch(\'' + escapeGitText(name).replace(/'/g, '\\&#39;') + '\')" style="display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid ' + (selected ? color : 'var(--color-border)') + ';border-radius:999px;background:' + (selected ? 'rgba(99,102,241,.12)' : 'var(--color-bg)') + ';color:' + (selected ? color : 'var(--color-text-secondary)') + ';font-size:11px;font-weight:700;cursor:pointer;"><i style="width:7px;height:7px;display:inline-block;border-radius:50%;background:' + color + ';"></i>' + escapeGitText(name) + (isDefault ? ' <span style="opacity:.7;">default</span>' : '') + '</button>';
-  }).join('');
+    var color = palette[index % palette.length];
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.onclick = function() { selectBranch(name); };
+    button.style.cssText = 'display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border:1px solid ' + (selected ? color : 'var(--color-border)') + ';border-radius:999px;background:' + (selected ? 'rgba(99,102,241,.12)' : 'var(--color-bg)') + ';color:' + (selected ? color : 'var(--color-text-secondary)') + ';font-size:11px;font-weight:700;cursor:pointer;';
+    button.innerHTML = '<i style="width:7px;height:7px;display:inline-block;border-radius:50%;background:' + color + ';"></i>' + escapeGitText(name) + (isDefault ? ' <span style="opacity:.7;">default</span>' : '');
+    branchEl.appendChild(button);
+  });
 
-  if (!_commits.length) {
+  var commits = _graphCommits.length ? _graphCommits : _commits;
+  if (!commits.length) {
     graphEl.innerHTML = '<div style="padding:20px;color:var(--color-text-tertiary);font-size:13px;">No history available for this branch.</div>';
     return;
   }
-  graphEl.innerHTML = _commits.map(function(commit) {
-    var sha = commit.sha || commit.commitId || '';
-    var message = (commit.message || 'No commit message').split('\n')[0];
-    var parents = commit.parents || commit.commit?.parents || [];
-    var merge = parents.length > 1;
-    return '<div class="git-graph-row"><div class="git-graph-lane">' + (merge ? '<i class="git-graph-merge-line"></i>' : '') + '<i class="git-graph-dot' + (merge ? ' merge' : '') + '"></i></div><div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeGitText(message) + '</div><div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px;">' + (merge ? 'Merge commit · ' : '') + escapeGitText(relTime(commit.date)) + '</div></div><code style="font-size:11px;color:var(--color-text-tertiary);">' + escapeGitText(sha.slice(0, 7)) + '</code></div>';
+  var bySha = new Map();
+  commits.forEach(function(commit) { var sha = commit.sha || commit.commitId; if (sha) bySha.set(sha, commit); });
+  var headOrder = _branches.slice().sort(function(a, b) {
+    var an = a.name || a, bn = b.name || b;
+    return (an === _selectedBranch ? -1 : 0) - (bn === _selectedBranch ? -1 : 0);
+  }).map(function(branch) { return branch.sha; }).filter(function(sha) { return bySha.has(sha); });
+  var ordered = [], visited = new Set();
+  function visit(sha) {
+    if (!sha || visited.has(sha) || !bySha.has(sha)) return;
+    visited.add(sha);
+    var commit = bySha.get(sha);
+    ordered.push(commit);
+    (commit.parents || []).forEach(visit);
+  }
+  headOrder.forEach(visit);
+  commits.sort(function(a, b) { return new Date(b.date || 0) - new Date(a.date || 0); }).forEach(function(commit) { visit(commit.sha || commit.commitId); });
+
+  var lanes = headOrder.slice();
+  var rows = ordered.map(function(commit) {
+    var sha = commit.sha || commit.commitId;
+    var lane = lanes.indexOf(sha);
+    if (lane < 0) { lanes.push(sha); lane = lanes.length - 1; }
+    var before = lanes.slice();
+    var parents = (commit.parents || []).filter(function(parent) { return bySha.has(parent); });
+    var next = before.slice();
+    next.splice(lane, 1);
+    var parentLanes = parents.map(function(parent, index) {
+      var target = next.indexOf(parent);
+      if (target < 0) { next.splice(Math.min(lane + index, next.length), 0, parent); target = next.indexOf(parent); }
+      return target;
+    });
+    lanes = next;
+    return { commit: commit, lane: lane, before: before, parentLanes: parentLanes, laneCount: Math.max(before.length, next.length, 1) };
+  });
+  if (subtitle) subtitle.textContent = 'Actual parent relationships from the latest 30 commits reachable from each branch; selected: ' + _selectedBranch + '.';
+  if (syncEl) syncEl.textContent = _graphSyncedAt ? 'Synced ' + _graphSyncedAt.toLocaleTimeString() : '';
+  graphEl.innerHTML = rows.map(function(row) {
+    var width = Math.max(48, row.laneCount * 22 + 18);
+    var x = function(index) { return 11 + index * 22; };
+    var laneColor = function(index) { return palette[index % palette.length]; };
+    var lines = row.before.map(function(_, index) { return '<line x1="' + x(index) + '" y1="0" x2="' + x(index) + '" y2="42" stroke="' + laneColor(index) + '" stroke-opacity=".72" stroke-width="1.8" />'; }).join('');
+    var links = row.parentLanes.map(function(parentLane) { return '<line x1="' + x(row.lane) + '" y1="21" x2="' + x(parentLane) + '" y2="42" stroke="' + laneColor(parentLane) + '" stroke-width="2.2" />'; }).join('');
+    var merge = row.parentLanes.length > 1;
+    var commit = row.commit, sha = commit.sha || commit.commitId || '', message = (commit.message || 'No commit message').split('\n')[0];
+    return '<div class="git-graph-row"><svg width="' + width + '" height="42" viewBox="0 0 ' + width + ' 42" aria-hidden="true">' + lines + links + '<circle cx="' + x(row.lane) + '" cy="21" r="' + (merge ? '7' : '5') + '" fill="' + (merge ? '#a78bfa' : laneColor(row.lane)) + '" stroke="var(--color-surface)" stroke-width="3" /></svg><div style="min-width:0;"><div style="font-size:13px;font-weight:600;color:var(--color-text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeGitText(message) + '</div><div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px;">' + (merge ? 'Merge commit · ' : '') + escapeGitText(relTime(commit.date)) + '</div></div><code style="font-size:11px;color:var(--color-text-tertiary);">' + escapeGitText(sha.slice(0, 7)) + '</code></div>';
   }).join('');
 }
 

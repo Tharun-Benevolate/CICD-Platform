@@ -151,9 +151,9 @@
     <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;">
       <div>
         <h2 style="font-size:15px;font-weight:700;margin:0 0 3px;color:var(--color-text-primary);display:flex;gap:8px;align-items:center;"><i data-lucide="git-graph" style="width:17px;height:17px;color:#6366f1;"></i> Visual history</h2>
-        <p style="margin:0;font-size:12px;color:var(--color-text-tertiary);">Branch heads, commits, and merge commits for the selected branch.</p>
+        <p id="git-graph-subtitle" style="margin:0;font-size:12px;color:var(--color-text-tertiary);">Loading the remote commit graph…</p>
       </div>
-      <div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-tertiary);"><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6366f1;"></i> Commit</span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#a78bfa;"></i> Merge</span></div>
+      <div style="display:flex;gap:10px;font-size:11px;color:var(--color-text-tertiary);"><span id="git-graph-sync"></span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#6366f1;"></i> Commit</span><span><i style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#a78bfa;"></i> Merge</span></div>
     </div>
     <div id="git-graph-branches" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px;"></div>
     <div id="git-graph" class="git-graph" aria-label="Visual Git commit history"></div>
