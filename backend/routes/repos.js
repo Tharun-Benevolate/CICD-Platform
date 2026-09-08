@@ -890,7 +890,7 @@ router.post("/branches/merge", auth.requireRole("super_admin", "devops", "admin"
     const repo = await repoStore.getRepository(repositoryId);
     if (!repo) return res.status(404).json({ ok: false, error: "Repository not found" });
 
-    const { token } = await resolveGithubToken(req);
+    const { token } = await resolveGithubTokenForRepo(req, repo);
     const { getProvider } = require("../services/gitProvider");
     const provider = getProvider(repo.provider);
     const result = await provider.mergeBranches(
@@ -899,20 +899,22 @@ router.post("/branches/merge", auth.requireRole("super_admin", "devops", "admin"
       null, token
     );
 
-    if (result.alreadyUpToDate) {
-      return res.status(400).json({ ok: false, error: "Branch is already up to date with base" });
-    }
-
     const auditStore = require("../stores/auditStore");
     auditStore.logAction(
       req.user?.username || "system",
-      `Merged branch '${headBranch}' into '${baseBranch}'`,
+      result.alreadyUpToDate
+        ? `Merge already present: '${headBranch}' into '${baseBranch}'`
+        : `Merged branch '${headBranch}' into '${baseBranch}'`,
       repo.repo_name, "Success", "Change Requests"
     );
-    res.json({ ok: true, mergeResult: result });
+    res.json({ ok: true, mergeResult: result, alreadyUpToDate: !!result.alreadyUpToDate });
   } catch (err) {
     if (err.status === 409) {
-      return res.status(409).json({ ok: false, error: "Merge conflict detected. Resolve conflicts before merging." });
+      return res.status(409).json({
+        ok: false,
+        mergeConflict: true,
+        error: "GitHub found a merge conflict. No merge commit or branch update was created."
+      });
     }
     res.status(err.status || 500).json({ ok: false, error: err.message });
   }

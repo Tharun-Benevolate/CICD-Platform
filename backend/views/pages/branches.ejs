@@ -220,6 +220,7 @@
         <label class="workspace-label" style="margin-top:14px;">MERGE COMMIT MESSAGE</label><input id="merge-message" class="workspace-select" type="text" placeholder="Merge feature branch into main">
         <div id="merge-preview" style="display:none;margin-top:14px;padding:10px 12px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:8px;font-size:12px;color:var(--color-text-secondary);"></div>
         <div id="merge-branch-error" style="display:none;margin-top:14px;" class="msg-box error"></div>
+        <div id="merge-conflict-guide" style="display:none;margin-top:14px;padding:13px;border:1px solid rgba(245,158,11,.45);background:rgba(245,158,11,.08);border-radius:9px;font-size:12px;color:var(--color-text-secondary);"></div>
         <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:20px;"><button type="button" onclick="closeMergeModal()" class="btn-secondary" style="padding:9px 16px;border-radius:9px;font-size:13px;font-weight:600;">Cancel</button><button type="submit" id="btn-submit-merge" style="padding:9px 18px;background:#6366f1;color:#fff;border:0;border-radius:9px;font-weight:700;cursor:pointer;">Merge branches</button></div>
       </form>
     </div>

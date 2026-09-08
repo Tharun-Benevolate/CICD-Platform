@@ -682,6 +682,8 @@ function openMergeModal() {
   if (source.value === target.value) source.selectedIndex = 1;
   error.style.display = 'none';
   preview.style.display = 'none';
+  var conflictGuide = document.getElementById('merge-conflict-guide');
+  if (conflictGuide) conflictGuide.style.display = 'none';
   document.getElementById('merge-message').value = '';
   document.getElementById('modal-merge-branch').style.display = 'flex';
   updateMergePreview();
@@ -691,6 +693,37 @@ function openMergeModal() {
 }
 
 function closeMergeModal() { document.getElementById('modal-merge-branch').style.display = 'none'; }
+
+function shellQuote(value) {
+  return "'" + String(value || '').replace(/'/g, "'\\\"'\\\"'") + "'";
+}
+
+function showMergeConflictGuide(source, target) {
+  var guide = document.getElementById('merge-conflict-guide');
+  if (!guide) return;
+  var fetchCommand = 'git fetch origin --prune';
+  var checkoutCommand = 'git checkout ' + shellQuote(target) + ' && git pull --ff-only origin ' + shellQuote(target);
+  var mergeCommand = 'git merge ' + shellQuote('origin/' + source);
+  guide.style.display = 'block';
+  guide.innerHTML = '<div style="font-weight:800;color:#fbbf24;margin-bottom:6px;">Merge conflict — nothing was merged</div>' +
+    '<div style="line-height:1.45;margin-bottom:9px;">GitHub rejected this merge before changing <strong>' + escapeGitText(target) + '</strong>. Resolve it in the project-scoped Git CLI, then retry here.</div>' +
+    '<ol style="margin:0 0 10px 18px;padding:0;line-height:1.65;">' +
+      '<li>Fetch remote updates: <code>' + escapeGitText(fetchCommand) + '</code></li>' +
+      '<li>Switch to the target safely: <code>' + escapeGitText(checkoutCommand) + '</code></li>' +
+      '<li>Start the same merge locally: <code>' + escapeGitText(mergeCommand) + '</code></li>' +
+      '<li>Edit only files reported by <code>git status</code>, then run <code>git add &lt;file&gt;</code>, <code>git commit</code>, and <code>git push origin ' + escapeGitText(target) + '</code>.</li>' +
+    '</ol>' +
+    '<button type="button" id="btn-open-conflict-cli" class="btn-secondary" style="padding:7px 10px;border-radius:7px;font-size:12px;font-weight:700;">Open Git CLI with step 1</button>';
+  var openButton = document.getElementById('btn-open-conflict-cli');
+  if (openButton) openButton.onclick = function() { openConflictCli(fetchCommand); };
+}
+
+function openConflictCli(command) {
+  var panel = document.getElementById('cli-panel');
+  if (panel && panel.style.display === 'none') toggleCliPanel();
+  var input = document.getElementById('cli-cmd-input');
+  if (input) { input.value = command; input.focus(); }
+}
 
 async function updateMergePreview() {
   var source = document.getElementById('merge-source-branch')?.value;
@@ -718,8 +751,11 @@ async function handleMergeBranchSubmit(event) {
   if (!source || !target || source === target) { error.textContent = 'Choose two different branches.'; error.style.display = 'block'; return; }
   if (!window.confirm('Merge "' + source + '" into "' + target + '"? This creates a remote merge commit.')) return;
   button.disabled = true; button.textContent = 'Merging…'; error.style.display = 'none';
+  var conflictGuide = document.getElementById('merge-conflict-guide');
+  if (conflictGuide) conflictGuide.style.display = 'none';
   try {
     var res = await api.post('/api/branches/merge', { repositoryId: _selectedRepoId, baseBranch: target, headBranch: source, commitMessage: message || undefined });
+    if (res?.mergeConflict) { showMergeConflictGuide(source, target); return; }
     if (!res?.ok) throw new Error(res?.error || 'Merge failed');
     closeMergeModal();
     _selectedBranch = target;
@@ -764,10 +800,10 @@ async function handleExecCli(e) {
       command: cmd
     });
 
-    if (res.ok) {
-      preOut.textContent = res.output || 'Command executed successfully.';
+    if (res.ok && res.result?.success) {
+      preOut.textContent = res.result.output || 'Command executed successfully.';
     } else {
-      preOut.textContent = 'Error: ' + (res.error || 'Command failed');
+      preOut.textContent = 'Error: ' + (res.result?.output || res.error || 'Command failed');
     }
   } catch (err) {
     preOut.textContent = 'Error: ' + err.message;
