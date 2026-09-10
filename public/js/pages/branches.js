@@ -1,4 +1,8 @@
 // Branches Page — Vanilla JS Logic
+// Keep this page isolated from other SPA page scripts. Several older pages
+// use generic globals such as `fetchRepos` and `_repos`; without this closure,
+// visiting Repositories overwrites Branches' loader before a return navigation.
+(function() {
 var _activeProject = null;
 var _repos = [];
 var _selectedRepoId = null;
@@ -913,3 +917,22 @@ async function handleCreateBranchSubmit(e) {
   }
   btn.disabled = false;
 }
+
+// Only functions called by the server-rendered markup or SPA router are public.
+// All page state and helpers stay private to prevent cross-page collisions.
+Object.assign(window, {
+  initBranchesPageRunner: initBranchesPageRunner,
+  initBranchesPage: initBranchesPage,
+  toggleRepoDropdown: toggleRepoDropdown,
+  fetchBranches: fetchBranches,
+  fetchCommits: fetchCommits,
+  toggleCliPanel: toggleCliPanel,
+  handleExecCli: handleExecCli,
+  openMergeModal: openMergeModal,
+  closeMergeModal: closeMergeModal,
+  handleMergeBranchSubmit: handleMergeBranchSubmit,
+  openCreateBranchModal: openCreateBranchModal,
+  closeCreateBranchModal: closeCreateBranchModal,
+  handleCreateBranchSubmit: handleCreateBranchSubmit
+});
+})();
