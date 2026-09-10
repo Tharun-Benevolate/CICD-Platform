@@ -11,11 +11,12 @@ var _graphSyncedAt = null;
 var _branchesSyncInterval = null;
 var _gitActivity = [];
 var _relationshipRequest = 0;
+var _branchesInitRequest = 0;
 
 var _branchesClickListenerAdded = false;
 
-function initBranchesPageRunner() {
-  initBranchesPage();
+async function initBranchesPageRunner() {
+  var result = initBranchesPage();
 
   if (!_branchesClickListenerAdded) {
     _branchesClickListenerAdded = true;
@@ -35,6 +36,7 @@ function initBranchesPageRunner() {
       }
     });
   }
+  return result;
 }
 
 window.initBranchesPageRunner = initBranchesPageRunner;
@@ -45,6 +47,7 @@ if (document.readyState === 'loading') {
 }
 
 async function initBranchesPage() {
+  var initRequest = ++_branchesInitRequest;
   // Reset all state on SPA re-navigation
   _repos = [];
   _branches = [];
@@ -84,15 +87,19 @@ async function initBranchesPage() {
     }
   } catch (e) {}
 
+  // A previous navigation may finish after the user has already left and
+  // returned to this page. Only the newest initialization may touch this DOM.
+  if (initRequest !== _branchesInitRequest) return;
+
   if (!projects || projects.length === 0) {
     showNoRepoState('No Projects Found', 'No projects exist yet. Please create a project first.');
     return;
   }
 
-  fetchRepos();
+  return fetchRepos(initRequest);
 }
 
-async function fetchRepos() {
+async function fetchRepos(initRequest) {
   try {
     var url = _activeProject ? '/api/repos?projectId=' + _activeProject.id : '/api/repos';
     var res = await api.get(url);
@@ -105,10 +112,16 @@ async function fetchRepos() {
     _repos = [];
   }
 
+  if (initRequest && initRequest !== _branchesInitRequest) return;
+
   renderRepoSelector();
 
   if (_repos.length > 0) {
-    selectRepo(_repos[0].id || _repos[0].repo_name || _repos[0].name);
+    var savedRepoId = null;
+    try { savedRepoId = sessionStorage.getItem('branches:selected-repo:' + (_activeProject?.id || 'global')); } catch (_) {}
+    var savedRepo = _repos.find(function(repo) { return String(repo.id || repo.repo_name || repo.name) === String(savedRepoId); });
+    var initialRepo = savedRepo || _repos[0];
+    return selectRepo(initialRepo.id || initialRepo.repo_name || initialRepo.name);
   } else {
     showNoRepoState('No Repositories Connected', 'Connect a repository on the Repositories page first.');
   }
@@ -160,13 +173,14 @@ function toggleRepoDropdown() {
   }
 }
 
-function selectRepo(rid) {
+async function selectRepo(rid) {
   var repo = _repos.find(function(r) { return String(r.id || r.repo_name || r.name) === String(rid); });
   if (!repo) {
     showNoRepoState('Repository unavailable', 'The selected repository is no longer available. Refresh the page and try again.');
     return;
   }
   _selectedRepoId = repo.id || repo.repo_name || repo.name;
+  try { sessionStorage.setItem('branches:selected-repo:' + (_activeProject?.id || 'global'), String(_selectedRepoId)); } catch (_) {}
   var name = repo ? (repo.repo_name || repo.repositoryName || repo.name) : 'Select Repository';
   var prov = repo ? (repo.provider || 'codecommit') : 'codecommit';
   var isGH = prov === 'github';
@@ -198,7 +212,7 @@ function selectRepo(rid) {
   var btnCreate = document.getElementById('btn-open-create-branch');
   if (btnCreate) btnCreate.disabled = false;
 
-  fetchBranches();
+  return fetchBranches();
 }
 
 function showNoRepoState(title, desc) {
@@ -245,11 +259,13 @@ async function fetchBranches() {
   if (titleEl) titleEl.textContent = '...';
   showCommitsEmptyState('No commits found for branch');
 
+  var requestedRepoId = _selectedRepoId;
   try {
-    var params = new URLSearchParams({ repositoryId: _selectedRepoId });
+    var params = new URLSearchParams({ repositoryId: requestedRepoId });
     if (_activeProject) params.set('projectId', _activeProject.id);
 
     var res = await api.get('/api/branches/by-repo?' + params.toString());
+    if (requestedRepoId !== _selectedRepoId || !document.getElementById('branches-main-grid')) return;
     if (res && res.ok && res.branches) {
       _branches = res.branches;
       _defaultBranch = res.defaultBranch || 'main';
@@ -274,11 +290,13 @@ async function fetchBranches() {
       }
     }
   } catch (err) {
+    if (requestedRepoId !== _selectedRepoId) return;
     if (errorEl) {
       document.getElementById('branches-error-text').textContent = err.message || 'Error loading branches';
       errorEl.style.display = 'flex';
     }
   } finally {
+    if (requestedRepoId !== _selectedRepoId) return;
     if (loadingEl) loadingEl.style.display = 'none';
     if (iconRefresh) {
       setTimeout(function() { iconRefresh.classList.remove('animate-spin'); }, 400);
