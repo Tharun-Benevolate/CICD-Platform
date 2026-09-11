@@ -176,9 +176,10 @@ router.get("/:projectId/values/:env", auth.requireAuth, requireSecretEnvironment
       throw err;
     }
 
-    const user = auth.getLoggedInUser(req) || "unknown";
-    auditStore.logAction(user, `Read ${env} secret values (${Object.keys(values).length} keys)`, project.name, "Success", "Secrets");
-
+    // Loading a secret for the editor is a read-only operation. Do not create
+    // audit events here: the UI loads these values as the user navigates, and
+    // recording each read would flood the audit trail. Mutations below remain
+    // audited (update, inherit, delete, restart, and environment deletion).
     res.json({ ok: true, values, exists: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
