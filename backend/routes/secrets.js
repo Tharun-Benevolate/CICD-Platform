@@ -74,14 +74,40 @@ function validateEnv(env) {
   return VALID_ENVS.includes(env) ? env : null;
 }
 
+function isPrivileged(req) {
+  return auth.ADMIN_ROLES.includes(req.user?.userType || auth.getLoggedInUserType(req));
+}
+
+// Developers may manage development/UAT secrets, but production metadata,
+// values, and mutations remain privileged-only. This is enforced server-side;
+// hiding the tab alone would not protect direct API calls.
+function requireSecretEnvironmentAccess(req, res, next) {
+  const env = req.params.env || req.body?.env;
+  if (env === "prod" && !isPrivileged(req)) {
+    return res.status(403).json({ ok: false, error: "Production secrets are restricted to Super Admin, Admin, and DevOps roles." });
+  }
+  next();
+}
+
+function requireSecretInheritanceAccess(req, res, next) {
+  if ((req.body?.sourceEnv === "prod" || req.body?.targetEnv === "prod") && !isPrivileged(req)) {
+    return res.status(403).json({ ok: false, error: "Production secrets are restricted to Super Admin, Admin, and DevOps roles." });
+  }
+  next();
+}
+
 // ── GET /api/secrets/:projectId/names — returns all env secret names + lock status ──
-router.get("/:projectId/names", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.get("/:projectId/names", auth.requireAuth, async (req, res) => {
   try {
     const project = await requireProject(req, res);
     if (!project) return;
 
     const result = {};
     for (const env of VALID_ENVS) {
+      if (env === "prod" && !isPrivileged(req)) {
+        result[env] = { restricted: true };
+        continue;
+      }
       const cfg = getSecretForEnv(project, env);
       let locked = !!cfg;
       let name = cfg ? cfg.name : resolveSecretNameForEnv(project, env);
@@ -120,7 +146,7 @@ router.get("/:projectId/names", auth.requireRole(...auth.ADMIN_ROLES), async (re
 });
 
 // ── GET /api/secrets/:projectId/values/:env — read current secret VALUES for editing ──
-router.get("/:projectId/values/:env", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.get("/:projectId/values/:env", auth.requireAuth, requireSecretEnvironmentAccess, async (req, res) => {
   try {
     const project = await requireProject(req, res);
     if (!project) return;
@@ -160,14 +186,14 @@ router.get("/:projectId/values/:env", auth.requireRole(...auth.ADMIN_ROLES), asy
 });
 
 // ── GET /api/secrets/:projectId/values — legacy: returns dev values (backward compat) ──
-router.get("/:projectId/values", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.get("/:projectId/values", auth.requireAuth, async (req, res) => {
   // Redirect to dev values for backward compatibility
   req.params.env = "dev";
   return router.handle(req, res);
 });
 
 // ── GET /api/secrets/:projectId — list key names for dev (backward compat) ──
-router.get("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.get("/:projectId", auth.requireAuth, async (req, res) => {
   try {
     const project = await requireProject(req, res);
     if (!project) return;
@@ -182,7 +208,7 @@ router.get("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, res
 });
 
 // ── GET /api/secrets/:projectId/keys/:env — list key names for a specific env ──
-router.get("/:projectId/keys/:env", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.get("/:projectId/keys/:env", auth.requireAuth, requireSecretEnvironmentAccess, async (req, res) => {
   try {
     const project = await requireProject(req, res);
     if (!project) return;
@@ -200,7 +226,7 @@ router.get("/:projectId/keys/:env", auth.requireRole(...auth.ADMIN_ROLES), async
 
 // ── POST /api/secrets/:projectId — upsert secrets for a specific env ──
 // Body: { env: "dev"|"uat"|"prod", secrets: { KEY: value, ... }, secretName?: "custom/name" }
-router.post("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.post("/:projectId", auth.requireAuth, requireSecretEnvironmentAccess, async (req, res) => {
   try {
     const project = await requireProject(req, res);
     if (!project) return;
@@ -289,7 +315,7 @@ router.post("/:projectId", auth.requireRole(...auth.ADMIN_ROLES), async (req, re
 
 // ── POST /api/secrets/:projectId/inherit — copy secrets from source env to target env ──
 // Body: { sourceEnv: "dev", targetEnv: "uat" } — copies key names (not values) as a starting point
-router.post("/:projectId/inherit", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.post("/:projectId/inherit", auth.requireAuth, requireSecretInheritanceAccess, async (req, res) => {
   try {
     const project = await requireProject(req, res);
     if (!project) return;
@@ -334,7 +360,7 @@ router.post("/:projectId/inherit", auth.requireRole(...auth.ADMIN_ROLES), async 
 });
 
 // ── DELETE /api/secrets/:projectId/:env/:key — remove a single key from an env ──
-router.delete("/:projectId/:env/:key", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.delete("/:projectId/:env/:key", auth.requireAuth, requireSecretEnvironmentAccess, async (req, res) => {
   try {
     const project = await requireProject(req, res);
     if (!project) return;
@@ -522,7 +548,7 @@ router.post("/:projectId/restart", auth.requireRole(...auth.ADMIN_ROLES), async 
 });
 
 // ── DELETE /api/secrets/:projectId/:env — force-delete entire secret from AWS + clear reference ──
-router.delete("/:projectId/:env", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.delete("/:projectId/:env", auth.requireAuth, requireSecretEnvironmentAccess, async (req, res) => {
   try {
     const project = await requireProject(req, res);
     if (!project) return;

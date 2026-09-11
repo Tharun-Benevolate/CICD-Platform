@@ -268,7 +268,7 @@ router.get("/settings/buildspec", (req, res) => {
 });
 
 // PUT /api/projects/:id/buildspec — Updates the custom buildspec and updates CodeBuild instantly
-router.put("/projects/:id/buildspec", async (req, res) => {
+router.put("/projects/:id/buildspec", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
   try {
     const project = await store.getProject(req.params.id);
     if (!project) return res.status(404).json({ ok: false, error: "Project not found" });

@@ -7,6 +7,10 @@ var _foundationDone = false;
 var _confirmModalCallback = null;
 var _setupPollTimer = null;
 
+function canManageProdSecrets() {
+  return typeof auth !== 'undefined' && typeof auth.isAdmin === 'function' && auth.isAdmin();
+}
+
 window.initSetupWizardPage = initSetupWizardPage;
 
 if (document.readyState === 'loading') {
@@ -444,6 +448,9 @@ async function loadSecrets() {
 
     // Load keys and values for all envs
     for (var env of ['dev', 'uat', 'prod']) {
+      // Do not even request production secret metadata or values for a
+      // non-privileged session. The server independently enforces this too.
+      if (env === 'prod' && !canManageProdSecrets()) continue;
       var container = document.getElementById('secrets-table-' + env);
       if (!container) continue;
 

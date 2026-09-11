@@ -9,7 +9,7 @@ const JWT_SECRET    = process.env.JWT_SECRET || "fallback-secret-change-in-produ
 const GOOGLE_CLIENT = process.env.GOOGLE_CLIENT_ID;
 
 // Roles with full access to approvals and infrastructure create/destroy.
-const ADMIN_ROLES = ["super_admin", "devops"];
+const ADMIN_ROLES = ["super_admin", "admin", "devops"];
 
 // ── Password helpers ──────────────────────────────────────────────────────
 

@@ -11,7 +11,7 @@ if (!JWT_SECRET) {
 // Roles with full access to approvals and infrastructure create/destroy,
 // per the 2026-07-02 project meeting. Developers and sales accounts are
 // restricted to development-related activity only.
-const ADMIN_ROLES = ["super_admin", "devops"];
+const ADMIN_ROLES = ["super_admin", "admin", "devops"];
 
 function hashPassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");

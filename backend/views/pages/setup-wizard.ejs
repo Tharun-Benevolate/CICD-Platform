@@ -1,17 +1,5 @@
 <div class="setup-container">
-  <% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
-    <!-- Access Restricted View for Non-DevOps Roles -->
-    <div style="padding:40px;text-align:center;color:var(--color-text-tertiary);">
-      <i data-lucide="shield-alert" style="width:48px;height:48px;color:var(--color-warning);margin-bottom:12px;"></i>
-      <h2 style="font-size:18px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">
-        Access Restricted
-      </h2>
-      <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">
-        You do not have permission to access this page. Please contact your organization administrator if you believe this is an error.
-      </p>
-    </div>
-  <% } else { %>
-    <!-- DevOps Setup Wizard View -->
+  <% const isPrivileged = ['devops', 'admin', 'super_admin'].includes(user.userType); %>
 
     <!-- Header -->
     <div style="margin-bottom:28px;">
@@ -24,6 +12,7 @@
       </p>
     </div>
 
+    <% if (isPrivileged) { %>
     <!-- Overview Cards Row -->
     <div class="setup-cards-row">
       <div class="setup-card">
@@ -151,6 +140,13 @@
       </div>
     </div>
 
+    <% } else { %>
+      <div style="margin-bottom:22px;padding:13px 16px;border-radius:10px;border:1px solid rgba(245,158,11,.3);background:rgba(245,158,11,.08);font-size:13px;color:var(--color-text-secondary);">
+        <i data-lucide="shield-alert" style="width:15px;height:15px;color:#f59e0b;vertical-align:middle;margin-right:5px;"></i>
+        Infrastructure controls and production secrets are restricted. You can manage Dev and UAT secrets below.
+      </div>
+    <% } %>
+
     <!-- SECTION 3: SECRETS MANAGEMENT -->
     <div class="setup-section-box">
       <h2 style="font-size:17px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">
@@ -172,9 +168,9 @@
         <button class="secrets-tab" data-env="uat" onclick="switchSecretsTab('uat')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--color-text-tertiary);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">
           UAT
         </button>
-        <button class="secrets-tab" data-env="prod" onclick="switchSecretsTab('prod')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--color-text-tertiary);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">
+        <% if (isPrivileged) { %><button class="secrets-tab" data-env="prod" onclick="switchSecretsTab('prod')" style="padding:10px 20px;font-size:13px;font-weight:600;border:none;cursor:pointer;background:transparent;color:var(--color-text-tertiary);border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s;">
           Prod
-        </button>
+        </button><% } %>
       </div>
 
       <!-- ── Tab Content (one per env, shown/hidden by JS) ── -->
@@ -234,7 +230,7 @@
         <div id="secrets-save-msg-uat" style="margin-top:12px;font-size:12px;display:none;"></div>
       </div>
 
-      <div id="secrets-tab-prod" class="secrets-tab-content" style="padding-top:18px;display:none;">
+      <% if (isPrivileged) { %><div id="secrets-tab-prod" class="secrets-tab-content" style="padding-top:18px;display:none;">
         <div style="margin-bottom:14px;">
           <label style="display:block;font-size:12px;font-weight:600;color:var(--color-text-secondary);margin-bottom:6px;">
             AWS Secrets Manager secret name
@@ -267,9 +263,10 @@
           </button>
         </div>
         <div id="secrets-save-msg-prod" style="margin-top:12px;font-size:12px;display:none;"></div>
-      </div>
+      </div><% } %>
 
       <!-- ── APPLY ACTIONS ── -->
+      <% if (isPrivileged) { %>
       <div style="margin-top:24px;padding-top:20px;border-top:1px solid var(--color-border);">
         <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);margin-bottom:6px;">
           Apply Secret Changes to Running Containers
@@ -302,10 +299,11 @@
           </div>
           <div id="secrets-action-log" style="padding:12px 14px;font-family:monospace;font-size:12px;color:#cbd5e1;background:#0f172a;max-height:260px;overflow-y:auto;white-space:pre-wrap;"></div>
         </div>
-      </div>
+      </div><% } %>
     </div>
 
     <!-- SECTION 4: DANGER ZONE — DESTROY ENTIRE PROJECT -->
+    <% if (isPrivileged) { %>
     <div class="setup-danger-box">
       <h2 style="font-size:17px;font-weight:700;color:var(--color-danger);margin-bottom:6px;">
         4. Danger Zone: Destroy Entire Project
@@ -389,7 +387,5 @@
           </button>
         </div>
       </div>
-    </div>
-
-  <% } %>
+    </div><% } %>
 </div>

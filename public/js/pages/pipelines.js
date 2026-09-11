@@ -171,7 +171,11 @@ function renderPipeline() {
       else if (stgNameLower === 'deploy-prod') url = protocol + prefix + '.' + domain;
       
       if (url) {
-        envLinkHtml = '<a href="' + url + '" target="_blank" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-size:12px;color:#3b82f6;text-decoration:none;font-weight:600;"><i data-lucide="external-link" style="width:12px;height:12px;"></i> View Site</a>';
+        var isProdSite = stgNameLower === 'deploy-prod';
+        var canViewProd = (typeof auth !== 'undefined' && auth.isAdmin) ? auth.isAdmin() : false;
+        envLinkHtml = isProdSite && !canViewProd
+          ? '<button type="button" onclick="showProdSiteRestricted()" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-size:12px;color:#f59e0b;border:0;background:transparent;font-weight:700;cursor:pointer;"><i data-lucide="lock" style="width:12px;height:12px;"></i> Production restricted</button>'
+          : '<a href="' + url + '" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:4px;margin-left:12px;font-size:12px;color:#3b82f6;text-decoration:none;font-weight:600;"><i data-lucide="external-link" style="width:12px;height:12px;"></i> View Site</a>';
       }
     }
 
@@ -205,6 +209,25 @@ function renderPipeline() {
 
   if (window.lucide) lucide.createIcons();
 }
+
+function showProdSiteRestricted() {
+  var existing = document.getElementById('prod-site-restricted-modal');
+  if (existing) { existing.style.display = 'flex'; return; }
+  var modal = document.createElement('div');
+  modal.id = 'prod-site-restricted-modal';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+  modal.style.cssText = 'position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(2,6,23,.68);';
+  modal.innerHTML = '<div style="max-width:430px;width:100%;padding:28px;border-radius:16px;background:var(--color-surface);border:1px solid var(--color-border);box-shadow:0 24px 60px rgba(0,0,0,.35);text-align:center;">' +
+    '<div style="width:48px;height:48px;margin:0 auto 14px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(245,158,11,.14);color:#f59e0b;"><i data-lucide="shield-alert" style="width:25px;height:25px;"></i></div>' +
+    '<h3 style="margin:0 0 8px;font-size:18px;color:var(--color-text-primary);">Production access restricted</h3>' +
+    '<p style="margin:0;color:var(--color-text-secondary);font-size:13px;line-height:1.6;">Production ECS is available only to Super Admin, Admin, and DevOps roles. Contact a platform administrator if you need production access.</p>' +
+    '<button type="button" style="margin-top:20px;padding:9px 17px;border:0;border-radius:8px;background:var(--color-primary);color:#fff;font-weight:700;cursor:pointer;" onclick="document.getElementById(\'prod-site-restricted-modal\').style.display=\'none\'">Understood</button>' +
+    '</div>';
+  document.body.appendChild(modal);
+  if (window.lucide) lucide.createIcons();
+}
+window.showProdSiteRestricted = showProdSiteRestricted;
 
 async function handleStartPipeline() {
   if (!_activeProject) return;
