@@ -1,3 +1,4 @@
+<% const isPrivileged = ['devops', 'admin', 'super_admin'].includes(user.userType); %>
 <aside class="sidebar" id="app-sidebar">
   <!-- Brand Header -->
   <div class="sidebar-header">
@@ -54,20 +55,18 @@
       <i data-lucide="layout-dashboard" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Dashboard</span>
     </a>
-    <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
-    <a href="/monitoring" class="nav-item <%= activePage === 'monitoring' ? 'active' : '' %>" title="Monitoring">
+    <a href="/monitoring" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Live infrastructure monitoring"' : '' %> class="nav-item <%= activePage === 'monitoring' ? 'active' : '' %>" title="Monitoring<%= !isPrivileged ? ' — restricted' : '' %>">
       <i data-lucide="activity" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Monitoring</span>
     </a>
-    <a href="/audit-logs" class="nav-item <%= activePage === 'audit-logs' ? 'active' : '' %>" title="Audit Logs">
+    <a href="/audit-logs" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Audit logs"' : '' %> class="nav-item <%= activePage === 'audit-logs' ? 'active' : '' %>" title="Audit Logs<%= !isPrivileged ? ' — restricted' : '' %>">
       <i data-lucide="file-text" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Audit Logs</span>
     </a>
-    <a href="/certificates" class="nav-item <%= activePage === 'certificates' ? 'active' : '' %>" title="SSL Certificates">
+    <a href="/certificates" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="SSL certificate management"' : '' %> class="nav-item <%= activePage === 'certificates' ? 'active' : '' %>" title="SSL Certificates<%= !isPrivileged ? ' — restricted' : '' %>">
       <i data-lucide="shield-check" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Certificates</span>
     </a>
-    <% } %>
     <a href="/pipelines" class="nav-item <%= activePage === 'pipelines' ? 'active' : '' %>" title="Pipelines">
       <i data-lucide="git-branch" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Pipelines</span>
@@ -93,29 +92,27 @@
     </a>
 
     <!-- Deployment -->
-    <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
     <span class="nav-section-label">Deployment</span>
-    <a href="/approvals" class="nav-item <%= activePage === 'approvals' ? 'active' : '' %>" title="Approvals">
+    <a href="/approvals" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Deployment approvals"' : '' %> class="nav-item <%= activePage === 'approvals' ? 'active' : '' %>" title="Approvals<%= !isPrivileged ? ' — restricted' : '' %>">
       <i data-lucide="check-circle" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Approvals</span>
     </a>
-    <a href="/builds" class="nav-item <%= activePage === 'build-history' ? 'active' : '' %>" title="Build History">
+    <a href="/builds" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Build history"' : '' %> class="nav-item <%= activePage === 'build-history' ? 'active' : '' %>" title="Build History<%= !isPrivileged ? ' — restricted' : '' %>">
       <i data-lucide="briefcase" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Build History</span>
     </a>
-    <a href="/scaling" class="nav-item <%= activePage === 'scaling' ? 'active' : '' %>" title="Auto-scaling">
+    <a href="/scaling" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Auto-scaling controls"' : '' %> class="nav-item <%= activePage === 'scaling' ? 'active' : '' %>" title="Auto-scaling<%= !isPrivileged ? ' — restricted' : '' %>">
       <i data-lucide="trending-up" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Auto-scaling</span>
     </a>
-    <a href="/beta" class="nav-item <%= activePage === 'beta-environment' ? 'active' : '' %>" title="Beta Environment">
+    <a href="/beta" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Beta environment controls"' : '' %> class="nav-item <%= activePage === 'beta-environment' ? 'active' : '' %>" title="Beta Environment<%= !isPrivileged ? ' — restricted' : '' %>">
       <i data-lucide="flask-conical" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Beta Environment</span>
     </a>
-    <a href="/release" class="nav-item <%= activePage === 'release' ? 'active' : '' %>" title="Release">
+    <a href="/release" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Release management"' : '' %> class="nav-item <%= activePage === 'release' ? 'active' : '' %>" title="Release<%= !isPrivileged ? ' — restricted' : '' %>">
       <i data-lucide="zap" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Release</span>
     </a>
-    <% } %>
 
 
     <!-- Project -->
@@ -124,8 +121,7 @@
       <i data-lucide="users" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Team Access</span>
     </a>
-    <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
-    <a href="/project-settings" class="nav-item <%= activePage === 'project-settings' ? 'active' : '' %>" title="Project Settings">
+    <a href="/project-settings" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Project settings and buildspec editing"' : '' %> class="nav-item <%= activePage === 'project-settings' ? 'active' : '' %>" title="Project Settings<%= !isPrivileged ? ' — restricted' : '' %>">
       <i data-lucide="folder-cog" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Project Settings</span>
     </a>
@@ -133,7 +129,6 @@
       <i data-lucide="settings" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Setup Wizard</span>
     </a>
-    <% } %>
   </nav>
 
   <!-- Sidebar Footer -->

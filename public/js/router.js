@@ -13,6 +13,18 @@
       var link = e.target.closest('a');
       if (!link) return;
 
+      // Restricted destinations stay visible to every role so the platform's
+      // capabilities are discoverable. Stop navigation before the page loads
+      // and present the shared access explanation instead.
+      if (link.dataset.accessRestricted === 'true') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (typeof window.showAccessRestricted === 'function') {
+          window.showAccessRestricted(link.dataset.restrictedResource);
+        }
+        return;
+      }
+
       var href = link.getAttribute('href');
       var target = link.getAttribute('target');
 
