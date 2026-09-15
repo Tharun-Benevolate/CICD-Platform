@@ -1,16 +1,4 @@
 <div class="monitoring-container">
-  <% if (user.userType !== 'devops' && user.userType !== 'admin' && user.userType !== 'super_admin') { %>
-    <div style="text-align:center;padding:80px 20px;">
-      <div style="width:56px;height:56px;border-radius:16px;background:rgba(239,68,68,0.1);color:#ef4444;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-        <i data-lucide="shield-alert" style="width:28px;height:28px;"></i>
-      </div>
-      <h2 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:8px;">Access Restricted</h2>
-      <p style="font-size:14px;color:var(--color-text-secondary);max-width:440px;margin:0 auto;">
-        You do not have permission to access this page. Please contact your organization administrator.
-      </p>
-    </div>
-  <% } else { %>
-
     <!-- Header -->
     <div class="monitoring-header">
       <div>
@@ -310,7 +298,6 @@
       </div><!-- /card -->
     </div><!-- /section -->
 
-  <% } %>
 </div>
 
 <style>

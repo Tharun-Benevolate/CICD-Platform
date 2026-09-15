@@ -141,8 +141,8 @@ router.get("/login", (req, res) => {
 
 // ── Protected Pages ──
 router.get("/", requireAuth, (req, res) => renderPage(res, req, "dashboard"));
-router.get("/monitoring", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "monitoring"));
-router.get("/audit-logs", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "audit-logs"));
+router.get("/monitoring", requireAuth, (req, res) => renderPage(res, req, "monitoring"));
+router.get("/audit-logs", requireAuth, (req, res) => renderPage(res, req, "audit-logs"));
 router.get("/pipelines", requireAuth, (req, res) => renderPage(res, req, "pipelines"));
 router.get("/build", requireAuth, (req, res) => renderPage(res, req, "build-logs"));
 router.get("/certificates", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "certificates"));

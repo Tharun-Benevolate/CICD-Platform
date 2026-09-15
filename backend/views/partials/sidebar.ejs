@@ -55,11 +55,11 @@
       <i data-lucide="layout-dashboard" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Dashboard</span>
     </a>
-    <a href="/monitoring" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Live infrastructure monitoring"' : '' %> class="nav-item <%= activePage === 'monitoring' ? 'active' : '' %>" title="Monitoring<%= !isPrivileged ? ' — restricted' : '' %>">
+    <a href="/monitoring" class="nav-item <%= activePage === 'monitoring' ? 'active' : '' %>" title="Monitoring">
       <i data-lucide="activity" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Monitoring</span>
     </a>
-    <a href="/audit-logs" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Audit logs"' : '' %> class="nav-item <%= activePage === 'audit-logs' ? 'active' : '' %>" title="Audit Logs<%= !isPrivileged ? ' — restricted' : '' %>">
+    <a href="/audit-logs" class="nav-item <%= activePage === 'audit-logs' ? 'active' : '' %>" title="Audit Logs">
       <i data-lucide="file-text" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Audit Logs</span>
     </a>
