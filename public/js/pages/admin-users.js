@@ -93,6 +93,7 @@ function makeAdminAvatar(u) {
 function adminRoleLabel(u) {
   if (u.jobTitle) return u.jobTitle;
   if (u.userType === 'devops')       return 'DevOps Engineer';
+  if (u.userType === 'admin')        return 'Admin';
   if (u.userType === 'super_admin')  return 'Super Admin';
   if (u.userType === 'developer')    return 'Developer';
   if (u.userType === 'sales')        return 'Sales &amp; Business';
@@ -176,6 +177,7 @@ function renderAdminUsers() {
         '<select onchange="handleRoleChange(\'' + u.username + '\', this.value)" ' +
           'style="padding:6px 10px;border-radius:7px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:12px;font-weight:600;cursor:pointer;outline:none;">' +
           '<option value="developer" ' + (u.userType === 'developer' ? 'selected' : '') + '>Developer</option>' +
+          '<option value="admin" ' + (u.userType === 'admin' ? 'selected' : '') + '>Admin</option>' +
           '<option value="devops" ' + (u.userType === 'devops' ? 'selected' : '') + '>DevOps Engineer</option>' +
           '<option value="super_admin" ' + (u.userType === 'super_admin' ? 'selected' : '') + '>Super Admin</option>' +
           '<option value="sales" ' + (u.userType === 'sales' ? 'selected' : '') + '>Sales &amp; Business</option>' +

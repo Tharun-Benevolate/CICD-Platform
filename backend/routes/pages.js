@@ -1,6 +1,7 @@
 const express = require("express");
 const jwt = require("jsonwebtoken");
 const auth = require("../middleware/auth");
+const userStore = require("../stores/userStore");
 
 const router = express.Router();
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-change-in-production-12345";
@@ -17,18 +18,42 @@ function getUser(req) {
 }
 
 // ── Auth check middleware (redirect to /login if no valid JWT, or /settings if profile incomplete) ──
-function requireAuth(req, res, next) {
-  const user = getUser(req);
-  if (!user) {
+async function requireAuth(req, res, next) {
+  const tokenUser = getUser(req);
+  if (!tokenUser) {
     if (req.headers["x-requested-with"] === "XMLHttpRequest") {
       return res.status(401).json({ ok: false, redirect: "/login" });
     }
     return res.redirect("/login");
   }
-  req.pageUser = user;
+
+  // A role can be changed through Admin User & Moderation after this JWT was
+  // issued. Render pages with the current database role, not the stale token
+  // claim, so a demotion immediately removes privileged controls.
+  let user;
+  try {
+    user = await userStore.getUser(tokenUser.username);
+  } catch (err) {
+    return next(err);
+  }
+  if (!user || user.isBlocked) {
+    res.clearCookie("auth_token");
+    if (req.headers["x-requested-with"] === "XMLHttpRequest") {
+      return res.status(401).json({ ok: false, redirect: "/login" });
+    }
+    return res.redirect("/login");
+  }
+  req.pageUser = {
+    ...tokenUser,
+    userType: user.userType,
+    email: user.email || tokenUser.email || null,
+    jobTitle: user.jobTitle || tokenUser.jobTitle || null,
+    isProfileCompleted: user.isProfileCompleted,
+    totpEnabled: user.totpEnabled
+  };
 
   // Enforce profile completion guard (e.g. newly registered via Google OAuth)
-  const isCompleted = user.isProfileCompleted === 1 || user.isProfileCompleted === true;
+  const isCompleted = req.pageUser.isProfileCompleted === 1 || req.pageUser.isProfileCompleted === true;
   if (!isCompleted && !req.path.startsWith("/settings") && req.path !== "/logout") {
     if (req.headers["x-requested-with"] === "XMLHttpRequest") {
       return res.status(200).json({ ok: false, redirect: "/settings" });
@@ -174,4 +199,3 @@ router.get("/new-project", requireAuth, checkPageRole(), (req, res) => renderPag
 router.get("*", requireAuth, (req, res) => res.redirect("/"));
 
 module.exports = router;
-

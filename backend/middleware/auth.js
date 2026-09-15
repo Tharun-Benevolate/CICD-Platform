@@ -218,34 +218,64 @@ function decodeToken(req) {
   }
 }
 
+// JWTs carry a role so the initial login can be stateless, but roles can be
+// changed by the moderation console at any time. Refresh the account record
+// before authorising a request so a demotion is effective immediately instead
+// of waiting for the token's 24-hour expiry.
+async function resolveCurrentUser(decoded) {
+  if (!decoded?.username) return null;
+  const user = await userStore.getUser(decoded.username);
+  if (!user || user.isBlocked) return null;
+  return {
+    ...decoded,
+    userType: user.userType,
+    email: user.email || decoded.email || null,
+    jobTitle: user.jobTitle || decoded.jobTitle || null,
+    isProfileCompleted: user.isProfileCompleted,
+    totpEnabled: user.totpEnabled
+  };
+}
+
 // ── Auth middleware ───────────────────────────────────────────────────────
 
-function requireAuth(req, res, next) {
+async function requireAuth(req, res, next) {
   const decoded = decodeToken(req);
   if (!decoded || decoded.pending2FA) {
     return res.status(401).json({ ok: false, error: "Authentication required", sessionExpired: true });
   }
-  req.user = decoded;
-  if (decoded.username) {
-    userStore.updateLastActive(decoded.username).catch(() => {});
+  try {
+    const currentUser = await resolveCurrentUser(decoded);
+    if (!currentUser) {
+      return res.status(401).json({ ok: false, error: "Session is no longer valid", sessionExpired: true });
+    }
+    req.user = currentUser;
+    userStore.updateLastActive(currentUser.username).catch(() => {});
+  } catch (err) {
+    return next(err);
   }
   next();
 }
 
 function requireRole(...allowedRoles) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     const decoded = req.user || decodeToken(req);
     if (!decoded || decoded.pending2FA) {
       return res.status(401).json({ ok: false, error: "Authentication required", sessionExpired: true });
     }
-    if (!allowedRoles.includes(decoded.userType)) {
-      return res.status(403).json({ ok: false, error: "You do not have permission to perform this action" });
+    try {
+      const currentUser = req.user || await resolveCurrentUser(decoded);
+      if (!currentUser) {
+        return res.status(401).json({ ok: false, error: "Session is no longer valid", sessionExpired: true });
+      }
+      if (!allowedRoles.includes(currentUser.userType)) {
+        return res.status(403).json({ ok: false, error: "You do not have permission to perform this action" });
+      }
+      req.user = currentUser;
+      userStore.updateLastActive(currentUser.username).catch(() => {});
+      next();
+    } catch (err) {
+      next(err);
     }
-    req.user = decoded;
-    if (decoded.username) {
-      userStore.updateLastActive(decoded.username).catch(() => {});
-    }
-    next();
   };
 }
 

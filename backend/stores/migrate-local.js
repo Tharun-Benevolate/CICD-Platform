@@ -39,7 +39,7 @@ const TABLES = [
       slack_id        VARCHAR(128)  NULL,
       github_username VARCHAR(128)  NULL,
       avatar_url      VARCHAR(512)  NULL,
-      user_type       ENUM('super_admin','devops','developer','sales') NOT NULL DEFAULT 'developer',
+      user_type       ENUM('super_admin','admin','devops','developer','sales') NOT NULL DEFAULT 'developer',
       created_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at      DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
       PRIMARY KEY (username),
@@ -465,6 +465,11 @@ async function run() {
     console.log(`  ✔  ${name}`);
 
     if (name === "users") {
+      const [typeColumn] = await conn.query("SHOW COLUMNS FROM users LIKE 'user_type'");
+      if (typeColumn[0] && !String(typeColumn[0].Type).includes("'admin'")) {
+        await conn.query("ALTER TABLE users MODIFY user_type ENUM('super_admin','admin','devops','developer','sales') NOT NULL DEFAULT 'developer'");
+        console.log("      ↳ added admin role");
+      }
       for (const { col, def } of extraUserCols) {
         if (!(await columnExists(conn, "users", col))) {
           await conn.query(`ALTER TABLE users ADD COLUMN \`${col}\` ${def}`);

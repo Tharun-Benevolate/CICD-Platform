@@ -8,7 +8,7 @@ const accessStore = require("../stores/accessStore");
 // --- Project CRUD ---
 
 // GET /api/projects — Role-based project access isolation
-router.get("/projects", async (req, res) => {
+router.get("/projects", auth.requireAuth, async (req, res) => {
   try {
     const username = auth.getLoggedInUser(req);
     const userType = auth.getLoggedInUserType(req);

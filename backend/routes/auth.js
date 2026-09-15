@@ -258,7 +258,7 @@ router.get("/users", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => 
 // PATCH /api/users/:username/role
 router.patch("/users/:username/role", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
   const { userType } = req.body;
-  const VALID_TYPES = ["super_admin", "devops", "developer", "sales"];
+  const VALID_TYPES = ["super_admin", "admin", "devops", "developer", "sales"];
   if (!VALID_TYPES.includes(userType)) {
     return res.status(400).json({ ok: false, error: `userType must be one of: ${VALID_TYPES.join(", ")}` });
   }

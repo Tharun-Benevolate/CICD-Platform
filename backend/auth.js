@@ -87,7 +87,16 @@ function decodeToken(req) {
   }
 }
 
-function requireAuth(req, res, next) {
+// Roles may change while a JWT is still valid. Resolve the account from the
+// database before authorising requests so access changes take effect at once.
+async function resolveCurrentUser(decoded) {
+  if (!decoded?.username) return null;
+  const user = await userStore.getUser(decoded.username);
+  if (!user) return null;
+  return { ...decoded, userType: user.userType };
+}
+
+async function requireAuth(req, res, next) {
   const decoded = decodeToken(req);
   if (!decoded) {
     // sessionExpired is a deliberate marker the frontend uses to decide
@@ -98,8 +107,16 @@ function requireAuth(req, res, next) {
     // validating the app's own auth cookie, should ever set this flag.
     return res.status(401).json({ ok: false, error: "Authentication required", sessionExpired: true });
   }
-  req.user = decoded; // { username, userType }
-  next();
+  try {
+    const currentUser = await resolveCurrentUser(decoded);
+    if (!currentUser) {
+      return res.status(401).json({ ok: false, error: "Session is no longer valid", sessionExpired: true });
+    }
+    req.user = currentUser;
+    next();
+  } catch (err) {
+    next(err);
+  }
 }
 
 /**
@@ -108,25 +125,35 @@ function requireAuth(req, res, next) {
  * Must run after requireAuth (or after the global /api auth middleware).
  */
 function requireRole(...allowedRoles) {
-  return (req, res, next) => {
+  return async (req, res, next) => {
     const decoded = req.user || decodeToken(req);
     if (!decoded) {
       return res.status(401).json({ ok: false, error: "Authentication required", sessionExpired: true });
     }
-    if (!allowedRoles.includes(decoded.userType)) {
-      return res.status(403).json({ ok: false, error: "You do not have permission to perform this action" });
+    try {
+      const currentUser = req.user || await resolveCurrentUser(decoded);
+      if (!currentUser) {
+        return res.status(401).json({ ok: false, error: "Session is no longer valid", sessionExpired: true });
+      }
+      if (!allowedRoles.includes(currentUser.userType)) {
+        return res.status(403).json({ ok: false, error: "You do not have permission to perform this action" });
+      }
+      req.user = currentUser;
+      next();
+    } catch (err) {
+      next(err);
     }
-    req.user = decoded;
-    next();
   };
 }
 
 function getLoggedInUser(req) {
+  if (req.user?.username) return req.user.username;
   const decoded = decodeToken(req);
   return decoded ? decoded.username : null;
 }
 
 function getLoggedInUserType(req) {
+  if (req.user?.userType) return req.user.userType;
   const decoded = decodeToken(req);
   return decoded ? decoded.userType : null;
 }
