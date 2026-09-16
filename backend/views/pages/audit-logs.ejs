@@ -29,7 +29,7 @@
     <div style="position:relative;min-width:220px;margin-left:auto;">
       <i data-lucide="search" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);width:14px;height:14px;color:var(--color-text-tertiary);"></i>
       <input
-        type="text" id="audit-search-input" placeholder="Search logs..." oninput="filterAuditLogs()"
+        type="text" id="audit-search-input" placeholder="Search all audit logs..." oninput="filterAuditLogs()"
         style="width:100%;padding:7px 12px 7px 32px;border-radius:var(--radius-md);border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;outline:none;"
       />
     </div>
@@ -50,5 +50,14 @@
 
     <!-- Logs List -->
     <div id="audit-logs-list" style="display:none;flex-direction:column;"></div>
+
+    <!-- Server-backed pagination keeps the page responsive while retaining full history. -->
+    <div id="audit-pagination" style="display:none;align-items:center;justify-content:space-between;gap:12px;border-top:1px solid var(--color-border);margin-top:14px;padding-top:14px;flex-wrap:wrap;">
+      <span id="audit-pagination-summary" style="font-size:12px;color:var(--color-text-tertiary);"></span>
+      <div style="display:flex;gap:8px;">
+        <button id="audit-page-previous" type="button" onclick="changeAuditPage(_auditPage - 1)" class="btn-secondary" style="font-size:12px;padding:7px 12px;" disabled>Previous</button>
+        <button id="audit-page-next" type="button" onclick="changeAuditPage(_auditPage + 1)" class="btn-secondary" style="font-size:12px;padding:7px 12px;" disabled>Next</button>
+      </div>
+    </div>
   </div>
 </div>

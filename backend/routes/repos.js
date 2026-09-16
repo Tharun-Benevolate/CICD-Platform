@@ -828,11 +828,11 @@ router.get("/branches/activity", async (req, res) => {
     if (!repo) return res.status(404).json({ ok: false, error: "Repository not found" });
     const project = projectId ? await projectStore.getProject(projectId) : null;
     const auditStore = require("../stores/auditStore");
-    const logs = await auditStore.getAuditLogs({
+    const auditPage = await auditStore.getAuditLogs({
       projectNames: [project?.name, repo.repo_name || repo.repoName],
       limit: 100
     });
-    const activity = logs.map(log => {
+    const activity = auditPage.logs.map(log => {
       const action = log.action || "";
       const command = (action.match(/Executed git command:\s*(.+)$/i) || [])[1] || "";
       let type = "";

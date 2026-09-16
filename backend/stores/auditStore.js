@@ -79,7 +79,8 @@ async function logAction(user, action, projectName, result, category, reqOrIp) {
 }
 
 /**
- * Get recent audit logs, sorted by timestamp descending, optionally filtered.
+ * Get audit logs in stable, newest-first pages. Keeping pagination in MySQL
+ * avoids truncating the audit trail in the browser as the table grows.
  */
 async function getAuditLogs(filters = {}) {
   try {
@@ -94,6 +95,13 @@ async function getAuditLogs(filters = {}) {
       conditions.push("category = ?");
       params.push(filters.category);
     }
+    if (filters.search) {
+      const search = `%${String(filters.search).trim()}%`;
+      if (search !== "%%") {
+        conditions.push("(action LIKE ? OR username LIKE ? OR category LIKE ? OR project_name LIKE ? OR result LIKE ?)");
+        params.push(search, search, search, search, search);
+      }
+    }
     if (Array.isArray(filters.projectNames) && filters.projectNames.length) {
       const names = filters.projectNames.filter(Boolean);
       if (names.length) {
@@ -103,22 +111,40 @@ async function getAuditLogs(filters = {}) {
     }
 
     const where = conditions.length ? `WHERE ${conditions.join(" AND ")}` : "";
-    const limit = Number.isInteger(filters.limit) ? filters.limit : 50;
+    const limit = Math.min(Math.max(Number.parseInt(filters.limit, 10) || 50, 1), 100);
+    const page = Math.max(Number.parseInt(filters.page, 10) || 1, 1);
+    const offset = (page - 1) * limit;
+
+    const [countRows] = await pool.query(
+      `SELECT COUNT(*) AS total FROM audit_log ${where}`,
+      params
+    );
+    const total = Number(countRows[0]?.total || 0);
 
     const [rows] = await pool.query(
       `SELECT id, ext_id AS extId, timestamp, username AS user, username, action, category,
               project_name AS projectName, result, COALESCE(ip_address, '127.0.0.1') AS ipAddress
-       FROM audit_log ${where} ORDER BY timestamp DESC LIMIT ?`,
-      [...params, limit]
+       FROM audit_log ${where} ORDER BY timestamp DESC, id DESC LIMIT ? OFFSET ?`,
+      [...params, limit, offset]
     );
-    return rows.map(r => ({
-      ...r,
-      timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : r.timestamp,
-      ipAddress: r.ipAddress || '127.0.0.1'
-    }));
+    return {
+      logs: rows.map(r => ({
+        ...r,
+        timestamp: r.timestamp instanceof Date ? r.timestamp.toISOString() : r.timestamp,
+        ipAddress: r.ipAddress || '127.0.0.1'
+      })),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(Math.ceil(total / limit), 1),
+        hasPrevious: page > 1,
+        hasNext: offset + rows.length < total
+      }
+    };
   } catch (err) {
     console.error("Failed to read audit log:", err);
-    return [];
+    return { logs: [], pagination: { page: 1, limit: 50, total: 0, totalPages: 1, hasPrevious: false, hasNext: false } };
   }
 }
 

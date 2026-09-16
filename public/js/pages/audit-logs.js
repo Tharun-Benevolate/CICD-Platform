@@ -1,6 +1,10 @@
 // Audit Logs Page — Vanilla JS Logic
 var _auditLogs = [];
 var _auditCategory = 'All';
+var _auditPage = 1;
+var _auditPageSize = 50;
+var _auditPagination = { page: 1, limit: 50, total: 0, totalPages: 1, hasPrevious: false, hasNext: false };
+var _auditSearchTimer = null;
 
 window.initAuditLogsPage = initAuditLogsPage;
 
@@ -16,6 +20,7 @@ function initAuditLogsPage() {
 
 function setAuditCategory(cat) {
   _auditCategory = cat;
+  _auditPage = 1;
   ['All', 'Login', 'Approvals', 'Pipeline Executions', 'Terraform', 'User Management', 'Other'].forEach(function(c) {
     var btn = document.getElementById('audit-cat-' + c);
     if (!btn) return;
@@ -48,13 +53,17 @@ async function fetchAuditLogs() {
   if (listEl) listEl.style.display = 'none';
 
   try {
-    var url = '/api/audit-logs?limit=100';
+    var query = (document.getElementById('audit-search-input')?.value || '').trim();
+    var url = '/api/audit-logs?limit=' + _auditPageSize + '&page=' + _auditPage;
     if (_auditCategory !== 'All') {
       url += '&category=' + encodeURIComponent(_auditCategory);
     }
+    if (query) url += '&search=' + encodeURIComponent(query);
     var res = await api.get(url);
     if (res && res.ok && res.logs) {
       _auditLogs = res.logs;
+      _auditPagination = res.pagination || _auditPagination;
+      _auditPage = _auditPagination.page || _auditPage;
     } else {
       _auditLogs = [];
     }
@@ -67,18 +76,32 @@ async function fetchAuditLogs() {
     setTimeout(function() { iconRefresh.classList.remove('animate-spin'); }, 400);
   }
 
-  filterAuditLogs();
+  renderAuditLogs();
 }
 
 function filterAuditLogs() {
-  var query = (document.getElementById('audit-search-input')?.value || '').toLowerCase();
-  var filtered = _auditLogs.filter(function(l) {
-    if (!query) return true;
-    var act = (l.action || '').toLowerCase();
-    var user = (l.username || l.user || '').toLowerCase();
-    var cat = (l.category || '').toLowerCase();
-    return act.includes(query) || user.includes(query) || cat.includes(query);
-  });
+  _auditPage = 1;
+  clearTimeout(_auditSearchTimer);
+  _auditSearchTimer = setTimeout(fetchAuditLogs, 250);
+}
+
+function changeAuditPage(nextPage) {
+  if (nextPage < 1 || nextPage > (_auditPagination.totalPages || 1) || nextPage === _auditPage) return;
+  _auditPage = nextPage;
+  fetchAuditLogs();
+}
+
+function escapeAuditHtml(value) {
+  return String(value == null ? '' : value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function renderAuditLogs() {
+  var filtered = _auditLogs;
 
   var listEl = document.getElementById('audit-logs-list');
   var emptyEl = document.getElementById('audit-empty');
@@ -105,13 +128,13 @@ function filterAuditLogs() {
 
     var html =
       '<div>' +
-        '<div style="font-weight:600;font-size:14px;color:var(--color-text-primary);">' + (log.action || 'Action') + '</div>' +
+        '<div style="font-weight:600;font-size:14px;color:var(--color-text-primary);">' + escapeAuditHtml(log.action || 'Action') + '</div>' +
         '<div style="font-size:12px;color:var(--color-text-tertiary);margin-top:2px;">' +
-          'User: <b style="color:var(--color-text-secondary);">' + (log.username || log.user || 'system') + '</b> &bull; IP: <b style="color:var(--color-text-secondary);">' + (log.ipAddress || log.ip_address || '127.0.0.1') + '</b> &bull; Category: ' + (log.category || 'General') + ' &bull; Project: ' + (log.project_name || log.projectName || 'N/A') +
+          'User: <b style="color:var(--color-text-secondary);">' + escapeAuditHtml(log.username || log.user || 'system') + '</b> &bull; IP: <b style="color:var(--color-text-secondary);">' + escapeAuditHtml(log.ipAddress || log.ip_address || '127.0.0.1') + '</b> &bull; Category: ' + escapeAuditHtml(log.category || 'General') + ' &bull; Project: ' + escapeAuditHtml(log.project_name || log.projectName || 'N/A') +
         '</div>' +
       '</div>' +
       '<div style="text-align:right;">' +
-        '<span class="badge ' + badgeClass + '">' + (log.result || 'Success') + '</span>' +
+        '<span class="badge ' + badgeClass + '">' + escapeAuditHtml(log.result || 'Success') + '</span>' +
         (dateStr ? '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:4px;">' + dateStr + '</div>' : '') +
       '</div>';
 
@@ -120,4 +143,25 @@ function filterAuditLogs() {
   });
 
   if (window.lucide) lucide.createIcons();
+  renderAuditPagination();
+}
+
+function renderAuditPagination() {
+  var paginationEl = document.getElementById('audit-pagination');
+  if (!paginationEl) return;
+  var total = _auditPagination.total || 0;
+  if (!total) {
+    paginationEl.style.display = 'none';
+    return;
+  }
+  var page = _auditPagination.page || 1;
+  var limit = _auditPagination.limit || _auditPageSize;
+  var first = (page - 1) * limit + 1;
+  var last = Math.min(page * limit, total);
+  paginationEl.style.display = 'flex';
+  document.getElementById('audit-pagination-summary').textContent = 'Showing ' + first + '–' + last + ' of ' + total + ' events';
+  var previous = document.getElementById('audit-page-previous');
+  var next = document.getElementById('audit-page-next');
+  if (previous) previous.disabled = !_auditPagination.hasPrevious;
+  if (next) next.disabled = !_auditPagination.hasNext;
 }

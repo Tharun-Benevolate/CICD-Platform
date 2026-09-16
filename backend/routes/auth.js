@@ -238,9 +238,15 @@ router.get("/me", async (req, res) => {
 
 // GET /api/audit-logs
 router.get("/audit-logs", auth.requireAuth, async (req, res) => {
-  const { user, category } = req.query;
-  const logs = await auditStore.getAuditLogs({ username: user, category, limit: 200 });
-  res.json({ ok: true, logs, categories: auditStore.VALID_CATEGORIES });
+  const { user, category, search } = req.query;
+  const result = await auditStore.getAuditLogs({
+    username: user,
+    category,
+    search,
+    page: req.query.page,
+    limit: req.query.limit
+  });
+  res.json({ ok: true, logs: result.logs, pagination: result.pagination, categories: auditStore.VALID_CATEGORIES });
 });
 
 // --- Enterprise Admin User & Security Management (super_admin / devops only) ---
@@ -327,7 +333,8 @@ router.get("/admin/users/:username/details", auth.requireRole(...auth.ADMIN_ROLE
     const user = await userStore.getUser(target);
     if (!user) return res.status(404).json({ ok: false, error: "User not found" });
     const clientIp = auditStore.extractClientIp(req);
-    const rawLogs = await auditStore.getAuditLogs({ username: user.username, limit: 15 });
+    const auditPage = await auditStore.getAuditLogs({ username: user.username, limit: 15 });
+    const rawLogs = auditPage.logs;
     const userLogs = rawLogs.map(log => {
       if (!log.ipAddress || log.ipAddress === "127.0.0.1" || log.ipAddress === "::1") {
         return { ...log, ipAddress: clientIp !== "127.0.0.1" ? clientIp : (log.ipAddress || "127.0.0.1") };
