@@ -164,4 +164,29 @@ function renderAuditPagination() {
   var next = document.getElementById('audit-page-next');
   if (previous) previous.disabled = !_auditPagination.hasPrevious;
   if (next) next.disabled = !_auditPagination.hasNext;
+
+  // Keep a compact, forward-looking five-page window. For example, page 5
+  // shows 5–9; near the final page the window shifts back to stay in range.
+  var numbers = document.getElementById('audit-page-numbers');
+  if (!numbers) return;
+  var totalPages = _auditPagination.totalPages || 1;
+  var firstPage = Math.min(page, Math.max(totalPages - 4, 1));
+  var lastPage = Math.min(firstPage + 4, totalPages);
+  numbers.innerHTML = '';
+  for (var number = firstPage; number <= lastPage; number++) {
+    var button = document.createElement('button');
+    var active = number === page;
+    button.type = 'button';
+    button.textContent = number;
+    button.setAttribute('aria-label', 'Go to audit-log page ' + number);
+    button.setAttribute('aria-current', active ? 'page' : 'false');
+    button.disabled = active;
+    button.style.cssText = 'min-width:31px;padding:7px 8px;border-radius:6px;border:1px solid ' + (active ? '#6366f1' : 'var(--color-border)') + ';background:' + (active ? '#6366f1' : 'var(--color-surface)') + ';color:' + (active ? '#fff' : 'var(--color-text-secondary)') + ';font-size:12px;font-weight:' + (active ? '700' : '500') + ';cursor:' + (active ? 'default' : 'pointer') + ';';
+    if (!active) {
+      (function(targetPage) {
+        button.addEventListener('click', function() { changeAuditPage(targetPage); });
+      })(number);
+    }
+    numbers.appendChild(button);
+  }
 }
