@@ -159,6 +159,9 @@
       <div style="font-size:12px;color:var(--color-text-tertiary);margin-bottom:20px;">
         <i data-lucide="lock" style="width:12px;height:12px;display:inline-block;vertical-align:text-bottom;"></i> Values are stored in AWS Secrets Manager only — never in the platform database. Each environment can have different DB_HOST, DB_NAME, etc. UAT can inherit from Dev, Prod can inherit from Dev or UAT.
       </div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin:-6px 0 18px;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-bg-secondary);line-height:1.5;">
+        Choose one input method for each environment: enter values manually or import a <code>.env</code> file. File imports are parsed in your browser and saved directly to AWS Secrets Manager; the platform never stores the file or secret values.
+      </div>
 
       <!-- ── Environment Tabs ── -->
       <div id="secrets-env-tabs" style="display:flex;gap:0;margin-bottom:0;border-bottom:2px solid var(--color-border);">
@@ -184,17 +187,24 @@
           <div id="secret-name-hint-dev" class="secret-name-hint" style="font-size:11px;color:var(--color-text-tertiary);margin-top:6px;"></div>
         </div>
         <div id="secrets-table-dev" class="secrets-table-container" style="margin-bottom:16px;"></div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <button type="button" data-secret-entry-mode="manual" data-env="dev" onclick="setSecretEntryMode('dev','manual')" class="btn-secondary" style="font-size:12px;padding:7px 12px;background:rgba(99,102,241,0.16);border-color:#6366f1;color:var(--color-text-primary);">Enter manually</button>
+          <button type="button" data-secret-entry-mode="upload" data-env="dev" onclick="setSecretEntryMode('dev','upload')" class="btn-secondary" style="font-size:12px;padding:7px 12px;">Upload .env</button>
+        </div>
+        <div id="secret-upload-panel-dev" style="display:none;margin-bottom:12px;padding:12px;border:1px dashed var(--color-border);border-radius:8px;background:var(--color-bg-secondary);">
+          <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px;line-height:1.45;">Select a <code>.env</code> file to import its keys into Dev. Only matching keys are updated; other existing AWS keys remain unchanged.</div>
+          <input type="file" id="env-file-dev" accept=".env,text/plain" onchange="handleEnvFileImport('dev', this)" style="display:none;" />
+          <button type="button" id="env-file-import-btn-dev" onclick="document.getElementById('env-file-dev').click()" class="btn-secondary" style="font-size:13px;padding:8px 14px;"><i data-lucide="upload" style="width:14px;height:14px;"></i> Select .env and import</button>
+        </div>
+        <div id="secret-manual-panel-dev" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
           <button onclick="handleAddSecretRow('dev')" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
             <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
-          </button>
-          <button onclick="handleDeleteEntireSecret('dev')" class="btn-danger-outline" style="font-size:12px;padding:6px 12px;color:var(--color-danger);border:1px solid var(--color-danger);border-radius:6px;background:transparent;cursor:pointer;">
-            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete Secret
           </button>
           <button onclick="handleSaveSecrets('dev')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;">
             Save Dev Secrets
           </button>
         </div>
+        <button onclick="handleDeleteEntireSecret('dev')" class="btn-danger-outline" style="margin-top:14px;font-size:12px;padding:6px 12px;color:var(--color-danger);border:1px solid var(--color-danger);border-radius:6px;background:transparent;cursor:pointer;"><i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete Dev Secret</button>
         <div id="secrets-save-msg-dev" style="margin-top:12px;font-size:12px;display:none;"></div>
       </div>
 
@@ -216,17 +226,24 @@
           <span style="font-size:11px;color:var(--color-text-tertiary);margin-left:8px;">Pre-fills values from Dev — edit what's different, then save.</span>
         </div>
         <div id="secrets-table-uat" class="secrets-table-container" style="margin-bottom:16px;"></div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <button type="button" data-secret-entry-mode="manual" data-env="uat" onclick="setSecretEntryMode('uat','manual')" class="btn-secondary" style="font-size:12px;padding:7px 12px;background:rgba(99,102,241,0.16);border-color:#6366f1;color:var(--color-text-primary);">Enter manually</button>
+          <button type="button" data-secret-entry-mode="upload" data-env="uat" onclick="setSecretEntryMode('uat','upload')" class="btn-secondary" style="font-size:12px;padding:7px 12px;">Upload .env</button>
+        </div>
+        <div id="secret-upload-panel-uat" style="display:none;margin-bottom:12px;padding:12px;border:1px dashed var(--color-border);border-radius:8px;background:var(--color-bg-secondary);">
+          <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px;line-height:1.45;">Select a <code>.env</code> file to import its keys into UAT. Only matching keys are updated; other existing AWS keys remain unchanged.</div>
+          <input type="file" id="env-file-uat" accept=".env,text/plain" onchange="handleEnvFileImport('uat', this)" style="display:none;" />
+          <button type="button" id="env-file-import-btn-uat" onclick="document.getElementById('env-file-uat').click()" class="btn-secondary" style="font-size:13px;padding:8px 14px;"><i data-lucide="upload" style="width:14px;height:14px;"></i> Select .env and import</button>
+        </div>
+        <div id="secret-manual-panel-uat" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
           <button onclick="handleAddSecretRow('uat')" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
             <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
-          </button>
-          <button onclick="handleDeleteEntireSecret('uat')" class="btn-danger-outline" style="font-size:12px;padding:6px 12px;color:var(--color-danger);border:1px solid var(--color-danger);border-radius:6px;background:transparent;cursor:pointer;">
-            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete Secret
           </button>
           <button onclick="handleSaveSecrets('uat')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;">
             Save UAT Secrets
           </button>
         </div>
+        <button onclick="handleDeleteEntireSecret('uat')" class="btn-danger-outline" style="margin-top:14px;font-size:12px;padding:6px 12px;color:var(--color-danger);border:1px solid var(--color-danger);border-radius:6px;background:transparent;cursor:pointer;"><i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete UAT Secret</button>
         <div id="secrets-save-msg-uat" style="margin-top:12px;font-size:12px;display:none;"></div>
       </div>
 
@@ -251,17 +268,24 @@
           <span style="font-size:11px;color:var(--color-text-tertiary);margin-left:8px;">Pre-fills values — edit what's different, then save.</span>
         </div>
         <div id="secrets-table-prod" class="secrets-table-container" style="margin-bottom:16px;"></div>
-        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:12px;">
+          <button type="button" data-secret-entry-mode="manual" data-env="prod" onclick="setSecretEntryMode('prod','manual')" class="btn-secondary" style="font-size:12px;padding:7px 12px;background:rgba(99,102,241,0.16);border-color:#6366f1;color:var(--color-text-primary);">Enter manually</button>
+          <button type="button" data-secret-entry-mode="upload" data-env="prod" onclick="setSecretEntryMode('prod','upload')" class="btn-secondary" style="font-size:12px;padding:7px 12px;">Upload .env</button>
+        </div>
+        <div id="secret-upload-panel-prod" style="display:none;margin-bottom:12px;padding:12px;border:1px dashed var(--color-border);border-radius:8px;background:var(--color-bg-secondary);">
+          <div style="font-size:12px;color:var(--color-text-secondary);margin-bottom:8px;line-height:1.45;">Select a <code>.env</code> file to import its keys into Production. Only matching keys are updated; other existing AWS keys remain unchanged.</div>
+          <input type="file" id="env-file-prod" accept=".env,text/plain" onchange="handleEnvFileImport('prod', this)" style="display:none;" />
+          <button type="button" id="env-file-import-btn-prod" onclick="document.getElementById('env-file-prod').click()" class="btn-secondary" style="font-size:13px;padding:8px 14px;"><i data-lucide="upload" style="width:14px;height:14px;"></i> Select .env and import</button>
+        </div>
+        <div id="secret-manual-panel-prod" style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
           <button onclick="handleAddSecretRow('prod')" class="btn-secondary" style="font-size:13px;padding:8px 14px;">
             <i data-lucide="plus" style="width:14px;height:14px;"></i> Add Secret Key
-          </button>
-          <button onclick="handleDeleteEntireSecret('prod')" class="btn-danger-outline" style="font-size:12px;padding:6px 12px;color:var(--color-danger);border:1px solid var(--color-danger);border-radius:6px;background:transparent;cursor:pointer;">
-            <i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete Secret
           </button>
           <button onclick="handleSaveSecrets('prod')" class="btn-grad-primary" style="font-size:13px;padding:8px 16px;">
             Save Prod Secrets
           </button>
         </div>
+        <button onclick="handleDeleteEntireSecret('prod')" class="btn-danger-outline" style="margin-top:14px;font-size:12px;padding:6px 12px;color:var(--color-danger);border:1px solid var(--color-danger);border-radius:6px;background:transparent;cursor:pointer;"><i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete Production Secret</button>
         <div id="secrets-save-msg-prod" style="margin-top:12px;font-size:12px;display:none;"></div>
       </div><% } %>
 

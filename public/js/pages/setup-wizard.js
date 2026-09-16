@@ -404,6 +404,7 @@ async function executeDestroyProject() {
 
 var _envSecrets = { dev: { keys: [], values: {}, locked: false, name: '' }, uat: { keys: [], values: {}, locked: false, name: '' }, prod: { keys: [], values: {}, locked: false, name: '' } };
 var _activeSecretsEnv = 'dev';
+var _secretEntryModes = { dev: 'manual', uat: 'manual', prod: 'manual' };
 
 function switchSecretsTab(env) {
   _activeSecretsEnv = env;
@@ -417,6 +418,107 @@ function switchSecretsTab(env) {
   document.querySelectorAll('.secrets-tab-content').forEach(function(content) {
     content.style.display = content.id === 'secrets-tab-' + env ? 'block' : 'none';
   });
+}
+
+// The entry method only changes the editor. It never writes to AWS by itself.
+function setSecretEntryMode(env, mode) {
+  if (mode !== 'manual' && mode !== 'upload') return;
+  _secretEntryModes[env] = mode;
+
+  var manualPanel = document.getElementById('secret-manual-panel-' + env);
+  var uploadPanel = document.getElementById('secret-upload-panel-' + env);
+  if (manualPanel) manualPanel.style.display = mode === 'manual' ? 'flex' : 'none';
+  if (uploadPanel) uploadPanel.style.display = mode === 'upload' ? 'block' : 'none';
+
+  document.querySelectorAll('[data-secret-entry-mode][data-env="' + env + '"]').forEach(function(button) {
+    var selected = button.getAttribute('data-secret-entry-mode') === mode;
+    button.style.background = selected ? 'rgba(99,102,241,0.16)' : 'var(--color-bg-secondary)';
+    button.style.borderColor = selected ? '#6366f1' : 'var(--color-border)';
+    button.style.color = selected ? 'var(--color-text-primary)' : 'var(--color-text-secondary)';
+  });
+}
+
+function setSecretsMessage(env, text, color) {
+  var msg = document.getElementById('secrets-save-msg-' + env);
+  if (!msg) return;
+  msg.textContent = text;
+  msg.style.color = color || 'var(--color-text-secondary)';
+  msg.style.display = 'block';
+}
+
+function parseEnvFile(text) {
+  var parsed = {};
+  var lines = String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/);
+
+  for (var index = 0; index < lines.length; index++) {
+    var line = lines[index].trim();
+    if (!line || line.charAt(0) === '#') continue;
+    if (line.indexOf('export ') === 0) line = line.slice(7).trim();
+
+    var equalsAt = line.indexOf('=');
+    if (equalsAt < 1) {
+      throw new Error('Line ' + (index + 1) + ' is not a KEY=value entry.');
+    }
+
+    var key = line.slice(0, equalsAt).trim();
+    var value = line.slice(equalsAt + 1).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) {
+      throw new Error('Line ' + (index + 1) + ' has an invalid variable name.');
+    }
+    if (Object.prototype.hasOwnProperty.call(parsed, key)) {
+      throw new Error('Line ' + (index + 1) + ' repeats ' + key + '. Remove the duplicate before importing.');
+    }
+
+    if (value.length >= 2 && ((value.charAt(0) === '"' && value.charAt(value.length - 1) === '"') || (value.charAt(0) === "'" && value.charAt(value.length - 1) === "'"))) {
+      var quote = value.charAt(0);
+      value = value.slice(1, -1);
+      if (quote === '"') {
+        value = value.replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+      }
+    } else {
+      // dotenv treats a whitespace-prefixed # as a comment outside quotes.
+      value = value.replace(/\s+#.*$/, '').trim();
+    }
+    parsed[key] = value;
+  }
+
+  if (Object.keys(parsed).length === 0) throw new Error('The selected file does not contain any environment variables.');
+  return parsed;
+}
+
+async function handleEnvFileImport(env, input) {
+  if (!_activeProject || !input || !input.files || !input.files[0]) return;
+  var file = input.files[0];
+  var importButton = document.getElementById('env-file-import-btn-' + env);
+
+  try {
+    if (file.size > 256 * 1024) throw new Error('.env files must be 256 KB or smaller.');
+    var contents = await file.text();
+    var imported = parseEnvFile(contents);
+    var keyCount = Object.keys(imported).length;
+    var existingCount = (_envSecrets[env].keys || []).length;
+    var nameInput = document.getElementById('secret-name-' + env);
+    if (!_envSecrets[env].locked && (!nameInput || !nameInput.value.trim())) {
+      setSecretsMessage(env, 'Enter a secret name before importing a .env file.', 'var(--color-danger)');
+      if (nameInput) nameInput.focus();
+      return;
+    }
+    var notice = 'Import ' + keyCount + ' value' + (keyCount === 1 ? '' : 's') + ' from ' + (file.name || '.env') + ' to ' + env.toUpperCase() + ' in AWS Secrets Manager?';
+    if (existingCount) notice += '\n\nMatching keys will be updated. Existing keys not included in this file will remain unchanged.';
+    notice += '\n\nThe file is parsed in this browser and is not stored by the platform.';
+    if (!confirm(notice)) return;
+
+    await persistSecrets(env, imported, {
+      button: importButton,
+      loadingLabel: 'Importing .env...',
+      successMessage: keyCount + ' value' + (keyCount === 1 ? '' : 's') + ' imported from .env and saved to AWS Secrets Manager.'
+    });
+  } catch (error) {
+    setSecretsMessage(env, 'Import not completed: ' + error.message, 'var(--color-danger)');
+  } finally {
+    // Allow selecting the same file again after correcting it or cancelling.
+    input.value = '';
+  }
 }
 
 async function loadSecrets() {
@@ -662,7 +764,6 @@ async function handleDeleteEntireSecret(env) {
 
 async function handleSaveSecrets(env) {
   if (!_activeProject) return;
-  var btn = document.querySelector('#secrets-tab-' + env + ' .btn-grad-primary');
   var msg = document.getElementById('secrets-save-msg-' + env);
 
   // Collect EXISTING values (from editable masked inputs)
@@ -722,14 +823,49 @@ async function handleSaveSecrets(env) {
     return;
   }
 
+  await persistSecrets(env, secretsObj, {
+    secretName: typedName,
+    button: document.querySelector('#secrets-tab-' + env + ' .btn-grad-primary'),
+    loadingLabel: 'Saving...',
+    successMessage: env.toUpperCase() + ' secrets saved. Run pipeline or Re-apply Infra to deploy.'
+  });
+}
+
+async function persistSecrets(env, secretsObj, options) {
+  if (!_activeProject) return;
+  options = options || {};
+  var btn = options.button;
+  var msg = document.getElementById('secrets-save-msg-' + env);
+  var nameInput = document.getElementById('secret-name-' + env);
+  var typedName = options.secretName;
+  if (typedName === undefined) typedName = nameInput ? nameInput.value.trim() : '';
+
+  if (!secretsObj || Object.keys(secretsObj).length === 0) {
+    setSecretsMessage(env, 'No secrets to save.', 'var(--color-text-tertiary)');
+    return false;
+  }
+  if (!Object.keys(secretsObj).some(function(key) { return String(secretsObj[key] || '').length > 0; })) {
+    setSecretsMessage(env, 'Enter at least one value before saving.', 'var(--color-danger)');
+    return false;
+  }
+
+  if (!_envSecrets[env].locked && !typedName) {
+    setSecretsMessage(env, 'Enter a secret name before saving.', 'var(--color-danger)');
+    if (nameInput) nameInput.focus();
+    return false;
+  }
+
+  var originalLabel = btn ? btn.textContent.trim() : '';
   try {
-    if (btn) { btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> Saving...'; if (window.lucide) lucide.createIcons(); }
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:14px;height:14px;"></i> ' + (options.loadingLabel || 'Saving...');
+      if (window.lucide) lucide.createIcons();
+    }
 
-    var payload = { env: env, secrets: secretsObj, secretName: typedName };
-    // Note: secretName is always sent — backend uses stored name if locked,
-    // uses typed name if new. Sending it always avoids lost-update edge cases.
-
-    var res = await api.post('/api/secrets/' + _activeProject.id, payload);
+    // Values are posted straight to the existing AWS Secrets Manager upsert.
+    // The platform database continues to retain only name/ARN/key metadata.
+    var res = await api.post('/api/secrets/' + _activeProject.id, { env: env, secrets: secretsObj, secretName: typedName });
     if (res && res.ok) {
       // Re-fetch actual values from AWS so the table renders with real data
       var freshValues = {};
@@ -752,11 +888,12 @@ async function handleSaveSecrets(env) {
         if (nameHint) nameHint.textContent = 'Locked — secret exists in AWS Secrets Manager.';
       }
       if (msg) {
-        msg.innerHTML = '<span style="color:var(--color-success);"><i data-lucide="check-circle-2" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;"></i> ' + env.toUpperCase() + ' secrets saved. Run pipeline or Re-apply Infra to deploy.</span>';
+        msg.innerHTML = '<span style="color:var(--color-success);"><i data-lucide="check-circle-2" style="width:14px;height:14px;display:inline-block;vertical-align:text-bottom;"></i> ' + (options.successMessage || (env.toUpperCase() + ' secrets saved. Run pipeline or Re-apply Infra to deploy.')) + '</span>';
         msg.style.display = 'block';
         if (window.lucide) lucide.createIcons();
         setTimeout(function() { msg.style.display = 'none'; }, 8000);
       }
+      return true;
     } else {
       throw new Error(res.error || 'Failed to save');
     }
@@ -766,8 +903,9 @@ async function handleSaveSecrets(env) {
       msg.style.color = 'var(--color-danger)';
       msg.style.display = 'block';
     }
+    return false;
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = 'Save ' + env.toUpperCase() + ' Secrets'; }
+    if (btn) { btn.disabled = false; btn.textContent = originalLabel || ('Save ' + env.toUpperCase() + ' Secrets'); }
   }
 }
 
