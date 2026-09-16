@@ -21,7 +21,7 @@ function initAuditLogsPage() {
 function setAuditCategory(cat) {
   _auditCategory = cat;
   _auditPage = 1;
-  ['All', 'Login', 'Approvals', 'Pipeline Executions', 'Terraform', 'User Management', 'Other'].forEach(function(c) {
+  ['All', 'Security', 'Login', 'Approvals', 'Pipeline Executions', 'Terraform', 'User Management', 'Other'].forEach(function(c) {
     var btn = document.getElementById('audit-cat-' + c);
     if (!btn) return;
     if (c === cat) {
@@ -56,7 +56,11 @@ async function fetchAuditLogs() {
     var query = (document.getElementById('audit-search-input')?.value || '').trim();
     var url = '/api/audit-logs?limit=' + _auditPageSize + '&page=' + _auditPage;
     if (_auditCategory !== 'All') {
-      url += '&category=' + encodeURIComponent(_auditCategory);
+      if (_auditCategory === 'Security') {
+        url += '&security=true';
+      } else {
+        url += '&category=' + encodeURIComponent(_auditCategory);
+      }
     }
     if (query) url += '&search=' + encodeURIComponent(query);
     var res = await api.get(url);

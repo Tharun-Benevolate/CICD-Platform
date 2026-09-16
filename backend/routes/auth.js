@@ -238,11 +238,12 @@ router.get("/me", async (req, res) => {
 
 // GET /api/audit-logs
 router.get("/audit-logs", auth.requireAuth, async (req, res) => {
-  const { user, category, search } = req.query;
+  const { user, category, search, security } = req.query;
   const result = await auditStore.getAuditLogs({
     username: user,
     category,
     search,
+    securityOnly: security === "true",
     page: req.query.page,
     limit: req.query.limit
   });

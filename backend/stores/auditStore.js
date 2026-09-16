@@ -95,6 +95,17 @@ async function getAuditLogs(filters = {}) {
       conditions.push("category = ?");
       params.push(filters.category);
     }
+    if (filters.securityOnly) {
+      // Security events existed before a dedicated UI filter, so classify them
+      // from their durable category plus well-known sensitive action terms.
+      // This keeps historical login, role, access, and secret events visible.
+      conditions.push(`(
+        category IN ('Login', 'User Management', 'Access Control')
+        OR LOWER(action) LIKE ? OR LOWER(action) LIKE ? OR LOWER(action) LIKE ?
+        OR LOWER(action) LIKE ? OR LOWER(action) LIKE ? OR LOWER(action) LIKE ?
+      )`);
+      params.push('%secret%', '%credential%', '%password%', '%two factor%', '%totp%', '%session%');
+    }
     if (filters.search) {
       const search = `%${String(filters.search).trim()}%`;
       if (search !== "%%") {

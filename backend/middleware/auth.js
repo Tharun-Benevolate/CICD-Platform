@@ -4,6 +4,7 @@ const jwt        = require("jsonwebtoken");
 const crypto     = require("crypto");
 const { OAuth2Client } = require("google-auth-library");
 const userStore  = require("../stores/userStore");
+const auditStore = require("../stores/auditStore");
 
 const JWT_SECRET    = process.env.JWT_SECRET || "fallback-secret-change-in-production-12345";
 const GOOGLE_CLIENT = process.env.GOOGLE_CLIENT_ID;
@@ -268,6 +269,16 @@ function requireRole(...allowedRoles) {
         return res.status(401).json({ ok: false, error: "Session is no longer valid", sessionExpired: true });
       }
       if (!allowedRoles.includes(currentUser.userType)) {
+        // Record denied API actions centrally so every endpoint guarded by
+        // requireRole is represented in the Security Logs view.
+        auditStore.logAction(
+          currentUser.username,
+          `UNAUTHORIZED API ACCESS ATTEMPT: ${req.method} ${req.originalUrl}`,
+          "System",
+          "Denied",
+          "Access Control",
+          req
+        );
         return res.status(403).json({ ok: false, error: "You do not have permission to perform this action" });
       }
       req.user = currentUser;

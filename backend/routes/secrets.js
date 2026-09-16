@@ -84,6 +84,14 @@ function isPrivileged(req) {
 function requireSecretEnvironmentAccess(req, res, next) {
   const env = req.params.env || req.body?.env;
   if (env === "prod" && !isPrivileged(req)) {
+    auditStore.logAction(
+      auth.getLoggedInUser(req) || "unknown",
+      `UNAUTHORIZED API ACCESS ATTEMPT: ${req.method} ${req.originalUrl}`,
+      "System",
+      "Denied",
+      "Access Control",
+      req
+    );
     return res.status(403).json({ ok: false, error: "Production secrets are restricted to Super Admin, Admin, and DevOps roles." });
   }
   next();
@@ -91,6 +99,14 @@ function requireSecretEnvironmentAccess(req, res, next) {
 
 function requireSecretInheritanceAccess(req, res, next) {
   if ((req.body?.sourceEnv === "prod" || req.body?.targetEnv === "prod") && !isPrivileged(req)) {
+    auditStore.logAction(
+      auth.getLoggedInUser(req) || "unknown",
+      `UNAUTHORIZED API ACCESS ATTEMPT: ${req.method} ${req.originalUrl}`,
+      "System",
+      "Denied",
+      "Access Control",
+      req
+    );
     return res.status(403).json({ ok: false, error: "Production secrets are restricted to Super Admin, Admin, and DevOps roles." });
   }
   next();
