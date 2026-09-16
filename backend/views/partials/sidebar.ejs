@@ -63,10 +63,12 @@
       <i data-lucide="file-text" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Audit Logs</span>
     </a>
-    <a href="/certificates" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="SSL certificate management"' : '' %> class="nav-item <%= activePage === 'certificates' ? 'active' : '' %>" title="SSL Certificates<%= !isPrivileged ? ' — restricted' : '' %>">
+    <% if (isPrivileged) { %>
+    <a href="/certificates" class="nav-item <%= activePage === 'certificates' ? 'active' : '' %>" title="SSL Certificates">
       <i data-lucide="shield-check" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Certificates</span>
     </a>
+    <% } %>
     <a href="/pipelines" class="nav-item <%= activePage === 'pipelines' ? 'active' : '' %>" title="Pipelines">
       <i data-lucide="git-branch" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Pipelines</span>
@@ -92,27 +94,29 @@
     </a>
 
     <!-- Deployment -->
+    <% if (isPrivileged) { %>
     <span class="nav-section-label">Deployment</span>
-    <a href="/approvals" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Deployment approvals"' : '' %> class="nav-item <%= activePage === 'approvals' ? 'active' : '' %>" title="Approvals<%= !isPrivileged ? ' — restricted' : '' %>">
+    <a href="/approvals" class="nav-item <%= activePage === 'approvals' ? 'active' : '' %>" title="Approvals">
       <i data-lucide="check-circle" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Approvals</span>
     </a>
-    <a href="/builds" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Build history"' : '' %> class="nav-item <%= activePage === 'build-history' ? 'active' : '' %>" title="Build History<%= !isPrivileged ? ' — restricted' : '' %>">
+    <a href="/builds" class="nav-item <%= activePage === 'build-history' ? 'active' : '' %>" title="Build History">
       <i data-lucide="briefcase" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Build History</span>
     </a>
-    <a href="/scaling" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Auto-scaling controls"' : '' %> class="nav-item <%= activePage === 'scaling' ? 'active' : '' %>" title="Auto-scaling<%= !isPrivileged ? ' — restricted' : '' %>">
+    <a href="/scaling" class="nav-item <%= activePage === 'scaling' ? 'active' : '' %>" title="Auto-scaling">
       <i data-lucide="trending-up" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Auto-scaling</span>
     </a>
-    <a href="/beta" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Beta environment controls"' : '' %> class="nav-item <%= activePage === 'beta-environment' ? 'active' : '' %>" title="Beta Environment<%= !isPrivileged ? ' — restricted' : '' %>">
+    <a href="/beta" class="nav-item <%= activePage === 'beta-environment' ? 'active' : '' %>" title="Beta Environment">
       <i data-lucide="flask-conical" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Beta Environment</span>
     </a>
-    <a href="/release" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Release management"' : '' %> class="nav-item <%= activePage === 'release' ? 'active' : '' %>" title="Release<%= !isPrivileged ? ' — restricted' : '' %>">
+    <a href="/release" class="nav-item <%= activePage === 'release' ? 'active' : '' %>" title="Release">
       <i data-lucide="zap" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Release</span>
     </a>
+    <% } %>
 
 
     <!-- Project -->
@@ -121,10 +125,12 @@
       <i data-lucide="users" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Team Access</span>
     </a>
-    <a href="/project-settings" <%- !isPrivileged ? 'data-access-restricted="true" data-restricted-resource="Project settings and buildspec editing"' : '' %> class="nav-item <%= activePage === 'project-settings' ? 'active' : '' %>" title="Project Settings<%= !isPrivileged ? ' — restricted' : '' %>">
+    <% if (isPrivileged) { %>
+    <a href="/project-settings" class="nav-item <%= activePage === 'project-settings' ? 'active' : '' %>" title="Project Settings">
       <i data-lucide="folder-cog" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Project Settings</span>
     </a>
+    <% } %>
     <a href="/setup" class="nav-item <%= activePage === 'setup-wizard' ? 'active' : '' %>" title="Setup Wizard">
       <i data-lucide="settings" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Setup Wizard</span>
