@@ -1,6 +1,6 @@
 const {
   CodePipelineClient, GetPipelineStateCommand, PutApprovalResultCommand, ListPipelinesCommand,
-  StartPipelineExecutionCommand, ListPipelineExecutionsCommand, CreatePipelineCommand,
+  StartPipelineExecutionCommand, ListPipelineExecutionsCommand, CreatePipelineCommand, UpdatePipelineCommand,
   GetPipelineCommand, DeletePipelineCommand, StopPipelineExecutionCommand, RetryStageExecutionCommand,
   GetPipelineExecutionCommand
 } = require("@aws-sdk/client-codepipeline");
@@ -115,6 +115,37 @@ async function startPipeline(region, pipelineName) {
   const { pipeline } = clients(region);
   const res = await pipeline.send(new StartPipelineExecutionCommand({ name: pipelineName }));
   return res.pipelineExecutionId;
+}
+
+// Enable GitHub push events for an existing CodePipeline. Terraform handles
+// this for newly provisioned/re-applied stacks; this covers projects whose
+// pipeline was created before automatic source detection was made explicit.
+async function enablePipelineAutoTrigger(region, pipelineName) {
+  const { pipeline } = clients(region);
+  const current = await pipeline.send(new GetPipelineCommand({ name: pipelineName }));
+  const definition = current.pipeline;
+  let sourceAction = null;
+
+  for (const stage of definition.stages || []) {
+    sourceAction = (stage.actions || []).find(action =>
+      action.actionTypeId?.category === "Source" &&
+      action.actionTypeId?.provider === "CodeStarSourceConnection"
+    );
+    if (sourceAction) break;
+  }
+  if (!sourceAction) {
+    throw new Error("This pipeline does not use a GitHub CodeStar Connection source, so automatic GitHub push triggering cannot be enabled here.");
+  }
+
+  sourceAction.configuration = {
+    ...sourceAction.configuration,
+    DetectChanges: "true"
+  };
+  const updated = await pipeline.send(new UpdatePipelineCommand({ pipeline: definition }));
+  return {
+    pipelineName: updated.pipeline?.name || pipelineName,
+    branch: sourceAction.configuration.BranchName || "main"
+  };
 }
 
 async function listPipelineExecutions(region, pipelineName) {
@@ -264,7 +295,11 @@ function buildSourceAction({ sourceType, repoName, branchName, githubConnectionA
         ConnectionArn: githubConnectionArn,
         FullRepositoryId: `${githubOwner}/${githubRepo}`,
         BranchName: githubBranch || "main",
-        OutputArtifactFormat: "CODE_ZIP"
+        OutputArtifactFormat: "CODE_ZIP",
+        // Make the intended behaviour explicit: an accepted GitHub push to
+        // this configured branch starts CodePipeline without a user pressing
+        // Run Pipeline in the platform UI.
+        DetectChanges: "true"
       }
     };
   }
@@ -1324,7 +1359,7 @@ module.exports = {
   createBetaListenerRule,
   deleteBetaListenerRule, deleteBetaTargetGroup, getAlbListenerArn,
   checkCredentials,
-  getPipelineState, listPipelines, getPipelineDefinition, startPipeline, listPipelineExecutions,
+  getPipelineState, listPipelines, getPipelineDefinition, startPipeline, enablePipelineAutoTrigger, listPipelineExecutions,
   getPipelineExecution, waitForNewPipelineExecution,
   getPendingApprovals, approveAction, createPipeline, deletePipeline,
   stopPipeline, retryStage,

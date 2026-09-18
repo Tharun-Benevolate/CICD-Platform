@@ -32,7 +32,6 @@ async function initPipelinesPage() {
       var pName = _activeProject.pipelineName || (_activeProject.name + '-pipeline');
       nameTag.innerHTML = 'Pipeline: <strong style="color:var(--color-text-primary);">' + pName + '</strong>';
     }
-
     fetchPipeline(false);
     _pipePollTimer = setInterval(function() {
       fetchPipeline(false);
@@ -45,6 +44,45 @@ async function initPipelinesPage() {
       emptyEl.textContent = 'No active project selected. Create or select a project to view pipeline status.';
       emptyEl.style.display = 'block';
     }
+  }
+}
+
+function renderAutoTriggerStatus(message, isError) {
+  var status = document.getElementById('pipeline-auto-trigger-status');
+  if (!status || !_activeProject) return;
+  var trigger = _pipelineState && _pipelineState.autoTrigger;
+  var branch = (trigger && trigger.branch) || _activeProject.githubBranch || _activeProject.branchName || 'main';
+  if (!message) {
+    if (trigger && trigger.enabled) {
+      message = 'Automatic push trigger is enabled: pushes or merges to ' + branch + ' start Source, Build, and Dev. UAT and Production still require approval.';
+    } else if (trigger && trigger.supported) {
+      message = 'Automatic push trigger is not enabled for ' + branch + '. A DevOps administrator can enable it once for this project.';
+      isError = true;
+    } else {
+      message = 'This pipeline source does not support the GitHub automatic push trigger from this page.';
+      isError = true;
+    }
+  }
+  status.style.color = isError ? 'var(--color-danger)' : 'var(--color-text-secondary)';
+  status.style.borderColor = isError ? 'rgba(239,68,68,0.45)' : 'var(--color-border)';
+  status.style.display = 'block';
+}
+
+async function handleEnableAutoTrigger() {
+  if (!_activeProject) return;
+  var btn = document.getElementById('btn-enable-auto-trigger');
+  var branch = _activeProject.githubBranch || _activeProject.branchName || 'main';
+  if (!confirm('Enable automatic pipeline runs for new pushes to "' + branch + '"?\n\nA push will deploy to Dev automatically. UAT and Production approvals will remain required.')) return;
+  var original = btn ? btn.innerHTML : '';
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Enabling...'; }
+    var res = await api.post('/api/pipeline/enable-auto-trigger', { projectId: _activeProject.id });
+    if (!res || !res.ok) throw new Error((res && res.error) || 'Could not enable automatic push triggering.');
+    renderAutoTriggerStatus('Automatic runs enabled: new pushes to ' + (res.branch || branch) + ' will start the pipeline. UAT and Production still require approval.');
+    if (btn) { btn.textContent = 'Push Trigger Enabled'; btn.disabled = true; }
+  } catch (error) {
+    renderAutoTriggerStatus('Automatic push trigger was not enabled: ' + error.message, true);
+    if (btn) { btn.innerHTML = original; btn.disabled = false; if (window.lucide) lucide.createIcons(); }
   }
 }
 
@@ -63,6 +101,7 @@ async function fetchPipeline(isManual) {
     if (res && res.ok) {
       _pipelineState = res;
       renderPipeline();
+      renderAutoTriggerStatus();
     } else {
       // API responded but pipeline not found
       if (loadingEl) loadingEl.style.display = 'none';

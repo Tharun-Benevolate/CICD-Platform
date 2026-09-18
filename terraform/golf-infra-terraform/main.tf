@@ -804,6 +804,10 @@ resource "aws_codepipeline" "main" {
         ConnectionArn    = var.github_connection_arn
         FullRepositoryId = "${var.github_owner}/${var.github_repo}"
         BranchName       = var.github_branch
+        # CodeStar Connections receives the GitHub push event and starts the
+        # pipeline automatically for this branch. UAT/Prod remain protected
+        # by their manual approval stages below.
+        DetectChanges    = "true"
       }
     }
   }

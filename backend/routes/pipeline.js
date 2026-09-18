@@ -12,9 +12,24 @@ const { requireProject } = require("./projects");
 router.get(["/pipeline/state", "/pipeline/status"], async (req, res) => {
   try {
     const project = await requireProject(req, res); if (!project) return;
-    const stages = await aws.getPipelineState(project.region, project.pipelineName);
-    const executions = await aws.listPipelineExecutions(project.region, project.pipelineName);
-    res.json({ ok: true, stages, stageStates: stages, executions: (executions || []).slice(0, 8) });
+    const [stages, executions, definition] = await Promise.all([
+      aws.getPipelineState(project.region, project.pipelineName),
+      aws.listPipelineExecutions(project.region, project.pipelineName),
+      aws.getPipelineDefinition(project.region, project.pipelineName).catch(() => null)
+    ]);
+    let autoTrigger = { supported: false, enabled: false, branch: null };
+    for (const stage of definition?.stages || []) {
+      const source = (stage.actions || []).find(action => action.actionTypeId?.category === "Source");
+      if (!source) continue;
+      const supported = source.actionTypeId?.provider === "CodeStarSourceConnection";
+      autoTrigger = {
+        supported,
+        enabled: supported && String(source.configuration?.DetectChanges).toLowerCase() === "true",
+        branch: source.configuration?.BranchName || null
+      };
+      break;
+    }
+    res.json({ ok: true, stages, stageStates: stages, executions: (executions || []).slice(0, 8), autoTrigger });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -159,6 +174,29 @@ router.post("/pipeline/start", async (req, res) => {
         }
       } catch (e) { /* ignore transient errors */ }
     }, 10000); // poll every 10s
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// POST /api/pipeline/enable-auto-trigger — one-time project configuration.
+// A push to the configured GitHub branch then starts Source -> Build -> Dev.
+// UAT and Production approvals remain unchanged in the pipeline definition.
+router.post("/pipeline/enable-auto-trigger", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+  try {
+    const project = await requireProject(req, res); if (!project) return;
+    if (!project.pipelineName) {
+      return res.status(400).json({ ok: false, error: "This project does not have a pipeline configured yet." });
+    }
+    const result = await aws.enablePipelineAutoTrigger(project.region, project.pipelineName);
+    auditStore.logAction(
+      auth.getLoggedInUser(req) || "unknown",
+      `Enabled automatic pipeline trigger for pushes to ${result.branch}`,
+      project.name,
+      "Success",
+      "Pipeline Executions"
+    );
+    res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
