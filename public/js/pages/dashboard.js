@@ -180,8 +180,16 @@ async function loadProjects() {
         var el = document.getElementById('deploy-endpoint');
         el.style.display = 'flex';
         var name = active.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        document.getElementById('deploy-endpoint-text').innerHTML =
-          name + '.benevolate.internal:8080 &bull; <span style="color:var(--color-text-tertiary);">Not Deployed / Pending Pipeline Setup</span>';
+        var endpointLinks = [];
+        if (active.prodUrl) endpointLinks.push('<a href="http://' + active.prodUrl + '" target="_blank" style="color:inherit;text-decoration:none;">' + active.prodUrl + '</a> (Prod)');
+        if (active.uatUrl) endpointLinks.push('<a href="http://' + active.uatUrl + '" target="_blank" style="color:inherit;text-decoration:none;">' + active.uatUrl + '</a> (UAT)');
+        if (active.devUrl) endpointLinks.push('<a href="http://' + active.devUrl + '" target="_blank" style="color:inherit;text-decoration:none;">' + active.devUrl + '</a> (Dev)');
+        
+        var endpointStr = endpointLinks.length > 0 
+          ? endpointLinks.join(' &bull; ') 
+          : name + '.benevolate.internal:8080 &bull; <span style="color:var(--color-text-tertiary);">Not Deployed / Pending Pipeline Setup</span>';
+          
+        document.getElementById('deploy-endpoint-text').innerHTML = endpointStr;
       }
     }
   } catch(e) {}
