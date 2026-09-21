@@ -11,7 +11,16 @@
 //   - In development, Vite proxies /api calls here from :5173.
 
 require("dotenv").config();
+
+process.on("unhandledRejection", (reason) => {
+  console.error("[Process Warning] Unhandled Rejection:", reason?.stack || reason);
+});
+process.on("uncaughtException", (err) => {
+  console.error("[Process Error] Uncaught Exception:", err?.stack || err);
+});
+
 const express     = require("express");
+
 const fs          = require("fs");
 const path        = require("path");
 const cookieParser= require("cookie-parser");
