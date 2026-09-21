@@ -224,11 +224,21 @@ async function loadEnvStatus(project) {
           '</div>'
         : '';
 
+      var displayUrl = env.url
+        ? (env.url.replace(/^https?:\/\//, '').replace(/\/$/, ''))
+        : null;
+      var shortUrl = displayUrl && displayUrl.length > 24 ? displayUrl.slice(0, 22) + '…' : (displayUrl || '—');
+      var urlHtml = '<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.06);font-size:9px;color:' +
+        (env.url ? '#6366f1' : 'var(--color-text-tertiary)') +
+        ';font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + (displayUrl || 'No endpoint') + '">' +
+        (env.url ? '🌐 ' : '') + shortUrl +
+      '</div>';
+
       var linkStart = (env.url && isActive) ? '<a href="' + (env.url.startsWith('http') ? env.url : 'https://' + env.url) + '" target="_blank" style="text-decoration:none;color:inherit;">' : '<span>';
       var linkEnd   = (env.url && isActive) ? '</a>' : '</span>';
 
       return linkStart +
-        '<div style="position:relative;width:108px;padding:10px 12px;background:var(--color-bg);border:1px solid ' + (isActive ? color + '55' : 'var(--color-border)') + ';border-radius:10px;transition:border-color 0.2s,box-shadow 0.2s;cursor:' + (isActive ? 'pointer' : 'default') + ';" ' +
+        '<div style="position:relative;width:130px;padding:10px 12px;background:var(--color-bg);border:1px solid ' + (isActive ? color + '55' : 'var(--color-border)') + ';border-radius:10px;transition:border-color 0.2s,box-shadow 0.2s;cursor:' + (isActive ? 'pointer' : 'default') + ';" ' +
           'onmouseenter="if(' + isActive + ')this.style.boxShadow=\'0 0 0 2px ' + color + '44\'" ' +
           'onmouseleave="this.style.boxShadow=\'none\'">' +
           dotHtml +
@@ -238,6 +248,7 @@ async function loadEnvStatus(project) {
           '</div>' +
           '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:3px;">' + label + '</div>' +
           '<div style="font-size:10px;color:var(--color-text-tertiary);font-family:monospace;">' + taskText + '</div>' +
+          urlHtml +
         '</div>' +
       linkEnd;
     }).join('');
