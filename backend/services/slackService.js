@@ -10,6 +10,10 @@ const credManager = require("./credentialManager");
 async function getSlackConfig() {
   let devUrl = process.env.SLACK_DEV_WEBHOOK_URL || null;
   let opsUrl = process.env.SLACK_OPS_WEBHOOK_URL || null;
+  let opsChannelId = null;
+  let opsChannelName = null;
+  let securityChannelId = null;
+  let securityChannelName = null;
   let enabled = 1;
 
   try {
@@ -17,6 +21,10 @@ async function getSlackConfig() {
     if (rows.length > 0) {
       if (rows[0].dev_webhook_url) devUrl = rows[0].dev_webhook_url;
       if (rows[0].ops_webhook_url) opsUrl = rows[0].ops_webhook_url;
+      if (rows[0].ops_channel_id) opsChannelId = rows[0].ops_channel_id;
+      if (rows[0].ops_channel_name) opsChannelName = rows[0].ops_channel_name;
+      if (rows[0].security_channel_id) securityChannelId = rows[0].security_channel_id;
+      if (rows[0].security_channel_name) securityChannelName = rows[0].security_channel_name;
       if (rows[0].enabled !== undefined) enabled = rows[0].enabled;
     }
   } catch (err) {
@@ -26,27 +34,39 @@ async function getSlackConfig() {
   return {
     dev_webhook_url: devUrl,
     ops_webhook_url: opsUrl,
+    ops_channel_id: opsChannelId,
+    ops_channel_name: opsChannelName,
+    security_channel_id: securityChannelId,
+    security_channel_name: securityChannelName,
     enabled
   };
 }
 
 /**
- * Get any active Slack Bot/OAuth token
+ * Get any active Slack Bot/OAuth token (prioritizes botToken for chat:write and channel management)
  */
 async function getAnySlackToken() {
   if (process.env.SLACK_BOT_TOKEN) return process.env.SLACK_BOT_TOKEN;
   try {
     const [rows] = await pool.query(
-      "SELECT username FROM repo_credentials WHERE LOWER(provider) = 'slack' AND username != 'undefined' ORDER BY created_at DESC LIMIT 1"
+      "SELECT username, meta FROM repo_credentials WHERE LOWER(provider) = 'slack' AND username != 'undefined' ORDER BY created_at DESC LIMIT 1"
     );
     if (rows.length > 0) {
-      const cred = await credManager.getCredential(rows[0].username, 'slack');
-      if (cred) return cred;
+      try {
+        const meta = JSON.parse(rows[0].meta || "{}");
+        if (meta.botToken) return meta.botToken;
+      } catch (_) {}
+      const cred = await credManager.getCredentialByProvider(rows[0].username, 'slack');
+      if (cred && cred.token) return cred.token;
     }
     const [anyRows] = await pool.query(
-      "SELECT encrypted_token, token_iv, token_tag FROM repo_credentials WHERE LOWER(provider) = 'slack' LIMIT 1"
+      "SELECT encrypted_token, token_iv, token_tag, meta FROM repo_credentials WHERE LOWER(provider) = 'slack' LIMIT 1"
     );
     if (anyRows.length > 0) {
+      try {
+        const meta = JSON.parse(anyRows[0].meta || "{}");
+        if (meta.botToken) return meta.botToken;
+      } catch (_) {}
       return credManager.decrypt(anyRows[0].encrypted_token, anyRows[0].token_iv, anyRows[0].token_tag);
     }
   } catch (err) {
@@ -56,19 +76,53 @@ async function getAnySlackToken() {
 }
 
 /**
- * Update global Slack Webhook configuration
+ * Update global Slack Webhook and System Channels configuration
  */
-async function saveSlackConfig({ devWebhookUrl, opsWebhookUrl, enabled = 1 }) {
+async function saveSlackConfig({
+  devWebhookUrl,
+  opsWebhookUrl,
+  opsChannelId,
+  opsChannelName,
+  securityChannelId,
+  securityChannelName,
+  enabled = 1
+}) {
   const [existing] = await pool.query("SELECT id FROM slack_config WHERE id = 'global_slack'");
   if (existing.length > 0) {
     await pool.query(
-      `UPDATE slack_config SET dev_webhook_url = ?, ops_webhook_url = ?, enabled = ? WHERE id = 'global_slack'`,
-      [devWebhookUrl || null, opsWebhookUrl || null, enabled ? 1 : 0]
+      `UPDATE slack_config 
+       SET dev_webhook_url = ?, 
+           ops_webhook_url = ?, 
+           ops_channel_id = ?, 
+           ops_channel_name = ?, 
+           security_channel_id = ?, 
+           security_channel_name = ?, 
+           enabled = ? 
+       WHERE id = 'global_slack'`,
+      [
+        devWebhookUrl || null,
+        opsWebhookUrl || null,
+        opsChannelId || null,
+        opsChannelName || null,
+        securityChannelId || null,
+        securityChannelName || null,
+        enabled ? 1 : 0
+      ]
     );
   } else {
     await pool.query(
-      `INSERT INTO slack_config (id, dev_webhook_url, ops_webhook_url, enabled) VALUES ('global_slack', ?, ?, ?)`,
-      [devWebhookUrl || null, opsWebhookUrl || null, enabled ? 1 : 0]
+      `INSERT INTO slack_config (
+        id, dev_webhook_url, ops_webhook_url, ops_channel_id, ops_channel_name, security_channel_id, security_channel_name, enabled
+      ) VALUES ('global_slack', ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        devWebhookUrl || null,
+        opsWebhookUrl || null,
+        opsChannelId || null,
+        opsChannelName || null,
+        securityChannelId || null,
+        securityChannelName || null,
+        enabled ? 1 : 0
+      ]
     );
   }
   return true;
@@ -130,6 +184,94 @@ async function postToSlack(webhookUrl, payload) {
 }
 
 /**
+ * Resolve external or local URL for direct quick actions and deep-linking
+ */
+function getAppUrl() {
+  if (process.env.APP_URL) return process.env.APP_URL.replace(/\/$/, "");
+  if (process.env.BASE_URL) return process.env.BASE_URL.replace(/\/$/, "");
+  if (process.env.SLACK_REDIRECT_URI) {
+    try {
+      return new URL(process.env.SLACK_REDIRECT_URI).origin;
+    } catch (_) {}
+  }
+  return "http://localhost:3000";
+}
+
+/**
+ * Dispatch formatted payload to either Slack Channel ID via Bot API or fallback to Webhook URL
+ * Note: Never duplicates header text above attachments if rich card attachments are provided.
+ */
+async function postToSlackChannelOrWebhook({ channelId, webhookUrl, payload }) {
+  const token = await getAnySlackToken();
+  if (token && channelId) {
+    try {
+      const body = {
+        channel: channelId,
+        attachments: payload.attachments,
+        blocks: payload.blocks
+      };
+      // Only include top-level text if there are NO attachments/blocks, or if explicitly provided non-empty
+      if (payload.text && payload.text.trim().length > 0) {
+        body.text = payload.text;
+      }
+      const res = await fetch("https://slack.com/api/chat.postMessage", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (data.ok) return true;
+      console.warn(`[Slack postMessage to ${channelId} notice]:`, data.error);
+    } catch (err) {
+      console.error(`[Slack postMessage to ${channelId} error]:`, err.message);
+    }
+  }
+
+  // Fallback to webhook
+  if (webhookUrl) {
+    return postToSlack(webhookUrl, payload);
+  }
+  return false;
+}
+
+/**
+ * Post a Block Kit payload directly to a Slack channel by channel ID (e.g. C0123ABCDEF)
+ * using the bot token via chat.postMessage — works for private project channels.
+ */
+async function postToSlackChannelById(channelId, payload) {
+  if (!channelId) return false;
+  const token = await getAnySlackToken();
+  if (!token) {
+    console.error("[Slack] No bot token available to post to channel:", channelId);
+    return false;
+  }
+  try {
+    const body = {
+      channel: channelId,
+      text: typeof payload === "string" ? payload : (payload.text || " "),
+      attachments: payload.attachments || []
+    };
+    if (payload.blocks) body.blocks = payload.blocks;
+    const response = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await response.json();
+    return !!data.ok;
+  } catch (err) {
+    console.error("[Slack] postToSlackChannelById error:", err.message);
+    return false;
+  }
+}
+
+/**
  * Automatically invite a user's Slack account into a Slack channel
  */
 async function autoJoinSlackChannel(channelId, username) {
@@ -137,8 +279,36 @@ async function autoJoinSlackChannel(channelId, username) {
   const botToken = await getAnySlackToken();
   if (!botToken || !channelId) return false;
 
-  // Default fallback for amruth/admin to U0BMKQJTTQU if user-specific cred not present
-  const targetUserId = (creds && creds.slackUserId) ? creds.slackUserId : 'U0BMKQJTTQU';
+  let targetUserId = (creds && creds.slackUserId) ? creds.slackUserId : null;
+
+  if (!targetUserId && username) {
+    try {
+      const [userRows] = await pool.query(
+        `SELECT email, slack_id FROM users WHERE LOWER(username) = ? LIMIT 1`,
+        [username.toLowerCase().trim()]
+      );
+      if (userRows.length > 0) {
+        targetUserId = userRows[0].slack_id;
+        if (!targetUserId && userRows[0].email) {
+          const lookupRes = await fetch(`https://slack.com/api/users.lookupByEmail?email=${encodeURIComponent(userRows[0].email)}`, {
+            headers: { "Authorization": `Bearer ${botToken}` }
+          });
+          const lookupData = await lookupRes.json();
+          if (lookupData.ok && lookupData.user?.id) {
+            targetUserId = lookupData.user.id;
+            await pool.query("UPDATE users SET slack_id = ? WHERE LOWER(username) = ?", [targetUserId, username.toLowerCase().trim()]).catch(() => {});
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
+  // Fallback for default test user
+  if (!targetUserId && (username === "admin" || username === "amruth")) {
+    targetUserId = 'U0BMKQJTTQU';
+  }
+
+  if (!targetUserId) return false;
 
   try {
     const res = await fetch("https://slack.com/api/conversations.invite", {
@@ -150,8 +320,8 @@ async function autoJoinSlackChannel(channelId, username) {
       body: JSON.stringify({ channel: channelId, users: targetUserId })
     });
     const data = await res.json();
-    if (data.ok) {
-      console.log(`✔ Successfully invited human user (@${username} / ${targetUserId}) to Slack channel ${channelId}`);
+    if (data.ok || data.error === "already_in_channel") {
+      console.log(`✔ User (@${username} / ${targetUserId}) active in Slack channel ${channelId}`);
       return true;
     } else {
       console.log(`Notice inviting ${targetUserId} to channel ${channelId}:`, data.error);
@@ -419,6 +589,136 @@ async function autoProvisionProjectSlackChannel({ projectId, projectName, creato
     console.error("Failed to provision Private Slack channel:", err.message);
   }
   return null;
+}
+
+/**
+ * 🛠️ SUPER ADMIN UTILITY: List all Slack workspace channels (public & private)
+ * Cross-referenced with linked local projects and system alert channels.
+ */
+async function listAllSlackChannels() {
+  const token = await getAnySlackToken();
+  if (!token) return { ok: false, error: "No Slack token available. Please ensure Slack integration is connected." };
+
+  try {
+    const res = await fetch("https://slack.com/api/conversations.list?types=public_channel,private_channel&exclude_archived=false&limit=1000", {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const data = await res.json();
+    if (!data.ok) {
+      return { ok: false, error: data.error || "Failed to retrieve Slack channels from workspace." };
+    }
+
+    // Cross-reference with database
+    const [projects] = await pool.query("SELECT id, name, slack_channel_id, slack_channel_name FROM projects");
+    const [configRows] = await pool.query("SELECT ops_channel_id, ops_channel_name, security_channel_id, security_channel_name FROM slack_config WHERE id = 'global_slack'");
+    const config = configRows[0] || {};
+
+    const enriched = (data.channels || []).map(ch => {
+      let linked = [];
+      if (ch.id === config.ops_channel_id) linked.push("DevOps Alerts (#integrate-devops-alerts)");
+      if (ch.id === config.security_channel_id) linked.push("Security Alerts (#integrate-security-alerts)");
+      const matchedProj = projects.find(p => p.slack_channel_id === ch.id);
+      if (matchedProj) linked.push(`Project: ${matchedProj.name}`);
+
+      return {
+        id: ch.id,
+        name: ch.name,
+        is_private: !!ch.is_private,
+        is_archived: !!ch.is_archived,
+        num_members: ch.num_members || 0,
+        topic: ch.topic ? ch.topic.value : "",
+        purpose: ch.purpose ? ch.purpose.value : "",
+        created: ch.created,
+        linked: linked.length > 0 ? linked.join(", ") : "None"
+      };
+    });
+
+    return { ok: true, channels: enriched };
+  } catch (err) {
+    console.error("[listAllSlackChannels]", err.message);
+    return { ok: false, error: err.message };
+  }
+}
+
+/**
+ * 🛠️ SUPER ADMIN UTILITY: Delete or archive a Slack workspace channel and unlink from platform
+ */
+async function deleteOrArchiveSlackChannel(channelId) {
+  if (!channelId) return { ok: false, error: "Channel ID is required." };
+  const token = await getAnySlackToken();
+  if (!token) return { ok: false, error: "No Slack token available." };
+
+  try {
+    let mode = "deleted";
+    // 1. Attempt hard permanent deletion via admin.conversations.delete
+    const delRes = await fetch("https://slack.com/api/admin.conversations.delete", {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ channel_id: channelId })
+    });
+    const delData = await delRes.json();
+
+    if (!delData.ok) {
+      // Slack API blocks hard deletion on non-Enterprise workspaces; fallback to conversations.archive
+      const archRes = await fetch("https://slack.com/api/conversations.archive", {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ channel: channelId })
+      });
+      const archData = await archRes.json();
+      if (!archData.ok && archData.error !== "already_archived") {
+        return { ok: false, error: `Slack API error: ${archData.error || delData.error}` };
+      }
+      mode = archData.error === "already_archived" ? "already_archived" : "archived";
+    }
+
+    // 2. Clean up local project mappings
+    await pool.query(
+      "UPDATE projects SET slack_channel_id = NULL, slack_channel_name = NULL WHERE slack_channel_id = ?",
+      [channelId]
+    );
+
+    try {
+      const projectStore = require("../stores/projectStore");
+      const allProjects = await projectStore.listProjects();
+      for (const p of allProjects) {
+        if (p.slack_channel_id === channelId || p.slackChannelId === channelId) {
+          await projectStore.updateProject(p.id, {
+            slack_channel_id: null,
+            slack_channel_name: null,
+            slackChannelId: null,
+            slackChannelName: null
+          });
+        }
+      }
+    } catch (_) {}
+
+    // 3. Clean up global system alert mappings if linked
+    const [configRows] = await pool.query("SELECT ops_channel_id, security_channel_id FROM slack_config WHERE id = 'global_slack'");
+    if (configRows.length > 0) {
+      const updates = [];
+      if (configRows[0].ops_channel_id === channelId) {
+        updates.push("ops_channel_id = NULL, ops_channel_name = NULL");
+      }
+      if (configRows[0].security_channel_id === channelId) {
+        updates.push("security_channel_id = NULL, security_channel_name = NULL");
+      }
+      if (updates.length > 0) {
+        await pool.query(`UPDATE slack_config SET ${updates.join(", ")} WHERE id = 'global_slack'`);
+      }
+    }
+
+    const message = mode === "deleted"
+      ? `Channel ${channelId} permanently deleted from Slack workspace.`
+      : mode === "already_archived"
+        ? `Channel ${channelId} was already archived. Local platform links have been purged.`
+        : `Channel ${channelId} successfully archived and deactivated on Slack. Local platform links purged. (Note: Slack API reserves permanent deletion for Enterprise Grid Org Admin; channel is fully closed).`;
+
+    return { ok: true, mode, message };
+  } catch (err) {
+    console.error("[deleteOrArchiveSlackChannel]", err.message);
+    return { ok: false, error: err.message };
+  }
 }
 
 /**
@@ -747,21 +1047,615 @@ async function notifyChangeRequestApproved({ crId, title, approvedBy, requester,
   });
 }
 
-async function notifyPipelineExecution({ projectName, status, triggeredBy, branch = 'main', customWebhookUrl = null }) {
+async function notifyPipelineExecution({ projectName, status, triggeredBy, branch = 'main', buildNumber = 'N/A', executionCode = 'N/A', errorMsg = null, customWebhookUrl = null }) {
   const isSuccess = status.toLowerCase().includes('success') || status.toLowerCase().includes('complete');
+  
+  const title = isSuccess ? '✅ Pipeline Succeeded' : '🚨 Pipeline Alert: Build Failed';
+  const color = isSuccess ? '#10b981' : '#ef4444';
+  
+  let message = `Pipeline execution for *${projectName}* completed with status *${status}*.`;
+  
+  if (!isSuccess && errorMsg) {
+    message = `Pipeline execution for *${projectName}* failed with status *${status}*.\n\n*Error Details:*\n\`\`\`\n${errorMsg}\n\`\`\``;
+  }
+
   return sendSlackNotification({
     channelType: 'dev',
     customWebhookUrl,
-    title: isSuccess ? '✅ Pipeline Succeeded' : '❌ Pipeline Alert',
-    message: `Pipeline execution for *${projectName}* completed with status *${status}*.`,
+    title: title,
+    message: message,
     fields: [
       { title: "Project", value: projectName },
       { title: "Triggered By", value: `@${triggeredBy}` },
-      { title: "Status", value: status },
-      { title: "Branch", value: branch }
+      { title: "Build Number", value: buildNumber },
+      { title: "Branch", value: branch },
+      { title: "Execution Code", value: executionCode }
     ],
-    color: isSuccess ? '#10b981' : '#ef4444'
+    color: color
   });
+}
+
+
+/**
+ * 🛡️ SYSTEM CHANNELS PROVISIONING
+ * Automatically ensures dedicated private channels exist for:
+ * 1. #integrate-security-alerts (Super Admin only)
+ * 2. #integrate-devops-alerts (DevOps & Super Admin only)
+ * Follows strict Slack naming standards (lowercase, hyphenated).
+ */
+async function ensureSystemSlackChannels() {
+  const token = await getAnySlackToken();
+  if (!token) {
+    console.log("[Slack] Notice: No Slack bot token available yet to provision system channels.");
+    return null;
+  }
+
+  const channelsToEnsure = [
+    {
+      name: "integrate-security-alerts",
+      type: "security",
+      allowedRoles: ["super_admin"],
+      topic: "Benevolate Integrate — Security breach, 403 access violations & auth alerts"
+    },
+    {
+      name: "integrate-devops-alerts",
+      type: "ops",
+      allowedRoles: ["super_admin", "devops"],
+      topic: "Benevolate Integrate — Infrastructure, deployment gates & hourly telemetry digests"
+    }
+  ];
+
+  let existingChannels = [];
+  try {
+    const listRes = await fetch("https://slack.com/api/conversations.list?types=private_channel,public_channel&limit=500", {
+      headers: { "Authorization": `Bearer ${token}` }
+    });
+    const listData = await listRes.json();
+    if (listData.ok && Array.isArray(listData.channels)) {
+      existingChannels = listData.channels;
+    }
+  } catch (err) {
+    console.warn("[Slack] Warning listing conversations:", err.message);
+  }
+
+  const resolved = {};
+
+  for (const item of channelsToEnsure) {
+    let channelId = null;
+    const match = existingChannels.find(c => c.name === item.name);
+    if (match) {
+      channelId = match.id;
+      console.log(`✔ Found existing Slack channel #${item.name} (${channelId})`);
+    } else {
+      try {
+        const createRes = await fetch("https://slack.com/api/conversations.create", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ name: item.name, is_private: true })
+        });
+        const createData = await createRes.json();
+        if (createData.ok && createData.channel) {
+          channelId = createData.channel.id;
+          console.log(`✔ Created private Slack channel #${item.name} (${channelId})`);
+          await fetch("https://slack.com/api/conversations.setTopic", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${token}`,
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ channel: channelId, topic: item.topic })
+          }).catch(() => {});
+        } else if (createData.error === "name_taken") {
+          try {
+            const retryList = await fetch("https://slack.com/api/conversations.list?types=private_channel,public_channel&limit=500", {
+              headers: { "Authorization": `Bearer ${token}` }
+            });
+            const d = await retryList.json();
+            const found = (d.channels || []).find(c => c.name === item.name);
+            if (found) channelId = found.id;
+          } catch (_) {}
+        } else {
+          console.warn(`[Slack] Could not create channel #${item.name}:`, createData.error);
+        }
+      } catch (err) {
+        console.error(`[Slack] Error creating channel #${item.name}:`, err.message);
+      }
+    }
+
+    if (channelId) {
+      resolved[item.type] = { id: channelId, name: item.name };
+      try {
+        const placeholders = item.allowedRoles.map(() => "?").join(",");
+        const [users] = await pool.query(
+          `SELECT username, email, slack_id FROM users WHERE user_type IN (${placeholders})`,
+          item.allowedRoles
+        );
+        for (const u of users) {
+          await autoJoinSlackChannel(channelId, u.username);
+        }
+      } catch (err) {
+        console.error(`[Slack] Error inviting users to #${item.name}:`, err.message);
+      }
+    }
+  }
+
+  // Persist into slack_config table
+  if (resolved.ops?.id || resolved.security?.id) {
+    const config = await getSlackConfig();
+    await saveSlackConfig({
+      devWebhookUrl: config.dev_webhook_url,
+      opsWebhookUrl: config.ops_webhook_url,
+      opsChannelId: resolved.ops?.id || config.ops_channel_id,
+      opsChannelName: resolved.ops?.name || config.ops_channel_name,
+      securityChannelId: resolved.security?.id || config.security_channel_id,
+      securityChannelName: resolved.security?.name || config.security_channel_name,
+      enabled: config.enabled
+    });
+  }
+
+  return resolved;
+}
+
+/**
+ * 🚨 SEND SECURITY ALERT
+ * Dispatches critical security breach and access violation events
+ * to #integrate-security-alerts (Super Admin only).
+ */
+async function sendSecurityAlert({ 
+  actor = "Unknown", 
+  action, 
+  ip = "Unknown IP", 
+  details = "", 
+  severity = "critical", 
+  link = null,
+  endpoint = null,
+  method = null,
+  actionTaken = null
+}) {
+  const config = await getSlackConfig();
+  if (!config || !config.enabled) return false;
+
+  const appUrl = getAppUrl();
+  const sevColors = {
+    critical: "#dc2626",
+    high:     "#ea580c",
+    medium:   "#f59e0b",
+    low:      "#3b82f6"
+  };
+  const sevEmojis = {
+    critical: "🚨",
+    high:     "⚠️",
+    medium:   "🛡️",
+    low:      "ℹ️"
+  };
+
+  const color = sevColors[severity.toLowerCase()] || "#dc2626";
+  const emoji = sevEmojis[severity.toLowerCase()] || "🚨";
+
+  const fields = [
+    { type: "mrkdwn", text: `*Actor:*\n\`@${actor}\`` },
+    { type: "mrkdwn", text: `*Severity:*\n*${severity.toUpperCase()}*` },
+    { type: "mrkdwn", text: `*Client IP:*\n\`${ip}\`` },
+    { type: "mrkdwn", text: `*Timestamp:*\n\`${new Date().toUTCString()}\`` }
+  ];
+
+  if (endpoint) {
+    fields.push({
+      type: "mrkdwn",
+      text: `*Target URL / Action:*\n\`${method ? method + " " : ""}${endpoint}\``
+    });
+  }
+
+  if (actionTaken) {
+    fields.push({
+      type: "mrkdwn",
+      text: `*Enforcement Status:*\n*${actionTaken}*`
+    });
+  }
+
+  const blocks = [
+    {
+      type: "header",
+      text: { type: "plain_text", text: `${emoji} Security Alert: ${action}`, emoji: true }
+    },
+    {
+      type: "section",
+      fields
+    }
+  ];
+
+  if (details) {
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: `*Incident Details:*\n> ${details}` }
+    });
+  }
+
+  const investigationUrl = link || `${appUrl}/audit-logs?search=${encodeURIComponent(actor)}`;
+
+  blocks.push({
+    type: "actions",
+    elements: [
+      {
+        type: "button",
+        text: { type: "plain_text", text: "🔍 Investigate in Audit Logs", emoji: true },
+        url: investigationUrl,
+        style: "danger"
+      }
+    ]
+  });
+
+  blocks.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: `*Security Scope:* Benevolate Integrate Platform • Dedicated Super Admin Alert`
+      }
+    ]
+  });
+
+  const payload = {
+    text: "",
+    attachments: [{ color, blocks }]
+  };
+
+  return postToSlackChannelOrWebhook({
+    channelId: config.security_channel_id,
+    webhookUrl: config.ops_webhook_url || config.dev_webhook_url,
+    payload
+  });
+}
+
+/**
+ * 🛠️ SEND DEVOPS / INFRA ALERT
+ * Dispatches infrastructure state, pipeline gates, and ops notifications
+ * to #integrate-devops-alerts (DevOps & Super Admin only).
+ */
+async function sendOpsAlert({ 
+  project = null,
+  projectName = null,
+  title, 
+  message, 
+  fields = [], 
+  level = "info", 
+  link = null, 
+  environment = null,
+  customWebhookUrl = null 
+}) {
+  const config = await getSlackConfig();
+  if (!config || !config.enabled) return false;
+
+  const appUrl = getAppUrl();
+  const resolvedProject = project || projectName || (fields.find(f => f.title?.toLowerCase() === "project")?.value) || "Platform / Global";
+  const resolvedEnv = environment || (fields.find(f => f.title?.toLowerCase() === "environment")?.value) || "production";
+
+  const levelColors = {
+    info:    "#3b82f6",
+    success: "#10b981",
+    warn:    "#f59e0b",
+    error:   "#ef4444"
+  };
+  const levelEmojis = {
+    info:    "ℹ️",
+    success: "✅",
+    warn:    "⚠️",
+    error:   "❌"
+  };
+
+  const color = levelColors[level.toLowerCase()] || "#3b82f6";
+  const emoji = levelEmojis[level.toLowerCase()] || "🛠️";
+
+  const defaultFields = [
+    { type: "mrkdwn", text: `*Project Scope:*\n\`${resolvedProject}\`` },
+    { type: "mrkdwn", text: `*Environment:*\n\`${resolvedEnv}\`` }
+  ];
+
+  // Add remaining caller fields that aren't already project/environment
+  const extraFields = fields
+    .filter(f => !["project", "environment"].includes(f.title?.toLowerCase()))
+    .map(f => ({ type: "mrkdwn", text: `*${f.title}:*\n${f.value}` }));
+
+  const allFields = defaultFields.concat(extraFields);
+
+  const blocks = [
+    {
+      type: "header",
+      text: { type: "plain_text", text: `${emoji} ${title}`, emoji: true }
+    },
+    {
+      type: "section",
+      text: { type: "mrkdwn", text: message }
+    },
+    {
+      type: "section",
+      fields: allFields.slice(0, 10)
+    }
+  ];
+
+  const projectUrl = link || `${appUrl}/pipelines?project=${encodeURIComponent(resolvedProject)}`;
+
+  blocks.push({
+    type: "actions",
+    elements: [
+      {
+        type: "button",
+        text: { type: "plain_text", text: `🚀 Open ${resolvedProject} in App`, emoji: true },
+        url: projectUrl,
+        style: level === "error" ? "danger" : "primary"
+      },
+      {
+        type: "button",
+        text: { type: "plain_text", text: "📊 Monitor App Metrics & Logs", emoji: true },
+        url: `${appUrl}/monitoring?project=${encodeURIComponent(resolvedProject)}`
+      }
+    ]
+  });
+
+  blocks.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: `*DevOps Scope:* Benevolate Integrate • Dedicated DevOps & Super Admin Channel`
+      }
+    ]
+  });
+
+  const payload = {
+    text: "",
+    attachments: [{ color, blocks }]
+  };
+
+  return postToSlackChannelOrWebhook({
+    channelId: config.ops_channel_id,
+    webhookUrl: customWebhookUrl || config.ops_webhook_url,
+    payload
+  });
+}
+
+/**
+ * ⏱️ SEND HOURLY TELEMETRY DIGEST
+ * Queries the last 1 hour of platform activity from audit_log and posts a clean
+ * summary card with CloudWatch deep-links instead of dumping raw file attachments.
+ */
+async function sendHourlyOpsDigest() {
+  const config = await getSlackConfig();
+  if (!config || !config.enabled) return false;
+
+  try {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const [auditRows] = await pool.query(
+      `SELECT category, result, action, project_name, username, timestamp
+       FROM audit_log 
+       WHERE timestamp >= ? 
+       ORDER BY timestamp DESC`,
+      [oneHourAgo]
+    );
+
+    const totalEvents = auditRows.length;
+    const pipelines = auditRows.filter(r => r.category === "Pipeline Executions");
+    const terraform = auditRows.filter(r => r.category === "Terraform");
+    const securityDenials = auditRows.filter(r => r.category === "Access Control" || r.result === "Denied" || r.result === "Failed");
+    const failedPipelines = pipelines.filter(r => r.result === "Failed" || (r.action && r.action.toLowerCase().includes("failed")));
+
+    const recentFailures = auditRows.filter(r => r.result === "Failed" || r.result === "Denied").slice(0, 3);
+    let failureSummary = "• None — all systems operating cleanly.";
+    if (recentFailures.length > 0) {
+      failureSummary = recentFailures.map(f => `• *[${f.category}]* ${f.action} (${f.project_name}) by @${f.username}`).join("\n");
+    }
+
+    const blocks = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: "⏱️ Benevolate Integrate — Hourly Operations Digest", emoji: true }
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `Summary of platform activity over the last 60 minutes (*${oneHourAgo.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}* - *${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}*):` }
+      },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Total Activity:* ${totalEvents} events` },
+          { type: "mrkdwn", text: `*Pipeline Runs:* ${pipelines.length} (${failedPipelines.length} failed)` },
+          { type: "mrkdwn", text: `*Terraform Operations:* ${terraform.length}` },
+          { type: "mrkdwn", text: `*Security Denials / Warnings:* ${securityDenials.length}` }
+        ]
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `*Recent Failure / Warning Signatures:*\n${failureSummary}` }
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "View Live CloudWatch / ECS Logs", emoji: true },
+            url: "https://devops.benevolaite.com/monitoring",
+            style: failedPipelines.length > 0 ? "danger" : "primary"
+          },
+          {
+            type: "button",
+            text: { type: "plain_text", text: "View Audit Trail", emoji: true },
+            url: "https://devops.benevolaite.com/audit-logs"
+          }
+        ]
+      }
+    ];
+
+    const payload = {
+      text: `⏱️ Hourly Operations Digest: ${totalEvents} events, ${failedPipelines.length} failures, ${securityDenials.length} warnings.`,
+      attachments: [{
+        color: failedPipelines.length > 0 ? "#ef4444" : (securityDenials.length > 0 ? "#f59e0b" : "#10b981"),
+        blocks
+      }]
+    };
+
+    return postToSlackChannelOrWebhook({
+      channelId: config.ops_channel_id,
+      webhookUrl: config.ops_webhook_url,
+      payload
+    });
+  } catch (err) {
+    console.error("[sendHourlyOpsDigest] Error generating digest:", err.message);
+    return false;
+  }
+}
+
+let _digestInterval = null;
+function startHourlyDigestTimer() {
+  if (_digestInterval) return;
+  _digestInterval = setInterval(() => {
+    sendHourlyOpsDigest().catch(err => console.error("[HourlyOpsDigest Timer Error]:", err.message));
+  }, 60 * 60 * 1000);
+}
+
+/**
+ * 🚀 NOTIFY PROJECT DEPLOYED LIVE
+ * Dispatches live application URL to:
+ * 1. Assigned project Slack channel (#proj-<name>)
+ * 2. Direct Messages (DMs) to all assigned developers
+ * 3. In-app notification table for every assigned developer
+ */
+async function notifyProjectDeployedLive({ projectName, environment = "dev", liveUrl = null, triggeredBy = "system" }) {
+  if (!projectName) return false;
+  const envLabel = environment.toUpperCase();
+  const appUrl = getAppUrl();
+
+  try {
+    const [projRows] = await pool.query(
+      `SELECT id, name, data, slack_channel_id, slack_channel_name FROM projects WHERE LOWER(name) = ? OR id = ? LIMIT 1`,
+      [projectName.toLowerCase().trim(), projectName]
+    );
+
+    let resolvedLiveUrl = liveUrl;
+    let projId = projectName;
+    let projectChannelId = null;
+
+    if (projRows.length > 0) {
+      const p = projRows[0];
+      projId = p.id;
+      projectChannelId = p.slack_channel_id;
+      const data = typeof p.data === "object" && p.data !== null ? p.data : JSON.parse(p.data || "{}");
+      if (!resolvedLiveUrl) {
+        resolvedLiveUrl = data[`${environment}Url`] || data.devUrl || (data.albDnsName ? `http://${data.albDnsName}/${environment}` : null) || `https://${environment}.${projectName.toLowerCase()}.benevolate.com`;
+      }
+    }
+
+    if (!resolvedLiveUrl) {
+      resolvedLiveUrl = `https://${environment}.${projectName.toLowerCase()}.benevolate.com`;
+    }
+
+    // Query all assigned developers / members for this project
+    const [devRows] = await pool.query(
+      `SELECT DISTINCT da.username, u.email, u.slack_id 
+       FROM developer_access da 
+       JOIN users u ON LOWER(da.username) = LOWER(u.username) 
+       WHERE da.project_id = ? OR da.project_id = ?`,
+      [projId, projectName]
+    );
+
+    let targetUsers = devRows;
+    if (targetUsers.length === 0) {
+      const [allDevs] = await pool.query(
+        `SELECT username, email, slack_id FROM users WHERE user_type IN ('developer', 'devops')`
+      );
+      targetUsers = allDevs;
+    }
+
+    // Post to Project Slack Channel
+    const blocks = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: `🎉 ${projectName} Deployed Live to ${envLabel}!`, emoji: true }
+      },
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `Your project *${projectName}* has been deployed and is actively listening for traffic in *${envLabel}*.\n\n🌐 *Live Application URL:*\n<${resolvedLiveUrl}|${resolvedLiveUrl}>`
+        }
+      },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Project Scope:*\n\`${projectName}\`` },
+          { type: "mrkdwn", text: `*Environment:*\n\`${envLabel}\`` },
+          { type: "mrkdwn", text: `*Triggered By:*\n\`@${triggeredBy}\`` },
+          { type: "mrkdwn", text: `*Health Status:*\n*Active & Listening*` }
+        ]
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "🚀 Open Live App", emoji: true },
+            url: resolvedLiveUrl,
+            style: "primary"
+          },
+          {
+            type: "button",
+            text: { type: "plain_text", text: "📊 Monitor App Metrics & Logs", emoji: true },
+            url: `${appUrl}/monitoring?project=${encodeURIComponent(projectName)}`
+          }
+        ]
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `*Project Deployment Notification:* Benevolate Integrate • Team Alert`
+          }
+        ]
+      }
+    ];
+
+    if (projectChannelId) {
+      await postToSlackChannelOrWebhook({
+        channelId: projectChannelId,
+        payload: { text: "", attachments: [{ color: "#10b981", blocks }] }
+      }).catch(() => {});
+    }
+
+    // In-App Notifications and Slack DMs for each assigned developer
+    for (const dev of targetUsers) {
+      const extId = crypto.randomUUID();
+      await pool.query(
+        `INSERT INTO notifications (ext_id, recipient, type, title, body, link, is_read)
+         VALUES (?, ?, 'deploy_completed', ?, ?, ?, 0)`,
+        [
+          extId,
+          dev.username,
+          `Project ${projectName} is Live (${envLabel})`,
+          `Your assigned project ${projectName} was successfully deployed to ${envLabel} and is listening live at ${resolvedLiveUrl}`,
+          resolvedLiveUrl
+        ]
+      ).catch(err => console.error("[notifyProjectDeployedLive Notif Error]:", err.message));
+
+      await sendSlackDM(dev.username, {
+        title: `🚀 ${projectName} is Live (${envLabel})`,
+        message: `Your assigned project *${projectName}* has been successfully deployed to *${envLabel}*.\n\n🔗 *Live URL:* <${resolvedLiveUrl}|${resolvedLiveUrl}>`,
+        fields: [
+          { title: "Project", value: projectName },
+          { title: "Environment", value: envLabel },
+          { title: "Live URL", value: resolvedLiveUrl }
+        ],
+        color: "#10b981"
+      }).catch(() => {});
+    }
+
+    return true;
+  } catch (err) {
+    console.error("[notifyProjectDeployedLive]", err.message);
+    return false;
+  }
 }
 
 module.exports = {
@@ -770,6 +1664,7 @@ module.exports = {
   getUserSlackCreds,
   sendSlackNotification,
   sendSlackDM,
+  postToSlackChannelById,
   autoJoinSlackChannel,
   autoProvisionProjectSlackChannel,
   syncProjectMembersToSlackChannel,
@@ -780,5 +1675,13 @@ module.exports = {
   notifyCodePush,
   notifyChangeRequestSubmitted,
   notifyChangeRequestApproved,
-  notifyPipelineExecution
+  notifyPipelineExecution,
+  notifyProjectDeployedLive,
+  ensureSystemSlackChannels,
+  sendSecurityAlert,
+  sendOpsAlert,
+  sendHourlyOpsDigest,
+  startHourlyDigestTimer,
+  listAllSlackChannels,
+  deleteOrArchiveSlackChannel
 };

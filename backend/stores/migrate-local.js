@@ -432,6 +432,23 @@ const TABLES = [
       INDEX idx_rp_execution   (pipeline_execution_id),
       INDEX idx_rp_project_ts  (project_id, created_at)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
+  `],
+
+  // ── Global Slack channel and webhook configuration ──────────────────────
+  ["slack_config", `
+    CREATE TABLE IF NOT EXISTS slack_config (
+      id                    VARCHAR(64)   NOT NULL DEFAULT 'global_slack',
+      dev_webhook_url       VARCHAR(2048) NULL,
+      ops_webhook_url       VARCHAR(2048) NULL,
+      ops_channel_id        VARCHAR(64)   NULL,
+      ops_channel_name      VARCHAR(128)  NULL,
+      security_channel_id   VARCHAR(64)   NULL,
+      security_channel_name VARCHAR(128)  NULL,
+      enabled               TINYINT(1)    NOT NULL DEFAULT 1,
+      created_at            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at            DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      PRIMARY KEY (id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci
   `]
 ];
 
@@ -450,7 +467,8 @@ async function run() {
     { col: "email",           def: "VARCHAR(255) NULL AFTER password_hash" },
     { col: "slack_id",        def: "VARCHAR(128) NULL AFTER email" },
     { col: "github_username", def: "VARCHAR(128) NULL AFTER slack_id" },
-    { col: "avatar_url",      def: "VARCHAR(512) NULL AFTER github_username" },
+    { col: "github_verified", def: "TINYINT(1) NOT NULL DEFAULT 0 AFTER github_username" },
+    { col: "avatar_url",      def: "VARCHAR(512) NULL AFTER github_verified" },
     { col: "updated_at",      def: "DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP AFTER created_at" }
   ];
 
@@ -482,6 +500,21 @@ async function run() {
       for (const { col, def } of extraAuditCols) {
         if (!(await columnExists(conn, "audit_log", col))) {
           await conn.query(`ALTER TABLE audit_log ADD COLUMN \`${col}\` ${def}`);
+          console.log(`      ↳ added column: ${col}`);
+        }
+      }
+    }
+
+    if (name === "slack_config") {
+      const extraSlackCols = [
+        { col: "ops_channel_id",        def: "VARCHAR(64) NULL" },
+        { col: "ops_channel_name",      def: "VARCHAR(128) NULL" },
+        { col: "security_channel_id",   def: "VARCHAR(64) NULL" },
+        { col: "security_channel_name", def: "VARCHAR(128) NULL" }
+      ];
+      for (const { col, def } of extraSlackCols) {
+        if (!(await columnExists(conn, "slack_config", col))) {
+          await conn.query(`ALTER TABLE slack_config ADD COLUMN \`${col}\` ${def}`);
           console.log(`      ↳ added column: ${col}`);
         }
       }

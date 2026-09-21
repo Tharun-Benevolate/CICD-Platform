@@ -173,6 +173,15 @@ async function start() {
       console.log(`\n🚀 Benevolate server running → http://localhost:${PORT}`);
       console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
     });
+
+    // Initialize system Slack channels (#integrate-security-alerts, #integrate-devops-alerts) & hourly telemetry digest
+    try {
+      const slackService = require("./services/slackService");
+      slackService.ensureSystemSlackChannels().catch(err => {
+        console.warn("[Slack Startup] System channels initialization deferred:", err.message);
+      });
+      slackService.startHourlyDigestTimer();
+    } catch (_) {}
   } catch (err) {
     console.error("✘  Startup failed:", err.message);
     process.exit(1);

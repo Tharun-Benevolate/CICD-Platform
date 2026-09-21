@@ -25,12 +25,29 @@ router.post("/register", async (req, res) => {
   }
 });
 
+const _failedLoginTracker = new Map();
+function trackFailedLogin(identifier) {
+  const now = Date.now();
+  const entry = _failedLoginTracker.get(identifier) || { count: 0, lastAttempt: now };
+  if (now - entry.lastAttempt > 10 * 60 * 1000) {
+    entry.count = 0;
+  }
+  entry.count += 1;
+  entry.lastAttempt = now;
+  _failedLoginTracker.set(identifier, entry);
+  return entry.count;
+}
+function resetFailedLogin(identifier) {
+  _failedLoginTracker.delete(identifier);
+}
+
 // POST /api/login
 router.post("/login", async (req, res) => {
   const { username, password } = req.body;
   try {
     const result = await auth.loginUser(username, password);
     if (result.ok) {
+      resetFailedLogin((username || "").toLowerCase());
       if (result.require2FA) {
         return res.json({
           ok: true,
@@ -53,6 +70,21 @@ router.post("/login", async (req, res) => {
       });
     } else {
       auditStore.logAction(username, "Failed login attempt", "System", "Failed", "Login", req);
+      const failCount = trackFailedLogin((username || "unknown").toLowerCase());
+      if (failCount >= 3) {
+        try {
+          const slackService = require("../services/slackService");
+          const clientIp = typeof auditStore.extractClientIp === "function" ? auditStore.extractClientIp(req) : (req.ip || "127.0.0.1");
+          slackService.sendSecurityAlert({
+            actor: username || "unknown",
+            action: "Repeated Failed Login Attempts (Brute Force Warning)",
+            ip: clientIp,
+            details: `Detected ${failCount} consecutive failed password attempts for account '*${username}*'.`,
+            severity: failCount >= 5 ? "critical" : "high",
+            link: "https://devops.benevolaite.com/audit-logs?security=true"
+          }).catch(() => {});
+        } catch (_) {}
+      }
       res.status(401).json(result);
     }
   } catch (err) {
@@ -279,6 +311,18 @@ router.patch("/users/:username/role", auth.requireRole(...auth.ADMIN_ROLES), asy
       "Success",
       "User Management"
     );
+    try {
+      const slackService = require("../services/slackService");
+      const clientIp = typeof auditStore.extractClientIp === "function" ? auditStore.extractClientIp(req) : (req.ip || "127.0.0.1");
+      slackService.sendSecurityAlert({
+        actor: req.user.username,
+        action: `User Role Elevation / Modification`,
+        ip: clientIp,
+        details: `Administrator @${req.user.username} modified account role for '*${req.params.username}*' to '*${userType}*'.`,
+        severity: userType === "super_admin" ? "critical" : "medium",
+        link: "https://devops.benevolaite.com/admin/users"
+      }).catch(() => {});
+    } catch (_) {}
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
@@ -302,6 +346,18 @@ router.patch("/users/:username/block", auth.requireRole(...auth.ADMIN_ROLES), as
       "Success",
       "User Management"
     );
+    try {
+      const slackService = require("../services/slackService");
+      const clientIp = typeof auditStore.extractClientIp === "function" ? auditStore.extractClientIp(req) : (req.ip || "127.0.0.1");
+      slackService.sendSecurityAlert({
+        actor: req.user.username,
+        action: isBlocked ? "Account Suspended" : "Account Reactivated",
+        ip: clientIp,
+        details: `User account '*${target}*' was ${isBlocked ? "suspended" : "unblocked"} by @${req.user.username}.`,
+        severity: isBlocked ? "high" : "low",
+        link: "https://devops.benevolaite.com/admin/users"
+      }).catch(() => {});
+    } catch (_) {}
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });

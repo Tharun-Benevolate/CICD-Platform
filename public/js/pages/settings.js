@@ -9,9 +9,9 @@ function initSettingsPage() {
   var search = window.location.search;
   var currentTab = 'profile';
 
-  if (path.includes('/settings/notifications')) currentTab = 'notifications';
-  if (path.includes('/settings/project')) currentTab = 'project';
-  if (path.includes('/settings/integrations') || search.includes('github_connected') || search.includes('slack_connected') || search.includes('oauth_error') || search.includes('slack_error')) {
+  if (path.includes('/settings/notifications') || search.includes('tab=notifications')) currentTab = 'notifications';
+  if (path.includes('/settings/project') || search.includes('tab=project')) currentTab = 'project';
+  if (path.includes('/settings/integrations') || search.includes('tab=integrations') || search.includes('github_connected') || search.includes('slack_connected') || search.includes('oauth_error') || search.includes('slack_error')) {
     currentTab = 'integrations';
   }
   switchSettingsTab(currentTab, false);
@@ -88,6 +88,8 @@ window.cancelDisconnectSlack = cancelDisconnectSlack;
 window.confirmDisconnectSlack = confirmDisconnectSlack;
 window.loadGenericBuildspec = loadGenericBuildspec;
 window.saveProjectBuildspec = saveProjectBuildspec;
+window.loadNotificationSettings = loadNotificationSettings;
+window.handleSaveNotifications = handleSaveNotifications;
 
 // Listen for active project changes from topbar
 window.addEventListener('activeProjectChanged', function(e) {
@@ -261,6 +263,9 @@ function switchSettingsTab(tabName, updateUrl) {
 
   if (tabName === 'integrations') {
     checkOAuthConnections();
+    if (typeof loadAdminSlackChannels === 'function') loadAdminSlackChannels();
+  } else if (tabName === 'notifications') {
+    loadNotificationSettings();
   }
 }
 
@@ -883,3 +888,97 @@ async function provisionProjectSlackChannel() {
 
 window.loadProjectSlackStatus = loadProjectSlackStatus;
 window.provisionProjectSlackChannel = provisionProjectSlackChannel;
+
+// ── Super Admin Slack Channels Management (Temporary Utility) ──────────────
+async function loadAdminSlackChannels() {
+  var tbody = document.getElementById('admin-slack-channels-tbody');
+  if (!tbody) return;
+
+  var icon = document.getElementById('icon-refresh-slack-channels');
+  if (icon) icon.classList.add('spin');
+
+  try {
+    var res = await api.get('/api/admin/slack/channels');
+    if (res && res.ok && Array.isArray(res.channels)) {
+      if (res.channels.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--color-text-tertiary);">No Slack channels found in workspace.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = res.channels.map(function(ch) {
+        var isPrivateBadge = ch.is_private
+          ? '<span style="font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(234,88,12,0.1);color:#ea580c;font-weight:600;">Private</span>'
+          : '<span style="font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(59,130,246,0.1);color:#3b82f6;font-weight:600;">Public</span>';
+
+        var archivedBadge = ch.is_archived
+          ? ' <span style="font-size:11px;padding:2px 6px;border-radius:4px;background:rgba(100,116,139,0.1);color:#64748b;font-weight:600;">Archived</span>'
+          : '';
+
+        var linkedBadge = ch.linked !== 'None'
+          ? '<span style="color:var(--color-primary);font-weight:600;">' + escapeHtml(ch.linked) + '</span>'
+          : '<span style="color:var(--color-text-tertiary);">None</span>';
+
+        return '<tr style="border-bottom:1px solid var(--color-border);">' +
+          '<td style="padding:10px 14px;font-weight:600;color:var(--color-text-primary);">' +
+            '<div style="display:flex;align-items:center;gap:6px;">' +
+              '<i data-lucide="hash" style="width:13px;height:13px;color:var(--color-text-tertiary);"></i>' +
+              '<span>' + escapeHtml(ch.name) + '</span>' +
+            '</div>' +
+          '</td>' +
+          '<td style="padding:10px 14px;font-family:monospace;font-size:12px;color:var(--color-text-secondary);">' + escapeHtml(ch.id) + '</td>' +
+          '<td style="padding:10px 14px;">' + isPrivateBadge + archivedBadge + '</td>' +
+          '<td style="padding:10px 14px;color:var(--color-text-secondary);">' + ch.num_members + '</td>' +
+          '<td style="padding:10px 14px;">' + linkedBadge + '</td>' +
+          '<td style="padding:10px 14px;text-align:right;">' +
+            '<button onclick="handleDeleteSlackChannel(\'' + escapeHtml(ch.id) + '\', \'' + escapeHtml(ch.name) + '\')" class="btn-danger" style="padding:4px 10px;font-size:11px;display:inline-flex;align-items:center;gap:4px;">' +
+              '<i data-lucide="trash-2" style="width:12px;height:12px;"></i> Delete' +
+            '</button>' +
+          '</td>' +
+        '</tr>';
+      }).join('');
+
+      if (window.lucide) lucide.createIcons();
+    } else {
+      tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--color-danger);">' + ((res && res.error) || 'Failed to load Slack channels.') + '</td></tr>';
+    }
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;text-align:center;color:var(--color-danger);">' + (err.message || 'Error fetching channels') + '</td></tr>';
+  } finally {
+    if (icon) icon.classList.remove('spin');
+  }
+}
+
+async function handleDeleteSlackChannel(channelId, channelName) {
+  if (!confirm('Are you sure you want to permanently delete/archive Slack channel #' + channelName + ' (' + channelId + ')?\n\nThis will remove the channel from Slack and purge all platform associations.')) {
+    return;
+  }
+
+  var msgEl = document.getElementById('admin-slack-channels-msg');
+  if (msgEl) msgEl.style.display = 'none';
+
+  try {
+    var res = await api.delete('/api/admin/slack/channels/' + encodeURIComponent(channelId));
+    if (res && res.ok) {
+      if (msgEl) showMsg(msgEl, '✔ ' + res.message, false);
+      loadAdminSlackChannels();
+    } else {
+      if (msgEl) showMsg(msgEl, '✖ ' + ((res && res.error) || 'Failed to delete/archive Slack channel.'), true);
+    }
+  } catch (err) {
+    if (msgEl) showMsg(msgEl, '✖ ' + (err.message || 'Error deleting channel'), true);
+  }
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+window.loadAdminSlackChannels = loadAdminSlackChannels;
+window.handleDeleteSlackChannel = handleDeleteSlackChannel;
+

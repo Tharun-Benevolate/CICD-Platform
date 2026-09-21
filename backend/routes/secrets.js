@@ -595,6 +595,18 @@ router.delete("/:projectId/:env", auth.requireAuth, requireSecretEnvironmentAcce
 
     syncSecretsToCodeBuild({ ...project, secrets: updatedSecrets }).catch(() => {});
     auditStore.logAction(auth.getLoggedInUser(req), `Delete entire ${env} secret from AWS`, project.name, "Completed");
+    try {
+      const slackService = require("../services/slackService");
+      const clientIp = typeof auditStore.extractClientIp === "function" ? auditStore.extractClientIp(req) : (req.ip || "127.0.0.1");
+      slackService.sendSecurityAlert({
+        actor: auth.getLoggedInUser(req) || "unknown",
+        action: `AWS Secret Deletion (${env.toUpperCase()})`,
+        ip: clientIp,
+        details: `Secret '*${cfg.name}*' for environment '*${env}*' (Project: *${project.name}*) was permanently deleted from AWS Secrets Manager by @${auth.getLoggedInUser(req)}.`,
+        severity: env === "prod" ? "critical" : "high",
+        link: "https://devops.benevolaite.com/secrets"
+      }).catch(() => {});
+    } catch (_) {}
     res.json({ ok: true, message: `Secret ${cfg.name} deleted from AWS. Reference cleared.` });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });

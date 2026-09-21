@@ -84,6 +84,22 @@ router.post(["/pipeline/approve", "/approvals/action"], auth.requireRole(...auth
     const statusText = isApproved ? "Approved" : "Rejected";
     const auditMsg = `${statusText} stage "${stageName}" in pipeline. Reason/Comment: "${comment || "No comment provided"}"`;
     auditStore.logAction(user, auditMsg, project.name, "Success");
+
+    try {
+      const slackService = require("../services/slackService");
+      slackService.sendOpsAlert({
+        title: `Pipeline Gate ${statusText}: ${stageName}`,
+        message: `Deployment gate *${stageName}* for project *${project.name}* was *${statusText.toUpperCase()}* by @${user}.${comment ? `\n> "${comment}"` : ""}`,
+        fields: [
+          { title: "Project", value: project.name },
+          { title: "Stage", value: stageName },
+          { title: "Decision", value: statusText },
+          { title: "Reviewer", value: `@${user}` }
+        ],
+        level: isApproved ? "success" : "warn",
+        link: "https://devops.benevolaite.com/pipelines"
+      }).catch(() => {});
+    } catch (_) {}
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -149,6 +165,21 @@ router.post("/pipeline/start", async (req, res) => {
     res.json({ ok: true, executionId });
     auditStore.logAction(user, "Triggered manual pipeline execution (Run Pipeline)", project.name, "Success");
 
+    try {
+      const slackService = require("../services/slackService");
+      slackService.sendOpsAlert({
+        title: `Pipeline Triggered: ${project.name}`,
+        message: `Pipeline execution manually started for *${project.name}* by @${user || "system"}.`,
+        fields: [
+          { title: "Project", value: project.name },
+          { title: "Triggered By", value: `@${user || "system"}` },
+          { title: "Execution ID", value: executionId }
+        ],
+        level: "info",
+        link: "https://devops.benevolaite.com/pipelines"
+      }).catch(() => {});
+    } catch (_) {}
+
     // Poll pipeline until it reaches a terminal state and log the final result
     const region = project.region;
     const pipelineName = project.pipelineName;
@@ -168,9 +199,37 @@ router.post("/pipeline/start", async (req, res) => {
         if (s === "Succeeded") {
           clearInterval(pollPipeline);
           auditStore.logAction("system", "Pipeline execution", projectName, "Succeeded");
+          try {
+            const slackService = require("../services/slackService");
+            slackService.sendOpsAlert({
+              title: `Pipeline Succeeded: ${projectName}`,
+              message: `Pipeline execution for *${projectName}* completed successfully across all stages.`,
+              fields: [
+                { title: "Project", value: projectName },
+                { title: "Status", value: "Succeeded" },
+                { title: "Execution ID", value: executionId }
+              ],
+              level: "success",
+              link: "https://devops.benevolaite.com/pipelines"
+            }).catch(() => {});
+          } catch (_) {}
         } else if (s === "Failed" || s === "Stopped" || s === "Superseded") {
           clearInterval(pollPipeline);
           auditStore.logAction("system", "Pipeline execution", projectName, s);
+          try {
+            const slackService = require("../services/slackService");
+            slackService.sendOpsAlert({
+              title: `Pipeline ${s}: ${projectName}`,
+              message: `Pipeline execution for *${projectName}* ended with status *${s}*.`,
+              fields: [
+                { title: "Project", value: projectName },
+                { title: "Status", value: s },
+                { title: "Execution ID", value: executionId }
+              ],
+              level: s === "Failed" ? "error" : "warn",
+              link: "https://devops.benevolaite.com/pipelines"
+            }).catch(() => {});
+          } catch (_) {}
         }
       } catch (e) { /* ignore transient errors */ }
     }, 10000); // poll every 10s

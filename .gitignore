@@ -52,4 +52,12 @@ aws_seed_db.sql
 # Unused frontend & agent folders
 frontend/
 .agents/
-.agent/
+.agent/
+
+# Documentation & Scratch (do not track)
+docs/
+docs-site/
+site/
+mkdocs.yml
+scratch/
+

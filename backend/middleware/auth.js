@@ -279,6 +279,20 @@ function requireRole(...allowedRoles) {
           "Access Control",
           req
         );
+        try {
+          const slackService = require("../services/slackService");
+          const clientIp = typeof auditStore.extractClientIp === "function" ? auditStore.extractClientIp(req) : (req.ip || "127.0.0.1");
+          slackService.sendSecurityAlert({
+            actor: currentUser.username,
+            action: `Unauthorized 403 API Access Attempt`,
+            ip: clientIp,
+            endpoint: req.originalUrl,
+            method: req.method,
+            actionTaken: "Blocked (403 Forbidden)",
+            details: `User with role '*${currentUser.userType}*' attempted to call \`${req.method} ${req.originalUrl}\` which strictly requires: \`[${allowedRoles.join(", ")}]\``,
+            severity: "high"
+          }).catch(() => {});
+        } catch (_) {}
         return res.status(403).json({ ok: false, error: "You do not have permission to perform this action" });
       }
       req.user = currentUser;

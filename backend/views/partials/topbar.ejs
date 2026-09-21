@@ -76,9 +76,46 @@
     </button>
 
     <!-- Notification bell -->
-    <button class="topbar-icon-btn" title="Notifications">
-      <i data-lucide="bell" style="width:18px;height:18px;"></i>
-    </button>
+    <div style="position:relative;" id="notif-menu-wrapper">
+      <button onclick="toggleNotifMenu()" id="btn-notifications" class="topbar-icon-btn" title="Notifications" style="position:relative;">
+        <i data-lucide="bell" style="width:18px;height:18px;"></i>
+        <span id="notif-badge" class="notif-badge" style="display:none;"></span>
+      </button>
+
+      <div id="notif-dropdown" class="notif-dropdown" style="display:none;">
+        <div class="notif-dropdown-header">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <strong style="color:var(--color-text-primary);font-size:13px;">Notifications</strong>
+            <span id="notif-count-pill" class="notif-pill" style="display:none;">0</span>
+          </div>
+          <button onclick="markAllNotificationsRead(event)" class="notif-mark-all-btn">Mark all read</button>
+        </div>
+        
+        <!-- Continuous OAuth status readiness banner -->
+        <div id="notif-oauth-banner" style="display:none;padding:10px 14px;background:rgba(234,88,12,0.1);border-bottom:1px solid rgba(234,88,12,0.25);font-size:12px;line-height:1.4;">
+          <div style="display:flex;align-items:flex-start;gap:8px;">
+            <i data-lucide="alert-triangle" style="width:15px;height:15px;color:#ea580c;flex-shrink:0;margin-top:2px;"></i>
+            <div>
+              <span id="notif-oauth-text" style="color:var(--color-text-primary);font-weight:600;">Integration Notice</span>
+              <div style="margin-top:4px;">
+                <a href="/settings/integrations" style="color:var(--color-primary);font-weight:600;text-decoration:underline;">Connect in Integrations &rarr;</a>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="notif-items-list" class="notif-items-list">
+          <div style="padding:24px;text-align:center;color:var(--color-text-tertiary);font-size:12px;">
+            Loading notifications…
+          </div>
+        </div>
+        <div class="notif-dropdown-footer">
+          <a href="/settings/notifications" style="color:var(--color-primary);text-decoration:none;font-size:12px;display:flex;align-items:center;gap:4px;">
+            <i data-lucide="sliders" style="width:12px;height:12px;"></i> Notification Preferences
+          </a>
+        </div>
+      </div>
+    </div>
 
     <!-- Account menu -->
     <div style="position:relative;" id="account-menu-wrapper">
@@ -110,25 +147,272 @@
   </div>
 </div>
 
+<style>
+  .notif-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 8px;
+    height: 8px;
+    background: #ef4444;
+    border-radius: 50%;
+    border: 2px solid var(--color-surface);
+    box-shadow: 0 0 6px rgba(239,68,68,0.6);
+  }
+  .notif-dropdown {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 8px;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-xl);
+    width: 360px;
+    max-width: 90vw;
+    z-index: 1000;
+    overflow: hidden;
+    font-family: var(--font-family);
+  }
+  .notif-dropdown-header {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .notif-pill {
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 1px 6px;
+    border-radius: 10px;
+  }
+  .notif-mark-all-btn {
+    background: none;
+    border: none;
+    color: var(--color-primary);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 2px 4px;
+  }
+  .notif-mark-all-btn:hover {
+    text-decoration: underline;
+  }
+  .notif-items-list {
+    max-height: 380px;
+    overflow-y: auto;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE / Edge */
+  }
+  .notif-items-list::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  .notif-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--color-border);
+    cursor: pointer;
+    transition: background var(--transition-fast);
+    text-decoration: none;
+    color: inherit;
+  }
+  .notif-item:hover {
+    background: var(--color-surface-hover);
+  }
+  .notif-item.unread {
+    background: rgba(99, 102, 241, 0.05);
+  }
+  .notif-item:last-child {
+    border-bottom: none;
+  }
+  .notif-icon-box {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .notif-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    line-height: 1.3;
+  }
+  .notif-body {
+    font-size: 11.5px;
+    color: var(--color-text-secondary);
+    margin-top: 3px;
+    line-height: 1.4;
+    word-break: break-word;
+  }
+  .notif-time {
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+    margin-top: 4px;
+  }
+  .notif-dropdown-footer {
+    padding: 8px 14px;
+    background: var(--color-surface-hover);
+    border-top: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+</style>
+
 <script>
+  function toggleNotifMenu() {
+    var dd = document.getElementById('notif-dropdown');
+    var isHidden = dd.style.display === 'none';
+    dd.style.display = isHidden ? 'block' : 'none';
+    if (isHidden) {
+      loadNotifications();
+    }
+  }
+
   function toggleAccountMenu() {
     var dd = document.getElementById('account-dropdown');
     dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
   }
+
   document.addEventListener('mousedown', function(e) {
-    var wrapper = document.getElementById('account-menu-wrapper');
-    if (wrapper && !wrapper.contains(e.target)) {
+    var notifWrapper = document.getElementById('notif-menu-wrapper');
+    if (notifWrapper && !notifWrapper.contains(e.target)) {
+      document.getElementById('notif-dropdown').style.display = 'none';
+    }
+    var accWrapper = document.getElementById('account-menu-wrapper');
+    if (accWrapper && !accWrapper.contains(e.target)) {
       document.getElementById('account-dropdown').style.display = 'none';
     }
   });
+
+  async function loadNotifications() {
+    try {
+      var res = await fetch('/api/notifications');
+      var data = await res.json();
+      if (!data.ok) return;
+
+      var badge = document.getElementById('notif-badge');
+      var pill = document.getElementById('notif-count-pill');
+      if (data.unreadCount > 0) {
+        badge.style.display = 'block';
+        pill.style.display = 'inline-block';
+        pill.textContent = data.unreadCount;
+      } else {
+        badge.style.display = 'none';
+        pill.style.display = 'none';
+      }
+
+      // OAuth status banner handling
+      var oauthBanner = document.getElementById('notif-oauth-banner');
+      var oauthText = document.getElementById('notif-oauth-text');
+      if (data.oauthStatus) {
+        if (!data.oauthStatus.githubConnected && !data.oauthStatus.slackConnected) {
+          oauthBanner.style.display = 'block';
+          oauthText.textContent = 'GitHub & Slack accounts are not connected.';
+        } else if (!data.oauthStatus.githubConnected) {
+          oauthBanner.style.display = 'block';
+          oauthText.textContent = 'GitHub account not connected — cannot push code.';
+        } else if (!data.oauthStatus.slackConnected) {
+          oauthBanner.style.display = 'block';
+          oauthText.textContent = 'Slack workspace not connected — alerts disabled.';
+        } else {
+          oauthBanner.style.display = 'none';
+        }
+      }
+
+      var listEl = document.getElementById('notif-items-list');
+      if (!data.notifications || data.notifications.length === 0) {
+        listEl.innerHTML = '<div style="padding:28px;text-align:center;color:var(--color-text-tertiary);font-size:12px;">No notifications yet</div>';
+        return;
+      }
+
+      listEl.innerHTML = data.notifications.map(function(n) {
+        var icon = 'bell';
+        var iconColor = '#3b82f6';
+        var iconBg = 'rgba(59,130,246,0.1)';
+        var type = (n.type || '').toLowerCase();
+        var titleLower = (n.title || '').toLowerCase();
+
+        if (type === 'system' || type === 'warning' || titleLower.includes('not connected') || titleLower.includes('alert') || titleLower.includes('warning')) {
+          icon = 'alert-triangle';
+          iconColor = '#ea580c';
+          iconBg = 'rgba(234,88,12,0.1)';
+        } else if (type === 'deploy_completed' || type === 'pipeline_succeeded' || type === 'deployment') {
+          icon = 'rocket';
+          iconColor = '#10b981';
+          iconBg = 'rgba(16,185,129,0.1)';
+        } else if (type === 'pipeline_failed' || type === 'deploy_failed' || type === 'security') {
+          icon = 'shield-alert';
+          iconColor = '#ef4444';
+          iconBg = 'rgba(239,68,68,0.1)';
+        }
+
+        // Clean out any leading emojis or symbols since Lucide icon is rendered next to it
+        var displayTitle = (n.title || 'Notification')
+          .replace(/^[\p{Extended_Pictographic}\u200d\uFE0F\s]+/u, '')
+          .trim();
+
+        var timeStr = n.created_at ? new Date(n.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+
+        return '<div class="notif-item ' + (n.is_read ? '' : 'unread') + '" onclick="handleNotificationClick(\'' + (n.id || n.ext_id) + '\', \'' + (n.link || '') + '\')">' +
+          '<div class="notif-icon-box" style="background:' + iconBg + ';color:' + iconColor + ';">' +
+            '<i data-lucide="' + icon + '" style="width:14px;height:14px;"></i>' +
+          '</div>' +
+          '<div style="flex:1;min-width:0;">' +
+            '<div class="notif-title">' + displayTitle + '</div>' +
+            (n.body ? '<div class="notif-body">' + n.body + '</div>' : '') +
+            (timeStr ? '<div class="notif-time">' + timeStr + '</div>' : '') +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+    } catch (_) {}
+  }
+
+  async function handleNotificationClick(id, link) {
+    try {
+      await fetch('/api/notifications/' + encodeURIComponent(id) + '/read', { method: 'POST' });
+    } catch (_) {}
+    if (link && link !== 'null' && link !== 'undefined') {
+      window.location.href = link;
+    } else {
+      loadNotifications();
+    }
+  }
+
+  async function markAllNotificationsRead(e) {
+    if (e) e.stopPropagation();
+    try {
+      await fetch('/api/notifications/read-all', { method: 'POST' });
+      loadNotifications();
+    } catch (_) {}
+  }
+
+  // Initial load on page mount and polling every 30s
+  document.addEventListener('DOMContentLoaded', function() {
+    loadNotifications();
+    setInterval(loadNotifications, 30000);
+  });
+
   async function handleLogout() {
-    // Prevent double-click / rapid re-invocation
     var btn = document.querySelector('.account-dropdown-logout');
     if (btn) { btn.disabled = true; btn.textContent = 'Logging out…'; }
     try {
       await fetch('/api/logout', { method: 'POST', credentials: 'include' });
     } catch (_) {}
-    // Use replace() so the login page can't navigate back to a protected page
     window.location.replace('/login');
   }
 </script>

@@ -233,6 +233,11 @@ router.get("/oauth/slack/callback", async (req, res) => {
     if (typeof slackService.syncUserToAllProjectSlackChannels === "function") {
       slackService.syncUserToAllProjectSlackChannels(username).catch(() => {});
     }
+    if (typeof slackService.ensureSystemSlackChannels === "function") {
+      slackService.ensureSystemSlackChannels().catch(err => {
+        console.warn("[Slack] Warning ensuring system channels on OAuth callback:", err.message);
+      });
+    }
 
     res.redirect("/settings/integrations?slack_connected=1");
   } catch (err) {

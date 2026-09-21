@@ -464,8 +464,57 @@
             </div>
           </div>
         </div>
+    <% if (user && user.userType === 'super_admin') { %>
+    <!-- Super Admin Temporary Hidden Feature: Slack Workspace Channels Management -->
+    <div class="settings-card" id="card-superadmin-slack-channels" style="border: 1.5px dashed var(--color-danger); background: rgba(239, 68, 68, 0.02); margin-top: 20px;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:14px;">
+        <div>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <i data-lucide="shield-alert" style="width:18px;height:18px;color:var(--color-danger);"></i>
+            <h2 style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin:0;">
+              Slack Channels Management
+            </h2>
+            <span style="font-size:11px;padding:2px 8px;border-radius:6px;font-weight:700;background:rgba(239,68,68,0.12);color:var(--color-danger);text-transform:uppercase;">
+              Super Admin Only
+            </span>
+            <span style="font-size:11px;padding:2px 8px;border-radius:6px;font-weight:700;background:rgba(99,102,241,0.12);color:var(--color-primary);">
+              Temporary Testing Utility
+            </span>
+          </div>
+          <p style="font-size:13px;color:var(--color-text-secondary);margin-top:6px;max-width:640px;">
+            Inspect all active public and private channels in the connected Slack workspace, see linked projects/alerts, and permanently delete or archive them to cleanly reset test environments.
+          </p>
+        </div>
+        <button onclick="loadAdminSlackChannels()" class="btn-secondary" style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:6px 14px;">
+          <i data-lucide="refresh-cw" id="icon-refresh-slack-channels" style="width:13px;height:13px;"></i> Refresh Channels
+        </button>
+      </div>
+
+      <div id="admin-slack-channels-msg" style="display:none;margin-bottom:14px;" class="msg-box"></div>
+
+      <div style="overflow-x:auto;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface);">
+        <table style="width:100%;border-collapse:collapse;font-size:13px;text-align:left;">
+          <thead>
+            <tr style="background:var(--color-bg);border-bottom:1px solid var(--color-border);color:var(--color-text-secondary);font-size:12px;font-weight:600;">
+              <th style="padding:10px 14px;">Channel Name</th>
+              <th style="padding:10px 14px;">Channel ID</th>
+              <th style="padding:10px 14px;">Type / Status</th>
+              <th style="padding:10px 14px;">Members</th>
+              <th style="padding:10px 14px;">Platform Association</th>
+              <th style="padding:10px 14px;text-align:right;">Action</th>
+            </tr>
+          </thead>
+          <tbody id="admin-slack-channels-tbody">
+            <tr>
+              <td colspan="6" style="padding:24px;text-align:center;color:var(--color-text-tertiary);font-size:12px;">
+                Loading Slack workspace channels...
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </div>
+    <% } %>
   </div>
 
 

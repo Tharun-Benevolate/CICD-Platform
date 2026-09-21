@@ -76,6 +76,21 @@ async function _saveRunOutputs(runId) {
 
   if (run.status !== "done") {
     auditStore.logAction("system", action, projectName, "Failed");
+    try {
+      const slackService = require("../services/slackService");
+      slackService.sendOpsAlert({
+        title: `Terraform Failed: ${action}`,
+        message: `Infrastructure operation *${action}* for project *${projectName}* failed during execution.`,
+        fields: [
+          { title: "Project", value: projectName },
+          { title: "Action", value: action },
+          { title: "Status", value: "Failed" },
+          { title: "Run ID", value: runId }
+        ],
+        level: "error",
+        link: "https://devops.benevolaite.com/audit-logs"
+      }).catch(() => {});
+    } catch (_) {}
     return;
   }
 
@@ -191,6 +206,28 @@ async function _saveRunOutputs(runId) {
   }
 
   auditStore.logAction("system", action, projectName, "Completed");
+  try {
+    const slackService = require("../services/slackService");
+    slackService.sendOpsAlert({
+      title: `Terraform Succeeded: ${action}`,
+      message: `Infrastructure operation *${action}* for project *${projectName}* completed successfully.`,
+      fields: [
+        { title: "Project", value: projectName },
+        { title: "Action", value: action },
+        { title: "Status", value: "Completed" }
+      ],
+      level: "success"
+    }).catch(() => {});
+
+    if (meta && (meta.type === "deployment" || meta.type === "initial")) {
+      slackService.notifyProjectDeployedLive({
+        projectName,
+        environment: meta.env || "dev",
+        liveUrl: null,
+        triggeredBy: "system"
+      }).catch(() => {});
+    }
+  } catch (_) {}
 }
 
 // Background watchers — safety net in case the browser tab is closed mid-run;
