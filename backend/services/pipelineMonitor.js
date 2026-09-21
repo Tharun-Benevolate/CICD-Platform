@@ -115,15 +115,26 @@ async function pollProject(project) {
 
     console.log(`[PipelineMonitor] ${project.name} | execution ${execId} → ${status}`);
 
-    // ── Routing: project private channel → global #dev webhook (fallback) ──
+    // ── Routing: ALWAYS send to global webhook, ALSO send to private channel ──
     //
-    // If the project has a provisioned Slack channel (e.g. #proj-boa-979),
-    // post directly there using the bot token via chat.postMessage.
-    // If not, fall back to the global SLACK_DEV_WEBHOOK_URL.
-    const privateChannelId = project.slack_channel_id || project.slackChannelId || null;
+    // Step 1: Always fire to the global SLACK_DEV_WEBHOOK_URL (guaranteed delivery,
+    //         no bot token needed — works as long as webhook is configured in .env).
+    // Step 2: If the project has a private Slack channel AND a bot token is available,
+    //         also post directly there via chat.postMessage.
+    await slackService.notifyPipelineExecution({
+      projectName:   project.name,
+      status,
+      triggeredBy,
+      branch:        project.githubBranch || "main",
+      buildNumber,
+      executionCode: execId || "N/A",
+      errorMsg
+    });
+    console.log(`[PipelineMonitor] Sent to global #dev webhook`);
 
+    // Step 2: Also attempt private project channel if configured (best-effort)
+    const privateChannelId = project.slack_channel_id || project.slackChannelId || null;
     if (privateChannelId) {
-      // Build the Block Kit payload manually so we can post via channel ID
       const isSuccess = status === "Succeeded";
       const title     = isSuccess ? "✅ Pipeline Succeeded" : "🚨 Pipeline Alert: Build Failed";
       const color     = isSuccess ? "#10b981" : "#ef4444";
@@ -156,20 +167,8 @@ async function pollProject(project) {
         }]
       };
 
-      await slackService.postToSlackChannelById(privateChannelId, payload);
-      console.log(`[PipelineMonitor] Sent to private channel ${privateChannelId} (#${project.slack_channel_name || "project-channel"})`);
-    } else {
-      // No private channel — use global dev webhook via notifyPipelineExecution
-      await slackService.notifyPipelineExecution({
-        projectName:   project.name,
-        status,
-        triggeredBy,
-        branch:        project.githubBranch || "main",
-        buildNumber,
-        executionCode: execId || "N/A",
-        errorMsg
-      });
-      console.log(`[PipelineMonitor] Sent to global #dev webhook (no private channel for ${project.name})`);
+      const sent = await slackService.postToSlackChannelById(privateChannelId, payload);
+      console.log(`[PipelineMonitor] Private channel ${privateChannelId}: ${sent ? "✔ sent" : "✘ failed (no bot token?)"}`);
     }
 
   } catch (err) {
