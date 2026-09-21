@@ -130,6 +130,43 @@ async function postToSlack(webhookUrl, payload) {
 }
 
 /**
+ * Post a Block Kit payload directly to a Slack channel by channel ID (e.g. C0123ABCDEF)
+ * using the bot token via chat.postMessage — works for private project channels.
+ */
+async function postToSlackChannelById(channelId, payload) {
+  if (!channelId) return false;
+  const token = await getAnySlackToken();
+  if (!token) {
+    console.error("[Slack] No bot token available to post to channel:", channelId);
+    return false;
+  }
+  try {
+    // Reshape webhook-style payload (attachments) into chat.postMessage format
+    const body = {
+      channel: channelId,
+      text: payload.text || " ",
+      attachments: payload.attachments || []
+    };
+    const response = await fetch("https://slack.com/api/chat.postMessage", {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+    const data = await response.json();
+    if (!data.ok) {
+      console.error(`[Slack] chat.postMessage to ${channelId} failed:`, data.error);
+    }
+    return data.ok;
+  } catch (err) {
+    console.error("[Slack] postToSlackChannelById error:", err.message);
+    return false;
+  }
+}
+
+/**
  * Automatically invite a user's Slack account into a Slack channel
  */
 async function autoJoinSlackChannel(channelId, username) {
@@ -747,20 +784,31 @@ async function notifyChangeRequestApproved({ crId, title, approvedBy, requester,
   });
 }
 
-async function notifyPipelineExecution({ projectName, status, triggeredBy, branch = 'main', customWebhookUrl = null }) {
+async function notifyPipelineExecution({ projectName, status, triggeredBy, branch = 'main', buildNumber = 'N/A', executionCode = 'N/A', errorMsg = null, customWebhookUrl = null }) {
   const isSuccess = status.toLowerCase().includes('success') || status.toLowerCase().includes('complete');
+  
+  const title = isSuccess ? '✅ Pipeline Succeeded' : '🚨 Pipeline Alert: Build Failed';
+  const color = isSuccess ? '#10b981' : '#ef4444';
+  
+  let message = `Pipeline execution for *${projectName}* completed with status *${status}*.`;
+  
+  if (!isSuccess && errorMsg) {
+    message = `Pipeline execution for *${projectName}* failed with status *${status}*.\n\n*Error Details:*\n\`\`\`\n${errorMsg}\n\`\`\``;
+  }
+
   return sendSlackNotification({
     channelType: 'dev',
     customWebhookUrl,
-    title: isSuccess ? '✅ Pipeline Succeeded' : '❌ Pipeline Alert',
-    message: `Pipeline execution for *${projectName}* completed with status *${status}*.`,
+    title: title,
+    message: message,
     fields: [
       { title: "Project", value: projectName },
       { title: "Triggered By", value: `@${triggeredBy}` },
-      { title: "Status", value: status },
-      { title: "Branch", value: branch }
+      { title: "Build Number", value: buildNumber },
+      { title: "Branch", value: branch },
+      { title: "Execution Code", value: executionCode }
     ],
-    color: isSuccess ? '#10b981' : '#ef4444'
+    color: color
   });
 }
 
@@ -770,6 +818,7 @@ module.exports = {
   getUserSlackCreds,
   sendSlackNotification,
   sendSlackDM,
+  postToSlackChannelById,
   autoJoinSlackChannel,
   autoProvisionProjectSlackChannel,
   syncProjectMembersToSlackChannel,
