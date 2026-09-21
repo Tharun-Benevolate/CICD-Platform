@@ -264,6 +264,9 @@ async function postToSlackChannelById(channelId, payload) {
       body: JSON.stringify(body)
     });
     const data = await response.json();
+    if (!data.ok) {
+      console.error(`[Slack] chat.postMessage to ${channelId} failed:`, data.error);
+    }
     return !!data.ok;
   } catch (err) {
     console.error("[Slack] postToSlackChannelById error:", err.message);

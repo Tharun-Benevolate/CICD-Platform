@@ -172,6 +172,10 @@ async function start() {
     app.listen(PORT, () => {
       console.log(`\n🚀 Benevolate server running → http://localhost:${PORT}`);
       console.log(`   Environment: ${process.env.NODE_ENV || "development"}`);
+
+      // Start background pipeline monitor — polls AWS CodePipeline and sends
+      // Slack alerts when a build succeeds or fails.
+      require("./services/pipelineMonitor").start();
     });
 
     // Initialize system Slack channels (#integrate-security-alerts, #integrate-devops-alerts) & hourly telemetry digest
