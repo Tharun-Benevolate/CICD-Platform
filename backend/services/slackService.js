@@ -198,6 +198,51 @@ function getAppUrl() {
 }
 
 /**
+ * Format timestamp with CST/CDT (US Central Time) as primary top priority, followed by IST side-by-side
+ * Example: "09:50 AM CDT (08:20 PM IST)"
+ */
+function formatTimeCstIst(date = new Date()) {
+  const d = new Date(date);
+  const cstTime = d.toLocaleTimeString("en-US", {
+    timeZone: "America/Chicago",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
+  const cstTz = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    timeZoneName: "short"
+  }).formatToParts(d).find(p => p.type === "timeZoneName")?.value || "CDT";
+
+  const istTime = d.toLocaleTimeString("en-US", {
+    timeZone: "Asia/Kolkata",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true
+  });
+
+  return `${cstTime} ${cstTz} (${istTime} IST)`;
+}
+
+/**
+ * Format 60-minute or time range showing CST/CDT as primary and IST side-by-side
+ * Example: "08:50 AM - 09:50 AM CDT (07:20 PM - 08:20 PM IST)"
+ */
+function formatRangeCstIst(startDate, endDate) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  const cstStart = start.toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit", hour12: true });
+  const cstEnd = end.toLocaleTimeString("en-US", { timeZone: "America/Chicago", hour: "2-digit", minute: "2-digit", hour12: true });
+  const cstTz = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", timeZoneName: "short" }).formatToParts(end).find(p => p.type === "timeZoneName")?.value || "CDT";
+
+  const istStart = start.toLocaleTimeString("en-US", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true });
+  const istEnd = end.toLocaleTimeString("en-US", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: true });
+
+  return `${cstStart} - ${cstEnd} ${cstTz} (${istStart} - ${istEnd} IST)`;
+}
+
+/**
  * Dispatch formatted payload to either Slack Channel ID via Bot API or fallback to Webhook URL
  * Note: Never duplicates header text above attachments if rich card attachments are provided.
  */
@@ -210,8 +255,10 @@ async function postToSlackChannelOrWebhook({ channelId, webhookUrl, payload }) {
         attachments: payload.attachments,
         blocks: payload.blocks
       };
-      // Only include top-level text if there are NO attachments/blocks, or if explicitly provided non-empty
-      if (payload.text && payload.text.trim().length > 0) {
+      // Only include top-level text if there are NO attachments or blocks.
+      // When attachments with blocks are present, Slack renders body.text as an extra chat bubble above the card, duplicating emojis and headers!
+      const hasRichCards = (payload.attachments && payload.attachments.length > 0) || (payload.blocks && payload.blocks.length > 0);
+      if (!hasRichCards && payload.text && payload.text.trim().length > 0) {
         body.text = payload.text;
       }
       const res = await fetch("https://slack.com/api/chat.postMessage", {
@@ -251,10 +298,13 @@ async function postToSlackChannelById(channelId, payload) {
   try {
     const body = {
       channel: channelId,
-      text: typeof payload === "string" ? payload : (payload.text || " "),
       attachments: payload.attachments || []
     };
     if (payload.blocks) body.blocks = payload.blocks;
+    const hasRichCards = (body.attachments && body.attachments.length > 0) || (body.blocks && body.blocks.length > 0);
+    if (!hasRichCards) {
+      body.text = typeof payload === "string" ? payload : (payload.text || " ");
+    }
     const response = await fetch("https://slack.com/api/chat.postMessage", {
       method: "POST",
       headers: {
@@ -1072,7 +1122,8 @@ async function notifyPipelineExecution({ projectName, status, triggeredBy, branc
       { title: "Triggered By", value: `@${triggeredBy}` },
       { title: "Build Number", value: buildNumber },
       { title: "Branch", value: branch },
-      { title: "Execution Code", value: executionCode }
+      { title: "Execution Code", value: executionCode },
+      { title: "Timestamp", value: formatTimeCstIst(new Date()) }
     ],
     color: color
   });
@@ -1242,7 +1293,7 @@ async function sendSecurityAlert({
     { type: "mrkdwn", text: `*Actor:*\n\`@${actor}\`` },
     { type: "mrkdwn", text: `*Severity:*\n*${severity.toUpperCase()}*` },
     { type: "mrkdwn", text: `*Client IP:*\n\`${ip}\`` },
-    { type: "mrkdwn", text: `*Timestamp:*\n\`${new Date().toUTCString()}\`` }
+    { type: "mrkdwn", text: `*Timestamp:*\n\`${formatTimeCstIst(new Date())}\`` }
   ];
 
   if (endpoint) {
@@ -1296,7 +1347,7 @@ async function sendSecurityAlert({
     elements: [
       {
         type: "mrkdwn",
-        text: `*Security Scope:* Benevolate Integrate Platform • Dedicated Super Admin Alert`
+        text: `*Security Scope:* Benevolate Integrate Platform • Dedicated Super Admin Alert • Timezones: CST/CDT & IST`
       }
     ]
   });
@@ -1308,7 +1359,7 @@ async function sendSecurityAlert({
 
   return postToSlackChannelOrWebhook({
     channelId: config.security_channel_id,
-    webhookUrl: config.ops_webhook_url || config.dev_webhook_url,
+    webhookUrl: null, // Strict security isolation: NEVER route security alerts to DevOps or Dev webhooks!
     payload
   });
 }
@@ -1354,7 +1405,8 @@ async function sendOpsAlert({
 
   const defaultFields = [
     { type: "mrkdwn", text: `*Project Scope:*\n\`${resolvedProject}\`` },
-    { type: "mrkdwn", text: `*Environment:*\n\`${resolvedEnv}\`` }
+    { type: "mrkdwn", text: `*Environment:*\n\`${resolvedEnv}\`` },
+    { type: "mrkdwn", text: `*Timestamp:*\n\`${formatTimeCstIst(new Date())}\`` }
   ];
 
   // Add remaining caller fields that aren't already project/environment
@@ -1403,7 +1455,7 @@ async function sendOpsAlert({
     elements: [
       {
         type: "mrkdwn",
-        text: `*DevOps Scope:* Benevolate Integrate • Dedicated DevOps & Super Admin Channel`
+        text: `*DevOps Scope:* Benevolate Integrate • Dedicated DevOps & Super Admin Channel • Timezones: CST/CDT & IST`
       }
     ]
   });
@@ -1422,15 +1474,16 @@ async function sendOpsAlert({
 
 /**
  * ⏱️ SEND HOURLY TELEMETRY DIGEST
- * Queries the last 1 hour of platform activity from audit_log and posts a clean
- * summary card with CloudWatch deep-links instead of dumping raw file attachments.
+ * Queries the last 1 hour of DevOps & Infrastructure activity from audit_log and posts a clean
+ * summary card to #integrate-devops-alerts with dual CST/IST timezones and zero security noise.
  */
 async function sendHourlyOpsDigest() {
   const config = await getSlackConfig();
   if (!config || !config.enabled) return false;
 
   try {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const [auditRows] = await pool.query(
       `SELECT category, result, action, project_name, username, timestamp
        FROM audit_log 
@@ -1439,16 +1492,20 @@ async function sendHourlyOpsDigest() {
       [oneHourAgo]
     );
 
-    const totalEvents = auditRows.length;
-    const pipelines = auditRows.filter(r => r.category === "Pipeline Executions");
-    const terraform = auditRows.filter(r => r.category === "Terraform");
-    const securityDenials = auditRows.filter(r => r.category === "Access Control" || r.result === "Denied" || r.result === "Failed");
+    // Strictly DevOps & Infrastructure categories ONLY — NEVER leak Access Control / User Management / Security
+    const devopsRows = auditRows.filter(r => 
+      ["Pipeline Executions", "Terraform", "Infrastructure", "Deployments", "Builds"].includes(r.category)
+    );
+    const pipelines = devopsRows.filter(r => r.category === "Pipeline Executions");
+    const terraform = devopsRows.filter(r => r.category === "Terraform");
+    const deployments = devopsRows.filter(r => r.category === "Deployments" || r.category === "Builds");
     const failedPipelines = pipelines.filter(r => r.result === "Failed" || (r.action && r.action.toLowerCase().includes("failed")));
+    const failedTerraform = terraform.filter(r => r.result === "Failed" || (r.action && r.action.toLowerCase().includes("failed")));
 
-    const recentFailures = auditRows.filter(r => r.result === "Failed" || r.result === "Denied").slice(0, 3);
-    let failureSummary = "• None — all systems operating cleanly.";
-    if (recentFailures.length > 0) {
-      failureSummary = recentFailures.map(f => `• *[${f.category}]* ${f.action} (${f.project_name}) by @${f.username}`).join("\n");
+    const recentDevopsFailures = devopsRows.filter(r => r.result === "Failed" || (r.action && r.action.toLowerCase().includes("failed"))).slice(0, 3);
+    let failureSummary = "• None — all pipelines and infrastructure operating cleanly.";
+    if (recentDevopsFailures.length > 0) {
+      failureSummary = recentDevopsFailures.map(f => `• *[${f.category}]* ${f.action} (${f.project_name || 'Platform'}) by @${f.username}`).join("\n");
     }
 
     const blocks = [
@@ -1458,15 +1515,15 @@ async function sendHourlyOpsDigest() {
       },
       {
         type: "section",
-        text: { type: "mrkdwn", text: `Summary of platform activity over the last 60 minutes (*${oneHourAgo.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}* - *${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}*):` }
+        text: { type: "mrkdwn", text: `Summary of platform operations over the last 60 minutes (*${formatRangeCstIst(oneHourAgo, now)}*):` }
       },
       {
         type: "section",
         fields: [
-          { type: "mrkdwn", text: `*Total Activity:* ${totalEvents} events` },
+          { type: "mrkdwn", text: `*Total DevOps Events:* ${devopsRows.length}` },
           { type: "mrkdwn", text: `*Pipeline Runs:* ${pipelines.length} (${failedPipelines.length} failed)` },
-          { type: "mrkdwn", text: `*Terraform Operations:* ${terraform.length}` },
-          { type: "mrkdwn", text: `*Security Denials / Warnings:* ${securityDenials.length}` }
+          { type: "mrkdwn", text: `*Terraform Operations:* ${terraform.length} (${failedTerraform.length} failed)` },
+          { type: "mrkdwn", text: `*Deployments & Builds:* ${deployments.length}` }
         ]
       },
       {
@@ -1480,7 +1537,7 @@ async function sendHourlyOpsDigest() {
             type: "button",
             text: { type: "plain_text", text: "View Live CloudWatch / ECS Logs", emoji: true },
             url: "https://devops.benevolaite.com/monitoring",
-            style: failedPipelines.length > 0 ? "danger" : "primary"
+            style: (failedPipelines.length > 0 || failedTerraform.length > 0) ? "danger" : "primary"
           },
           {
             type: "button",
@@ -1488,13 +1545,22 @@ async function sendHourlyOpsDigest() {
             url: "https://devops.benevolaite.com/audit-logs"
           }
         ]
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `*DevOps Scope:* Benevolate Integrate • Dedicated DevOps Channel • Timezones: CST/CDT & IST`
+          }
+        ]
       }
     ];
 
     const payload = {
-      text: `⏱️ Hourly Operations Digest: ${totalEvents} events, ${failedPipelines.length} failures, ${securityDenials.length} warnings.`,
+      text: "",
       attachments: [{
-        color: failedPipelines.length > 0 ? "#ef4444" : (securityDenials.length > 0 ? "#f59e0b" : "#10b981"),
+        color: (failedPipelines.length > 0 || failedTerraform.length > 0) ? "#ef4444" : "#10b981",
         blocks
       }]
     };
@@ -1510,11 +1576,118 @@ async function sendHourlyOpsDigest() {
   }
 }
 
+/**
+ * 🛡️ SEND HOURLY SECURITY DIGEST
+ * Dispatches a summary of security incidents, unauthorized access attempts,
+ * and role denials strictly to #integrate-security-alerts (Super Admin only).
+ */
+async function sendHourlySecurityDigest() {
+  const config = await getSlackConfig();
+  if (!config || !config.enabled || !config.security_channel_id) return false;
+
+  try {
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    const [auditRows] = await pool.query(
+      `SELECT category, result, action, project_name, username, timestamp
+       FROM audit_log 
+       WHERE timestamp >= ? 
+       ORDER BY timestamp DESC`,
+      [oneHourAgo]
+    );
+
+    const securityRows = auditRows.filter(r => 
+      ["Access Control", "User Management", "Authentication", "Security"].includes(r.category) ||
+      r.result === "Denied" ||
+      (r.action && r.action.toLowerCase().includes("unauthorized"))
+    );
+
+    // If zero security incidents in the last hour, avoid noisy channel spam
+    if (securityRows.length === 0) {
+      return true;
+    }
+
+    const unauthorizedAttempts = securityRows.filter(r => 
+      r.result === "Denied" || (r.action && r.action.toLowerCase().includes("unauthorized"))
+    );
+    const userMgmtEvents = securityRows.filter(r => r.category === "User Management");
+
+    const recentIncidents = unauthorizedAttempts.slice(0, 5);
+    let incidentsSummary = "• None — zero policy violations.";
+    if (recentIncidents.length > 0) {
+      incidentsSummary = recentIncidents.map(f => `• *[${f.category}]* ${f.action} by @${f.username}`).join("\n");
+    }
+
+    const appUrl = getAppUrl();
+    const blocks = [
+      {
+        type: "header",
+        text: { type: "plain_text", text: "🛡️ Benevolate Integrate — Hourly Security Digest", emoji: true }
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `Summary of security events over the last 60 minutes (*${formatRangeCstIst(oneHourAgo, now)}*):` }
+      },
+      {
+        type: "section",
+        fields: [
+          { type: "mrkdwn", text: `*Total Security Events:* ${securityRows.length}` },
+          { type: "mrkdwn", text: `*Unauthorized Attempts:* ${unauthorizedAttempts.length}` },
+          { type: "mrkdwn", text: `*User Admin Actions:* ${userMgmtEvents.length}` },
+          { type: "mrkdwn", text: `*Enforcement Status:* *Active (All Blocked)*` }
+        ]
+      },
+      {
+        type: "section",
+        text: { type: "mrkdwn", text: `*Recent Security Incident Signatures:*\n${incidentsSummary}` }
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "🔍 Investigate in Audit Logs", emoji: true },
+            url: `${appUrl}/audit-logs?search=unauthorized`,
+            style: "danger"
+          }
+        ]
+      },
+      {
+        type: "context",
+        elements: [
+          {
+            type: "mrkdwn",
+            text: `*Security Scope:* Benevolate Integrate • Dedicated Super Admin Alert Channel • Timezones: CST/CDT & IST`
+          }
+        ]
+      }
+    ];
+
+    const payload = {
+      text: "",
+      attachments: [{
+        color: unauthorizedAttempts.length > 0 ? "#dc2626" : "#f59e0b",
+        blocks
+      }]
+    };
+
+    return postToSlackChannelOrWebhook({
+      channelId: config.security_channel_id,
+      webhookUrl: null, // Strict security isolation: NEVER fallback to DevOps webhook!
+      payload
+    });
+  } catch (err) {
+    console.error("[sendHourlySecurityDigest] Error generating digest:", err.message);
+    return false;
+  }
+}
+
 let _digestInterval = null;
 function startHourlyDigestTimer() {
   if (_digestInterval) return;
   _digestInterval = setInterval(() => {
     sendHourlyOpsDigest().catch(err => console.error("[HourlyOpsDigest Timer Error]:", err.message));
+    sendHourlySecurityDigest().catch(err => console.error("[HourlySecurityDigest Timer Error]:", err.message));
   }, 60 * 60 * 1000);
 }
 
@@ -1684,7 +1857,10 @@ module.exports = {
   sendSecurityAlert,
   sendOpsAlert,
   sendHourlyOpsDigest,
+  sendHourlySecurityDigest,
   startHourlyDigestTimer,
+  formatTimeCstIst,
+  formatRangeCstIst,
   listAllSlackChannels,
   deleteOrArchiveSlackChannel
 };

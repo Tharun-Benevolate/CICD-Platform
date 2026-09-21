@@ -299,6 +299,21 @@ router.post("/slack/test-digest", auth.requireRole(...auth.ADMIN_ROLES), async (
   }
 });
 
+// ── POST /api/slack/test-security-digest ───────────────────────────────
+router.post("/slack/test-security-digest", auth.requireRole("super_admin"), async (req, res) => {
+  try {
+    const success = await slackService.sendHourlySecurityDigest();
+    if (success) {
+      res.json({ ok: true, message: "Hourly security digest dispatched to #integrate-security-alerts!" });
+    } else {
+      res.status(400).json({ ok: false, error: "Failed to dispatch hourly security digest (check channel config or 0 events)." });
+    }
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+
 // ── POST /api/slack/test — Send Live Test Notification ───────────────
 router.post("/slack/test", auth.requireAuth, async (req, res) => {
   const { targetChannel = 'both' } = req.body;
