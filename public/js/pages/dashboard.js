@@ -207,22 +207,29 @@ async function loadEnvStatus(project) {
     var res = await api.get('/api/ecs/all-envs?projectId=' + project.id);
     if (!res || !res.ok || !res.envs) return;
 
-    var statusColor = { running: '#10b981', degraded: '#f59e0b', stopped: '#ef4444', idle: '#64748b', error: '#ef4444', 'not-configured': '#374151' };
-    var statusLabel = { running: 'Running', degraded: 'Degraded', stopped: 'Stopped', idle: 'Idle', error: 'Error', 'not-configured': 'Not Set' };
+    var deployColors = { deployed: '#10b981', failed: '#ef4444', 'in-progress': '#6366f1', 'not-deployed': '#64748b', 'no-pipeline': '#374151' };
+    var deployLabels = { deployed: 'Deployed ✓', failed: 'Deploy Failed', 'in-progress': 'Deploying…', 'not-deployed': 'Not Deployed', 'no-pipeline': 'No Pipeline' };
+    var ecsColors    = { healthy: '#10b981', degraded: '#f59e0b', stopped: '#ef4444', idle: '#64748b', error: '#ef4444', unknown: '#64748b', 'not-configured': '#374151' };
 
     var cards = res.envs.map(function(env) {
-      var isRunning = env.status === 'running';
-      var isDegraded = env.status === 'degraded';
-      var isActive   = isRunning || isDegraded;
-      var color      = statusColor[env.status] || '#64748b';
-      var label      = statusLabel[env.status] || env.status;
-      var taskText   = env.configured ? (env.running + '/' + env.desired + ' Tasks') : 'Not Deployed';
-      var envLabel   = env.env.toUpperCase();
-      var dotHtml    = isActive
+      var ds        = env.deployStatus || 'not-deployed';
+      var color     = deployColors[ds] || '#64748b';
+      var label     = deployLabels[ds] || ds;
+      var isActive  = ds === 'deployed';
+      var envLabel  = env.env.toUpperCase();
+
+      // ECS task row — secondary info
+      var taskColor   = ecsColors[env.ecsStatus] || '#64748b';
+      var taskText    = env.configured ? (env.running + '/' + env.desired + ' Tasks') : 'Not Configured';
+
+      // Pulsing dot only if actually deployed
+      var dotHtml = isActive
         ? '<div style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:' + color + ';box-shadow:0 0 0 2px rgba(16,185,129,0.25);">' +
             '<div style="position:absolute;inset:0;border-radius:50%;background:' + color + ';animation:ecsping 1.4s ease-out infinite;opacity:0.7;"></div>' +
           '</div>'
-        : '';
+        : (ds === 'in-progress'
+            ? '<div style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:#6366f1;animation:ecsping 1s ease-out infinite;"></div>'
+            : '');
 
       var displayUrl = env.url
         ? (env.url.replace(/^https?:\/\//, '').replace(/\/$/, ''))
@@ -246,8 +253,8 @@ async function loadEnvStatus(project) {
             ecsIcon +
             '<span style="font-size:10px;font-weight:800;letter-spacing:0.8px;color:' + (isActive ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)') + ';">' + envLabel + '</span>' +
           '</div>' +
-          '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:3px;">' + label + '</div>' +
-          '<div style="font-size:10px;color:var(--color-text-tertiary);font-family:monospace;">' + taskText + '</div>' +
+          '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:4px;">' + label + '</div>' +
+          '<div style="font-size:10px;color:' + taskColor + ';font-family:monospace;opacity:0.8;">' + taskText + '</div>' +
           urlHtml +
         '</div>' +
       linkEnd;

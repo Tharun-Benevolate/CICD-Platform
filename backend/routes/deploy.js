@@ -30,36 +30,107 @@ router.get("/ecs/service", async (req, res) => {
   }
 });
 
-// GET /api/ecs/all-envs — fetch ECS running/desired task counts for dev, UAT, prod in one call
+// GET /api/ecs/all-envs — accurate env status: CodePipeline deploy-stage status + ECS task count
 router.get("/ecs/all-envs", async (req, res) => {
   try {
     const project = await requireProject(req, res); if (!project) return;
-    const region  = project.region || "us-east-1";
+    const region       = project.region || "us-east-1";
     const prodCluster    = project.ecsClusterNameProd    || project.ecsClusterName;
     const nonProdCluster = project.ecsClusterNameNonProd || project.ecsClusterName;
 
     const envDefs = [
-      { key: "dev",  cluster: nonProdCluster, service: project.devServiceName,  url: project.devUrl  },
-      { key: "uat",  cluster: nonProdCluster, service: project.uatServiceName,  url: project.uatUrl  },
-      { key: "prod", cluster: prodCluster,    service: project.prodServiceName, url: project.prodUrl },
+      { key: "dev",  cluster: nonProdCluster, service: project.devServiceName,  url: project.devUrl,  stageHints: ["deploy-dev",  "deploydev",  "deploy_dev"]  },
+      { key: "uat",  cluster: nonProdCluster, service: project.uatServiceName,  url: project.uatUrl,  stageHints: ["deploy-uat",  "deployuat",  "deploy_uat"]  },
+      { key: "prod", cluster: prodCluster,    service: project.prodServiceName, url: project.prodUrl, stageHints: ["deploy-prod", "deployprod", "deploy_prod"] },
     ];
 
-    const results = await Promise.all(envDefs.map(async (e) => {
-      if (!e.service || !e.cluster) {
-        return { env: e.key, configured: false, running: 0, desired: 0, status: "not-configured", url: e.url || null };
-      }
+    // Pull pipeline stage states once (non-fatal if pipeline not configured)
+    let stageStates = [];
+    if (project.pipelineName) {
       try {
-        const svc = await aws.describeEcsService(region, e.cluster, e.service);
-        const running = svc?.runningCount ?? 0;
-        const desired = svc?.desiredCount ?? 0;
-        const status  = running > 0 && running === desired ? "running"
-                      : running > 0 ? "degraded"
-                      : desired > 0  ? "stopped"
-                      : "idle";
-        return { env: e.key, configured: true, running, desired, status, url: e.url || null };
-      } catch {
-        return { env: e.key, configured: true, running: 0, desired: 0, status: "error", url: e.url || null };
+        stageStates = await aws.getPipelineState(region, project.pipelineName) || [];
+      } catch { /* pipeline not found — degrade gracefully */ }
+    }
+
+    // Build a lookup: lowercase stage name → { status, lastUpdated }
+    const stageMap = {};
+    for (const stage of stageStates) {
+      const key = (stage.stageName || "").toLowerCase().replace(/[\s_]/g, "-");
+      stageMap[key] = {
+        pipelineStatus: stage.latestExecution?.status || null,
+        lastUpdated: stage.latestExecution?.lastStatusChange || null
+      };
+    }
+
+    const results = await Promise.all(envDefs.map(async (e) => {
+      // 1. Find the pipeline deploy stage for this env
+      let pipelineStatus = null; // "Succeeded" | "Failed" | "InProgress" | "Skipped" | null
+      let lastDeployed   = null;
+      for (const hint of e.stageHints) {
+        if (stageMap[hint]) {
+          pipelineStatus = stageMap[hint].pipelineStatus;
+          lastDeployed   = stageMap[hint].lastUpdated;
+          break;
+        }
       }
+      // Fallback: fuzzy match any stage name that contains the env keyword
+      if (!pipelineStatus) {
+        const envKey = e.key; // "dev" | "uat" | "prod"
+        for (const [k, v] of Object.entries(stageMap)) {
+          if (k.includes("deploy") && k.includes(envKey)) {
+            pipelineStatus = v.pipelineStatus;
+            lastDeployed   = v.lastUpdated;
+            break;
+          }
+        }
+      }
+
+      // 2. ECS task count (best-effort, shows infra health)
+      let running = 0, desired = 0, ecsStatus = "unknown";
+      if (e.service && e.cluster) {
+        try {
+          const svc = await aws.describeEcsService(region, e.cluster, e.service);
+          running   = svc?.runningCount ?? 0;
+          desired   = svc?.desiredCount ?? 0;
+          ecsStatus = running > 0 && running === desired ? "healthy"
+                    : running > 0 ? "degraded"
+                    : desired > 0 ? "stopped"
+                    : "idle";
+        } catch { ecsStatus = "error"; }
+      } else {
+        ecsStatus = "not-configured";
+      }
+
+      // 3. Authoritative deployment status — pipeline wins over ECS task count
+      //    "deployed"     → pipeline stage Succeeded
+      //    "failed"       → pipeline stage Failed
+      //    "in-progress"  → pipeline stage InProgress
+      //    "not-deployed" → stage Skipped / null / pending
+      //    "no-pipeline"  → no pipeline configured at all
+      let deployStatus;
+      if (!project.pipelineName) {
+        deployStatus = "no-pipeline";
+      } else if (pipelineStatus === "Succeeded") {
+        deployStatus = "deployed";
+      } else if (pipelineStatus === "Failed") {
+        deployStatus = "failed";
+      } else if (pipelineStatus === "InProgress") {
+        deployStatus = "in-progress";
+      } else {
+        deployStatus = "not-deployed";
+      }
+
+      return {
+        env: e.key,
+        deployStatus,
+        pipelineStatus,
+        lastDeployed,
+        running,
+        desired,
+        ecsStatus,
+        configured: !!(e.service && e.cluster),
+        url: e.url || null
+      };
     }));
 
     res.json({ ok: true, envs: results });
