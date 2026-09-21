@@ -163,18 +163,13 @@
     </div>
   </div>
 
-  <!-- Deployment Endpoint Status -->
-  <div id="deploy-endpoint" style="display:none;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:12px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-    <div style="display:flex;align-items:center;gap:12px;">
-      <div style="width:9px;height:9px;border-radius:50%;background:#94a3b8;"></div>
+  <div id="deploy-endpoint" style="display:none;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+    <div style="display:flex;align-items:center;gap:10px;flex:1;">
       <div>
-        <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;">DEPLOYMENT ENDPOINT STATUS</div>
-        <div id="deploy-endpoint-text" style="font-size:13px;font-weight:600;color:var(--color-text-secondary);font-family:monospace;margin-top:2px;"></div>
+        <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;margin-bottom:8px;">ECS ENVIRONMENT STATUS</div>
+        <div id="deploy-endpoint-text" style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;"></div>
       </div>
     </div>
-    <span style="padding:6px 14px;background:var(--color-bg);border:1px solid var(--color-border);color:var(--color-text-tertiary);border-radius:8px;font-size:12px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:not-allowed;">
-      <i data-lucide="globe" style="width:14px;height:14px;"></i> Not Deployed
-    </span>
   </div>
 
   <!-- Main Content Grid: Pipeline + Audit -->

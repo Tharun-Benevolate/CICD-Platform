@@ -174,17 +174,101 @@ async function loadProjects() {
     var res = await api.get('/api/projects');
     if (res.projects) {
       document.getElementById('projects-count').textContent = res.projects.length + ' Active';
-      // Deployment endpoint
       var active = res.projects.find(function(p) { return p.isActive; });
       if (active) {
         var el = document.getElementById('deploy-endpoint');
         el.style.display = 'flex';
-        var name = active.name.toLowerCase().replace(/[^a-z0-9]/g, '');
-        document.getElementById('deploy-endpoint-text').innerHTML =
-          name + '.benevolate.internal:8080 &bull; <span style="color:var(--color-text-tertiary);">Not Deployed / Pending Pipeline Setup</span>';
+        loadEnvStatus(active);
       }
     }
   } catch(e) {}
+}
+
+async function loadEnvStatus(project) {
+  var container = document.getElementById('deploy-endpoint-text');
+  if (!container) return;
+
+  // Show ECS icon SVG (AWS ECS colour: #FF9900)
+  var ecsIcon = '<svg width="18" height="18" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;margin-right:6px;">' +
+    '<rect width="40" height="40" rx="6" fill="#232F3E"/>' +
+    '<path d="M8 12h24M8 20h24M8 28h24" stroke="#FF9900" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<circle cx="13" cy="12" r="2.5" fill="#FF9900"/>' +
+    '<circle cx="13" cy="20" r="2.5" fill="#FF9900"/>' +
+    '<circle cx="13" cy="28" r="2.5" fill="#FF9900"/>' +
+    '</svg>';
+
+  // Skeleton while loading
+  container.innerHTML = '<div style="display:flex;gap:10px;align-items:center;">' +
+    ['DEV','UAT','PROD'].map(function(e) {
+      return '<div style="width:108px;height:72px;background:rgba(255,255,255,0.04);border:1px solid var(--color-border);border-radius:10px;animation:pulse 1.5s ease-in-out infinite;"></div>';
+    }).join('') + '</div>';
+
+  try {
+    var res = await api.get('/api/ecs/all-envs?projectId=' + project.id);
+    if (!res || !res.ok || !res.envs) return;
+
+    var deployColors = { deployed: '#10b981', failed: '#ef4444', 'in-progress': '#6366f1', 'not-deployed': '#64748b', 'no-pipeline': '#374151' };
+    var deployLabels = { deployed: 'Deployed ✓', failed: 'Deploy Failed', 'in-progress': 'Deploying…', 'not-deployed': 'Not Deployed', 'no-pipeline': 'No Pipeline' };
+    var ecsColors    = { healthy: '#10b981', degraded: '#f59e0b', stopped: '#ef4444', idle: '#64748b', error: '#ef4444', unknown: '#64748b', 'not-configured': '#374151' };
+
+    var cards = res.envs.map(function(env) {
+      var ds        = env.deployStatus || 'not-deployed';
+      var color     = deployColors[ds] || '#64748b';
+      var label     = deployLabels[ds] || ds;
+      var isActive  = ds === 'deployed';
+      var envLabel  = env.env.toUpperCase();
+
+      // ECS task row — secondary info
+      var taskColor   = ecsColors[env.ecsStatus] || '#64748b';
+      var taskText    = env.configured ? (env.running + '/' + env.desired + ' Tasks') : 'Not Configured';
+
+      // Pulsing dot only if actually deployed
+      var dotHtml = isActive
+        ? '<div style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:' + color + ';box-shadow:0 0 0 2px rgba(16,185,129,0.25);">' +
+            '<div style="position:absolute;inset:0;border-radius:50%;background:' + color + ';animation:ecsping 1.4s ease-out infinite;opacity:0.7;"></div>' +
+          '</div>'
+        : (ds === 'in-progress'
+            ? '<div style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:#6366f1;animation:ecsping 1s ease-out infinite;"></div>'
+            : '');
+
+      var displayUrl = env.url
+        ? (env.url.replace(/^https?:\/\//, '').replace(/\/$/, ''))
+        : null;
+      var shortUrl = displayUrl && displayUrl.length > 24 ? displayUrl.slice(0, 22) + '…' : (displayUrl || '—');
+      var urlHtml = '<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.06);font-size:9px;color:' +
+        (env.url ? '#6366f1' : 'var(--color-text-tertiary)') +
+        ';font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + (displayUrl || 'No endpoint') + '">' +
+        (env.url ? '🌐 ' : '') + shortUrl +
+      '</div>';
+
+      var linkStart = (env.url && isActive) ? '<a href="' + (env.url.startsWith('http') ? env.url : 'https://' + env.url) + '" target="_blank" style="text-decoration:none;color:inherit;">' : '<span>';
+      var linkEnd   = (env.url && isActive) ? '</a>' : '</span>';
+
+      return linkStart +
+        '<div style="position:relative;width:130px;padding:10px 12px;background:var(--color-bg);border:1px solid ' + (isActive ? color + '55' : 'var(--color-border)') + ';border-radius:10px;transition:border-color 0.2s,box-shadow 0.2s;cursor:' + (isActive ? 'pointer' : 'default') + ';" ' +
+          'onmouseenter="if(' + isActive + ')this.style.boxShadow=\'0 0 0 2px ' + color + '44\'" ' +
+          'onmouseleave="this.style.boxShadow=\'none\'">' +
+          dotHtml +
+          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;">' +
+            ecsIcon +
+            '<span style="font-size:10px;font-weight:800;letter-spacing:0.8px;color:' + (isActive ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)') + ';">' + envLabel + '</span>' +
+          '</div>' +
+          '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:4px;">' + label + '</div>' +
+          '<div style="font-size:10px;color:' + taskColor + ';font-family:monospace;opacity:0.8;">' + taskText + '</div>' +
+          urlHtml +
+        '</div>' +
+      linkEnd;
+    }).join('');
+
+    container.innerHTML = '<style>' +
+      '@keyframes ecsping{0%{transform:scale(1);opacity:0.7}70%{transform:scale(2.2);opacity:0}100%{transform:scale(2.4);opacity:0}}' +
+      '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}' +
+    '</style>' +
+    '<div style="display:flex;gap:10px;align-items:stretch;">' + cards + '</div>';
+
+  } catch(e) {
+    container.innerHTML = '<span style="font-size:12px;color:var(--color-text-tertiary);">Unable to load environment status</span>';
+  }
 }
 
 async function loadPipeline() {
