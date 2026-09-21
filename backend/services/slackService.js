@@ -1477,7 +1477,7 @@ async function sendOpsAlert({
  * Queries the last 1 hour of DevOps & Infrastructure activity from audit_log and posts a clean
  * summary card to #integrate-devops-alerts with dual CST/IST timezones and zero security noise.
  */
-async function sendHourlyOpsDigest() {
+async function sendHourlyOpsDigest({ force = false } = {}) {
   const config = await getSlackConfig();
   if (!config || !config.enabled) return false;
 
@@ -1496,6 +1496,13 @@ async function sendHourlyOpsDigest() {
     const devopsRows = auditRows.filter(r => 
       ["Pipeline Executions", "Terraform", "Infrastructure", "Deployments", "Builds"].includes(r.category)
     );
+
+    // Silence when idle: If zero DevOps / pipeline / infrastructure events occurred in the last hour, skip sending
+    if (devopsRows.length === 0 && !force) {
+      console.log("[sendHourlyOpsDigest] Zero DevOps events in the last 60 minutes — skipping idle digest.");
+      return true;
+    }
+
     const pipelines = devopsRows.filter(r => r.category === "Pipeline Executions");
     const terraform = devopsRows.filter(r => r.category === "Terraform");
     const deployments = devopsRows.filter(r => r.category === "Deployments" || r.category === "Builds");
@@ -1507,6 +1514,7 @@ async function sendHourlyOpsDigest() {
     if (recentDevopsFailures.length > 0) {
       failureSummary = recentDevopsFailures.map(f => `• *[${f.category}]* ${f.action} (${f.project_name || 'Platform'}) by @${f.username}`).join("\n");
     }
+
 
     const blocks = [
       {
@@ -1581,7 +1589,7 @@ async function sendHourlyOpsDigest() {
  * Dispatches a summary of security incidents, unauthorized access attempts,
  * and role denials strictly to #integrate-security-alerts (Super Admin only).
  */
-async function sendHourlySecurityDigest() {
+async function sendHourlySecurityDigest({ force = false } = {}) {
   const config = await getSlackConfig();
   if (!config || !config.enabled || !config.security_channel_id) return false;
 
@@ -1602,8 +1610,9 @@ async function sendHourlySecurityDigest() {
       (r.action && r.action.toLowerCase().includes("unauthorized"))
     );
 
-    // If zero security incidents in the last hour, avoid noisy channel spam
-    if (securityRows.length === 0) {
+    // If zero security incidents in the last hour and not forced, avoid noisy channel spam
+    if (securityRows.length === 0 && !force) {
+      console.log("[sendHourlySecurityDigest] Zero security incidents in the last 60 minutes — skipping idle digest.");
       return true;
     }
 

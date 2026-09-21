@@ -288,7 +288,7 @@ router.post("/slack/test-ops", auth.requireRole(...auth.ADMIN_ROLES), async (req
 // ── POST /api/slack/test-digest ────────────────────────────────────────
 router.post("/slack/test-digest", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
   try {
-    const success = await slackService.sendHourlyOpsDigest();
+    const success = await slackService.sendHourlyOpsDigest({ force: true });
     if (success) {
       res.json({ ok: true, message: "Hourly telemetry digest dispatched to #integrate-devops-alerts!" });
     } else {
@@ -302,7 +302,7 @@ router.post("/slack/test-digest", auth.requireRole(...auth.ADMIN_ROLES), async (
 // ── POST /api/slack/test-security-digest ───────────────────────────────
 router.post("/slack/test-security-digest", auth.requireRole("super_admin"), async (req, res) => {
   try {
-    const success = await slackService.sendHourlySecurityDigest();
+    const success = await slackService.sendHourlySecurityDigest({ force: true });
     if (success) {
       res.json({ ok: true, message: "Hourly security digest dispatched to #integrate-security-alerts!" });
     } else {
