@@ -30,6 +30,44 @@ router.get("/ecs/service", async (req, res) => {
   }
 });
 
+// GET /api/ecs/all-envs — fetch ECS running/desired task counts for dev, UAT, prod in one call
+router.get("/ecs/all-envs", async (req, res) => {
+  try {
+    const project = await requireProject(req, res); if (!project) return;
+    const region  = project.region || "us-east-1";
+    const prodCluster    = project.ecsClusterNameProd    || project.ecsClusterName;
+    const nonProdCluster = project.ecsClusterNameNonProd || project.ecsClusterName;
+
+    const envDefs = [
+      { key: "dev",  cluster: nonProdCluster, service: project.devServiceName,  url: project.devUrl  },
+      { key: "uat",  cluster: nonProdCluster, service: project.uatServiceName,  url: project.uatUrl  },
+      { key: "prod", cluster: prodCluster,    service: project.prodServiceName, url: project.prodUrl },
+    ];
+
+    const results = await Promise.all(envDefs.map(async (e) => {
+      if (!e.service || !e.cluster) {
+        return { env: e.key, configured: false, running: 0, desired: 0, status: "not-configured", url: e.url || null };
+      }
+      try {
+        const svc = await aws.describeEcsService(region, e.cluster, e.service);
+        const running = svc?.runningCount ?? 0;
+        const desired = svc?.desiredCount ?? 0;
+        const status  = running > 0 && running === desired ? "running"
+                      : running > 0 ? "degraded"
+                      : desired > 0  ? "stopped"
+                      : "idle";
+        return { env: e.key, configured: true, running, desired, status, url: e.url || null };
+      } catch {
+        return { env: e.key, configured: true, running: 0, desired: 0, status: "error", url: e.url || null };
+      }
+    }));
+
+    res.json({ ok: true, envs: results });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
 // POST /api/ecs/deploy — Manually deploy a chosen build (from history) to a chosen environment
 // This IS the rollback mechanism too
 router.post("/ecs/deploy", async (req, res) => {
