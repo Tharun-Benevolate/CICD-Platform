@@ -28,6 +28,18 @@ async function loadAdoptionStats() {
     var res = await api.get('/api/adoption/stats');
     if (!res || !res.ok) throw new Error(res?.error || 'Failed to fetch adoption stats');
 
+    // Show tracking-since badge if a reset has been applied
+    var badge = document.getElementById('trackingSinceBadge');
+    var sinceLabel = document.getElementById('trackingSinceLabel');
+    if (badge && sinceLabel) {
+      if (res.since) {
+        sinceLabel.textContent = 'Tracking since: ' + new Date(res.since).toLocaleString();
+        badge.style.display = 'inline-flex';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
     var stats = res.stats || [];
 
     // Summary stats
@@ -136,4 +148,20 @@ function escapeHtml(str) {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
+}
+
+async function resetTracking() {
+  if (!confirm('Reset adoption tracking for ALL users?\n\nThis sets a new start date — only GitHub activity AFTER this point will count as completed.\n\nThis does NOT delete any branches, commits or pull requests.')) return;
+  var btn = document.getElementById('resetBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Resetting…'; }
+  try {
+    var res = await api.post('/api/adoption/reset', {});
+    if (!res || !res.ok) throw new Error(res?.error || 'Reset failed');
+    alert('\u2705 Tracking reset successfully!\n\nNew start date: ' + new Date(res.resetAt).toLocaleString() + '\n\nRefreshing dashboard…');
+    await loadAdoptionStats();
+  } catch (err) {
+    alert('\u274C Reset failed: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerHTML = '<i data-lucide="rotate-ccw" style="width:14px;height:14px;margin-right:6px;"></i> Reset Fresh Start'; if (window.lucide) lucide.createIcons(); }
+  }
 }

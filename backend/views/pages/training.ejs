@@ -202,11 +202,21 @@
     <div class="header-title">
       <h1>GitHub Adoption Tracker</h1>
       <p>Monitor team progress across required Git onboarding tasks.</p>
+      <div id="trackingSinceBadge" style="display:none;margin-top:8px;font-size:12px;color:#f59e0b;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;">
+        <i data-lucide="calendar" style="width:12px;height:12px;"></i>
+        <span id="trackingSinceLabel">Tracking since: —</span>
+      </div>
     </div>
-    <button class="btn btn-primary" onclick="loadAdoptionStats()" id="refreshBtn">
-      <i data-lucide="refresh-cw" style="width:14px;height:14px;margin-right:6px;"></i>
-      Refresh Data
-    </button>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn" id="resetBtn" onclick="resetTracking()" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;">
+        <i data-lucide="rotate-ccw" style="width:14px;height:14px;margin-right:6px;"></i>
+        Reset Fresh Start
+      </button>
+      <button class="btn btn-primary" onclick="loadAdoptionStats()" id="refreshBtn">
+        <i data-lucide="refresh-cw" style="width:14px;height:14px;margin-right:6px;"></i>
+        Refresh Data
+      </button>
+    </div>
   </div>
 
   <div class="summary-grid" id="summaryGrid">
