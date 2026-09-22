@@ -1,83 +1,92 @@
 <style>
   /* Premium UI Styles for Adoption Dashboard */
   .adoption-container {
-    max-width: 1200px;
-    margin: 0 auto;
     padding-bottom: 40px;
     color: var(--color-text-primary);
-  }
-  .header-section {
     display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* Header Section matching Dashboard */
+  .header-section {
+    background: linear-gradient(135deg,rgba(99,102,241,0.09) 0%,rgba(139,92,246,0.04) 100%);
+    border: 1px solid rgba(99,102,241,0.25);
+    border-radius: var(--radius-xl);
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-    align-items: flex-start;
     flex-wrap: wrap;
     gap: 16px;
-    margin-bottom: 24px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid var(--color-border);
   }
   .header-title h1 {
-    font-size: 24px;
-    font-weight: 800;
-    margin: 0 0 8px 0;
-    background: linear-gradient(90deg, #60a5fa, #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin: 0 0 4px 0;
   }
   .header-title p {
     font-size: 13px;
     color: var(--color-text-secondary);
     margin: 0;
   }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
 
   /* Stats Grid */
   .summary-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 16px;
-    margin-bottom: 32px;
+    gap: 14px;
   }
   .summary-card {
-    background: var(--color-bg-secondary);
+    background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 12px;
-    padding: 20px;
-    text-align: center;
-    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    border-radius: var(--radius-lg);
+    padding: 16px;
   }
-  .summary-card .value {
-    font-size: 32px;
-    font-weight: 800;
-    color: var(--color-text-primary);
-    margin-bottom: 4px;
+  .summary-card .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
   }
   .summary-card .label {
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--color-text-secondary);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-text-tertiary);
+    letter-spacing: 0.5px;
+  }
+  .summary-card .value {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--color-text-primary);
   }
 
   /* User List */
   .user-list {
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 14px;
   }
   .user-card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
-    border-radius: 16px;
+    border-radius: var(--radius-xl);
     padding: 20px;
     display: flex;
     flex-direction: column;
     gap: 20px;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.2s ease;
   }
   .user-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    border-color: var(--color-primary);
+    border-color: rgba(99,102,241,0.5);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
   }
   
   .user-card-header {
@@ -90,19 +99,20 @@
   .user-info {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
   }
   .avatar {
-    width: 48px;
-    height: 48px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
     background: var(--color-border);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-weight: bold;
+    font-weight: 600;
     color: var(--color-text-primary);
     overflow: hidden;
+    flex-shrink: 0;
   }
   .avatar img {
     width: 100%;
@@ -110,9 +120,12 @@
     object-fit: cover;
   }
   .user-details h3 {
-    margin: 0 0 4px 0;
-    font-size: 16px;
-    font-weight: 600;
+    margin: 0 0 2px 0;
+    font-size: 15px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   .user-details p {
     margin: 0;
@@ -131,15 +144,14 @@
     margin-bottom: 6px;
   }
   .progress-bar-bg {
-    height: 8px;
+    height: 6px;
     background: var(--color-border);
-    border-radius: 4px;
+    border-radius: 3px;
     overflow: hidden;
   }
   .progress-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #10b981, #34d399);
-    border-radius: 4px;
+    border-radius: 3px;
     transition: width 0.5s ease-out;
   }
   
@@ -147,33 +159,27 @@
   .tasks-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 12px;
-    background: var(--color-bg-tertiary);
-    padding: 16px;
-    border-radius: 12px;
+    gap: 10px;
   }
   .task-item {
     display: flex;
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: 8px;
+    gap: 6px;
     padding: 12px;
-    border-radius: 8px;
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    background: rgba(0,0,0,0.1);
+    border: 1px solid transparent;
     transition: all 0.2s;
   }
   .task-item.completed {
     background: rgba(16, 185, 129, 0.05);
-    border-color: rgba(16, 185, 129, 0.3);
+    border-color: rgba(16, 185, 129, 0.2);
   }
   .task-item.pending {
     background: rgba(239, 68, 68, 0.05);
-    border-color: rgba(239, 68, 68, 0.2);
-  }
-  .task-icon {
-    font-size: 20px;
+    border-color: rgba(239, 68, 68, 0.1);
   }
   .task-label {
     font-size: 11px;
@@ -199,59 +205,51 @@
 
 <div class="adoption-container">
   <div class="header-section">
-    <div class="header-title">
-      <h1>GitHub Adoption Tracker</h1>
-      <p>Monitor team progress across required Git onboarding tasks.</p>
-      <div id="trackingSinceBadge" style="display:none;margin-top:8px;font-size:12px;color:#f59e0b;display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.3);border-radius:6px;">
-        <i data-lucide="calendar" style="width:12px;height:12px;"></i>
-        <span id="trackingSinceLabel">Tracking since: —</span>
+    <div>
+      <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(99,102,241,0.15);color:#6366f1;border-radius:12px;font-size:11px;font-weight:700;margin-bottom:8px;letter-spacing:0.5px;">
+        <span>TRAINING WORKSPACE</span>
+      </div>
+      <div class="header-title">
+        <h1>GitHub Adoption Tracker</h1>
+        <p>Monitor team progress across required Git onboarding tasks.</p>
+        <div id="trackingSinceBadge" style="display:none;margin-top:8px;font-size:11px;color:#f59e0b;align-items:center;gap:6px;padding:3px 10px;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.25);border-radius:12px;font-weight:600;">
+          <i data-lucide="calendar" style="width:12px;height:12px;"></i>
+          <span id="trackingSinceLabel">Tracking since: —</span>
+        </div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button class="btn" id="resetBtn" onclick="resetTracking()" style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;">
-        <i data-lucide="rotate-ccw" style="width:14px;height:14px;margin-right:6px;"></i>
-        Reset Fresh Start
+    <div class="header-actions">
+      <button class="btn-secondary" id="resetBtn" onclick="resetTracking()" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:var(--radius-md);font-weight:600;font-size:13px;color:#ef4444;border-color:rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);">
+        <i data-lucide="rotate-ccw" style="width:15px;height:15px;"></i> Reset Fresh Start
       </button>
-      <button class="btn btn-primary" onclick="loadAdoptionStats()" id="refreshBtn">
-        <i data-lucide="refresh-cw" style="width:14px;height:14px;margin-right:6px;"></i>
-        Refresh Data
+      <button class="btn-primary" onclick="loadAdoptionStats()" id="refreshBtn" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:var(--radius-md);font-weight:600;font-size:13px;">
+        <i data-lucide="refresh-cw" style="width:15px;height:15px;"></i> Refresh Data
       </button>
     </div>
   </div>
 
   <div class="summary-grid" id="summaryGrid">
-    <div class="summary-card">
-      <div class="value skeleton" style="height:32px;width:60px;margin:0 auto 8px;"></div>
-      <div class="label">Total Team</div>
-    </div>
-    <div class="summary-card">
-      <div class="value skeleton" style="height:32px;width:60px;margin:0 auto 8px;"></div>
-      <div class="label">Fully Adopted</div>
-    </div>
-    <div class="summary-card">
-      <div class="value skeleton" style="height:32px;width:60px;margin:0 auto 8px;"></div>
-      <div class="label">Average Progress</div>
-    </div>
+    <!-- Populated by JS -->
   </div>
 
   <div class="user-list" id="userList">
-    <!-- Populated by JS -->
+    <!-- Skeleton Loading -->
     <div class="user-card" style="opacity:0.6;">
       <div class="user-card-header">
         <div class="user-info">
           <div class="avatar skeleton"></div>
           <div class="user-details">
-            <div class="skeleton" style="height:16px;width:120px;margin-bottom:8px;"></div>
+            <div class="skeleton" style="height:15px;width:120px;margin-bottom:6px;"></div>
             <div class="skeleton" style="height:12px;width:80px;"></div>
           </div>
         </div>
       </div>
       <div class="tasks-grid">
-        <div class="task-item"><div class="skeleton" style="height:24px;width:24px;border-radius:50%"></div></div>
-        <div class="task-item"><div class="skeleton" style="height:24px;width:24px;border-radius:50%"></div></div>
-        <div class="task-item"><div class="skeleton" style="height:24px;width:24px;border-radius:50%"></div></div>
-        <div class="task-item"><div class="skeleton" style="height:24px;width:24px;border-radius:50%"></div></div>
-        <div class="task-item"><div class="skeleton" style="height:24px;width:24px;border-radius:50%"></div></div>
+        <div class="task-item"><div class="skeleton" style="height:20px;width:20px;border-radius:50%"></div></div>
+        <div class="task-item"><div class="skeleton" style="height:20px;width:20px;border-radius:50%"></div></div>
+        <div class="task-item"><div class="skeleton" style="height:20px;width:20px;border-radius:50%"></div></div>
+        <div class="task-item"><div class="skeleton" style="height:20px;width:20px;border-radius:50%"></div></div>
+        <div class="task-item"><div class="skeleton" style="height:20px;width:20px;border-radius:50%"></div></div>
       </div>
     </div>
   </div>
