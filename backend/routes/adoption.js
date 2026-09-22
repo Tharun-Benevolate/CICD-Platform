@@ -6,6 +6,41 @@ const auth = require("../middleware/auth");
 const fetch = require("node-fetch"); // v2 CommonJS
 const { pool } = require("../config/db");
 
+// ── GitHub API helper ─────────────────────────────────────────────────────────
+async function githubGet(path, token) {
+  const res = await fetch(`https://api.github.com${path}`, {
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/vnd.github+json",
+      "X-GitHub-Api-Version": "2022-11-28"
+    }
+  });
+  if (!res.ok) return null;
+  return res.json().catch(() => null);
+}
+
+// ── Pre-load all branches from GitHub once per request ────────────────────────
+// Returns array of { branchName, authorLogin } for non-default branches.
+async function getGithubBranchAuthors(owner, repo, token) {
+  try {
+    const branches = await githubGet(`/repos/${owner}/${repo}/branches?per_page=100`, token);
+    if (!Array.isArray(branches)) return [];
+
+    const results = await Promise.all(branches.map(async (b) => {
+      try {
+        // Get the head commit of this branch to find its author
+        const commit = await githubGet(`/repos/${owner}/${repo}/commits/${b.commit.sha}`, token);
+        const authorLogin = commit?.author?.login || commit?.commit?.author?.name || null;
+        return { branchName: b.name, authorLogin };
+      } catch { return { branchName: b.name, authorLogin: null }; }
+    }));
+    return results;
+  } catch (e) {
+    console.warn("[adoption] getGithubBranchAuthors error:", e.message);
+    return [];
+  }
+}
+
 // ── Audit log helper ──────────────────────────────────────────────────────────
 // NOTE: the table is "audit_log" (singular) — verified against live DB.
 // Usernames in audit_log match users.username (short form, e.g. "aditya").
@@ -57,17 +92,48 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
     const githubToken = await findAdminGithubToken();
     const canQueryGithub = !!(githubToken && mainProject);
 
+    // Pre-fetch GitHub branch authors once for all users (efficient — 1 API call set)
+    let githubBranchAuthors = [];
+    if (canQueryGithub) {
+      githubBranchAuthors = await getGithubBranchAuthors(mainProject.githubOwner, mainProject.githubRepo, githubToken);
+      console.log(`[adoption] Fetched ${githubBranchAuthors.length} branches from GitHub for attribution`);
+    }
+
     const stats = await Promise.all(users.map(async (u) => {
       // Task 1 – Profile / Platform Onboarding: Auto-checked for all registered users
       const task1 = true;
 
-      // Task 2 – Branch Creation: audit_log entries
-      const task2 = await hasAuditLog(u.username, [
-        "Created GitHub branch",
-        "Executed git command: git branch",
-        "Executed git command: git checkout -b",
-        "Executed git command: git switch -c"
-      ]);
+      // Task 2 – Branch Creation:
+      //   Source 1: platform branches table (created_by column)
+      //   Source 2: GitHub API — was user the author of any non-main branch head commit?
+      //   Source 3: audit_log (for platform-terminal git commands)
+      let task2 = false;
+
+      // Check platform branches table
+      try {
+        const [branchRows] = await pool.query(
+          `SELECT id FROM branches WHERE LOWER(created_by) = ? AND deleted_at IS NULL LIMIT 1`,
+          [u.username.toLowerCase()]
+        );
+        if (branchRows.length > 0) task2 = true;
+      } catch { /* ignore */ }
+
+      // Check GitHub branch authors (pre-fetched for all users)
+      if (!task2 && u.githubUsername && githubBranchAuthors.length > 0) {
+        const ghLogin = u.githubUsername.toLowerCase();
+        const authored = githubBranchAuthors.find(b => b.authorLogin && b.authorLogin.toLowerCase() === ghLogin);
+        if (authored) task2 = true;
+      }
+
+      // Fallback: audit_log
+      if (!task2) {
+        task2 = await hasAuditLog(u.username, [
+          "Created GitHub branch",
+          "Executed git command: git branch",
+          "Executed git command: git checkout -b",
+          "Executed git command: git switch -c"
+        ]);
+      }
 
       // Task 3 – Commit / Merge / Rebase:
       //   Primary: live GitHub API (catches any local push from laptop/IDE)
