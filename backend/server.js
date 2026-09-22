@@ -161,6 +161,7 @@ app.use("/api", require("./routes/betaRelease"));
 app.use("/api", require("./routes/notifications"));
 app.use("/api", require("./routes/profile"));
 app.use("/api", require("./routes/appLogs"));
+app.use("/api", require("./routes/adoption"));
 
 // ── Serve EJS pages for all non-API routes ────────────────────────────────
 app.use("/", require("./routes/pages"));

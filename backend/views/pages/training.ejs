@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <%- include('../partials/head', { title: 'Adoption & Training Dashboard' }) %>
+  <style>
+    /* Premium UI Styles for Adoption Dashboard */
+    .adoption-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+      color: var(--color-text-primary);
+    }
+    .header-section {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 32px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--color-border);
+    }
+    .header-title h1 {
+      font-size: 28px;
+      font-weight: 800;
+      margin: 0 0 8px 0;
+      background: linear-gradient(90deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .header-title p {
+      font-size: 14px;
+      color: var(--color-text-secondary);
+      margin: 0;
+    }
+
+    /* Stats Grid */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .summary-card {
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    }
+    .summary-card .value {
+      font-size: 32px;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+    .summary-card .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--color-text-secondary);
+    }
+
+    /* User List */
+    .user-list {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .user-card {
+      background: var(--color-bg-secondary);
+      border: 1px solid var(--color-border);
+      border-radius: 16px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .user-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      border-color: var(--color-border-focus);
+    }
+    
+    .user-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .avatar {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #374151;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      color: #fff;
+      overflow: hidden;
+    }
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .user-details h3 {
+      margin: 0 0 4px 0;
+      font-size: 16px;
+      font-weight: 600;
+    }
+    .user-details p {
+      margin: 0;
+      font-size: 12px;
+      color: var(--color-text-secondary);
+    }
+
+    /* Progress Bar */
+    .progress-section {
+      width: 200px;
+      text-align: right;
+    }
+    .progress-text {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    .progress-bar-bg {
+      height: 8px;
+      background: #374151;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #10b981, #34d399);
+      border-radius: 4px;
+      transition: width 0.5s ease-out;
+    }
+    
+    /* Tasks Checklist */
+    .tasks-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      background: rgba(0,0,0,0.2);
+      padding: 16px;
+      border-radius: 12px;
+    }
+    .task-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 8px;
+      padding: 12px;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid transparent;
+      transition: all 0.2s;
+    }
+    .task-item.completed {
+      background: rgba(16, 185, 129, 0.05);
+      border-color: rgba(16, 185, 129, 0.2);
+    }
+    .task-item.pending {
+      background: rgba(239, 68, 68, 0.05);
+      border-color: rgba(239, 68, 68, 0.2);
+    }
+    .task-icon {
+      font-size: 20px;
+    }
+    .task-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--color-text-secondary);
+    }
+    .completed .task-label {
+      color: #10b981;
+    }
+
+    /* Skeleton Loading State */
+    .skeleton {
+      background: linear-gradient(90deg, #374151 25%, #4b5563 50%, #374151 75%);
+      background-size: 200% 100%;
+      animation: loading 1.5s infinite;
+      border-radius: 4px;
+    }
+    @keyframes loading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+  </style>
+</head>
+<body class="theme-dark">
+  <div class="layout">
+    <%- include('../partials/sidebar', { active: 'training' }) %>
+    <main class="content">
+      <div class="adoption-container">
+        <div class="header-section">
+          <div class="header-title">
+            <h1>GitHub Adoption Tracker</h1>
+            <p>Monitor team progress across required Git onboarding tasks.</p>
+          </div>
+          <button class="btn btn-primary" onclick="loadAdoptionStats()" id="refreshBtn">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right:8px;"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            Refresh Data
+          </button>
+        </div>
+
+        <div class="summary-grid" id="summaryGrid">
+          <div class="summary-card">
+            <div class="value skeleton" style="height:32px;width:60px;margin:0 auto 8px;"></div>
+            <div class="label">Total Team</div>
+          </div>
+          <div class="summary-card">
+            <div class="value skeleton" style="height:32px;width:60px;margin:0 auto 8px;"></div>
+            <div class="label">Fully Adopted</div>
+          </div>
+          <div class="summary-card">
+            <div class="value skeleton" style="height:32px;width:60px;margin:0 auto 8px;"></div>
+            <div class="label">Average Progress</div>
+          </div>
+        </div>
+
+        <div class="user-list" id="userList">
+          <!-- Populated by JS -->
+          <div class="user-card" style="opacity:0.6;">
+            <div class="user-card-header">
+              <div class="user-info">
+                <div class="avatar skeleton"></div>
+                <div class="user-details">
+                  <div class="skeleton" style="height:16px;width:120px;margin-bottom:8px;"></div>
+                  <div class="skeleton" style="height:12px;width:80px;"></div>
+                </div>
+              </div>
+            </div>
+            <div class="tasks-grid">
+              <div class="task-item"><div class="skeleton" style="height:24px;width:24px;border-radius:50%"></div></div>
+              <div class="task-item"><div class="skeleton" style="height:24px;width:24px;border-radius:50%"></div></div>
+              <div class="task-item"><div class="skeleton" style="height:24px;width:24px;border-radius:50%"></div></div>
+              <div class="task-item"><div class="skeleton" style="height:24px;width:24px;border-radius:50%"></div></div>
+              <div class="task-item"><div class="skeleton" style="height:24px;width:24px;border-radius:50%"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <script src="/js/api.js"></script>
+  <script src="/js/pages/training.js"></script>
+</body>
+</html>

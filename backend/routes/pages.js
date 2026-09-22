@@ -179,6 +179,7 @@ router.get("/setup", requireAuth, checkPageRole(), (req, res) => renderPage(res,
 router.get("/setup/:step", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "setup-wizard"));
 
 router.get("/admin/users", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "admin-users"));
+router.get("/training", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "training"));
 const credManager = require("../services/credentialManager");
 
 router.get("/project-settings", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "project-settings"));

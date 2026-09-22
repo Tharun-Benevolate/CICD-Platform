@@ -126,6 +126,10 @@
       <span class="nav-label">Team Access</span>
     </a>
     <% if (isPrivileged) { %>
+    <a href="/training" class="nav-item <%= activePage === 'training' ? 'active' : '' %>" title="Training Tracker">
+      <i data-lucide="graduation-cap" class="nav-icon" style="width:18px;height:18px;"></i>
+      <span class="nav-label">Training Tracker</span>
+    </a>
     <a href="/project-settings" class="nav-item <%= activePage === 'project-settings' ? 'active' : '' %>" title="Project Settings">
       <i data-lucide="folder-cog" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Project Settings</span>
