@@ -21,8 +21,25 @@ async function githubGet(path, token) {
   } catch { return null; }
 }
 
-// ── Audit log helper ──────────────────────────────────────────────────────────
-// NOTE: table is "audit_log" (singular). Usernames match users.username.
+// ── Find a working GitHub token ───────────────────────────────────────────────
+async function findWorkingToken() {
+  try {
+    const [rows] = await pool.query(`SELECT username FROM users WHERE is_blocked = 0 ORDER BY FIELD(user_type,'super_admin','admin','devops') LIMIT 15`);
+    for (const row of rows) {
+      const cred = await credManager.getCredentialByProvider(row.username, "github");
+      if (!cred?.token) continue;
+      const check = await githubGet("/user", cred.token);
+      if (check?.login) {
+        console.log(`[adoption] Using token from user: ${row.username} (github: ${check.login})`);
+        return cred.token;
+      }
+    }
+  } catch (e) { console.warn("[adoption] Token search:", e.message); }
+  return process.env.GITHUB_TOKEN || null;
+}
+
+// ── Audit log check with optional since filter ────────────────────────────────
+// NOTE: table is "audit_log" (singular)
 async function hasAuditLog(username, matchers, since) {
   if (!username) return false;
   const likeConditions = matchers.map(() => `action LIKE ?`).join(" OR ");
@@ -34,115 +51,133 @@ async function hasAuditLog(username, matchers, since) {
       values
     );
     return rows.length > 0;
-  } catch (e) {
-    console.error("[adoption] hasAuditLog error:", e.message);
-    return false;
-  }
+  } catch { return false; }
 }
 
-// ── GitHub token helper ───────────────────────────────────────────────────────
-async function findAdminGithubToken() {
-  try {
-    // Iterate all users — try every GitHub credential until one works
-    const [allRows] = await pool.query(`SELECT username FROM users WHERE is_blocked = 0 ORDER BY FIELD(user_type,'super_admin','admin','devops') LIMIT 10`);
-    for (const row of allRows) {
-      const cred = await credManager.getCredentialByProvider(row.username, "github");
-      if (!cred?.token) continue;
-      // Quick validity check
-      const check = await githubGet("/user", cred.token);
-      if (check?.login) { console.log("[adoption] Using GitHub token of:", row.username); return cred.token; }
-    }
-  } catch (e) { console.warn("[adoption] Token search error:", e.message); }
-  if (process.env.GITHUB_TOKEN) return process.env.GITHUB_TOKEN;
-  return null;
+// ── Build a rich "identity set" for a user ────────────────────────────────────
+// Used to match against GitHub commit author fields from any direction
+function buildUserIdentifiers(u) {
+  const ids = new Set();
+  const add = (v) => { if (v && v.trim()) ids.add(v.trim().toLowerCase()); };
+
+  add(u.githubUsername);           // stored GitHub username (may be wrong org account)
+  add(u.username);                 // platform username
+  add(u.email);                    // full email
+  if (u.username) add(u.username.split("@")[0]);  // email-prefix e.g. "tharun"
+  if (u.email)    add(u.email.split("@")[0]);
+
+  return ids;
 }
 
-// ── Pre-fetch all branch head-commit authors from GitHub ─────────────────────
-async function getGithubBranchAuthors(owner, repo, token) {
+// ── Match commit to user ──────────────────────────────────────────────────────
+function commitMatchesUser(commit, userIds) {
+  const login  = (commit.author?.login          || "").toLowerCase();
+  const name   = (commit.commit?.author?.name   || "").toLowerCase();
+  const email  = (commit.commit?.author?.email  || "").toLowerCase();
+  const ePart  = email.split("@")[0];
+
+  return (login  && userIds.has(login))  ||
+         (name   && userIds.has(name))   ||
+         (email  && userIds.has(email))  ||
+         (ePart  && ePart.length > 2 && userIds.has(ePart));
+}
+
+// ── Fetch all commits across ALL branches (paginated up to 5 pages each) ──────
+// Returns array of commit objects with author info
+async function fetchAllCommits(owner, repo, token, since) {
   try {
     const branches = await githubGet(`/repos/${owner}/${repo}/branches?per_page=100`, token);
     if (!Array.isArray(branches)) return [];
+
+    const sinceParam = since ? `&since=${new Date(since).toISOString()}` : "";
+    const allCommits = new Map(); // dedupe by sha
+
+    await Promise.all(branches.map(async (b) => {
+      // Fetch up to 2 pages (200 commits) per branch
+      for (let page = 1; page <= 2; page++) {
+        const commits = await githubGet(
+          `/repos/${owner}/${repo}/commits?sha=${encodeURIComponent(b.name)}&per_page=100&page=${page}${sinceParam}`,
+          token
+        );
+        if (!Array.isArray(commits) || commits.length === 0) break;
+        for (const c of commits) allCommits.set(c.sha, c);
+        if (commits.length < 100) break;
+      }
+    }));
+
+    console.log(`[adoption] Total unique commits fetched across all branches: ${allCommits.size}`);
+    return Array.from(allCommits.values());
+  } catch (e) {
+    console.warn("[adoption] fetchAllCommits:", e.message);
+    return [];
+  }
+}
+
+// ── Fetch branch list with head commit author ─────────────────────────────────
+async function fetchBranchAuthors(owner, repo, token) {
+  try {
+    const branches = await githubGet(`/repos/${owner}/${repo}/branches?per_page=100`, token);
+    if (!Array.isArray(branches)) return [];
+
     const results = await Promise.all(branches.map(async (b) => {
       const commit = await githubGet(`/repos/${owner}/${repo}/commits/${b.commit.sha}`, token);
       return {
-        branchName: b.name,
-        authorLogin: (commit?.author?.login || "").toLowerCase(),
-        authorName:  (commit?.commit?.author?.name || "").toLowerCase(),
-        authorEmail: (commit?.commit?.author?.email || "").toLowerCase()
+        name:       b.name,
+        login:      (commit?.author?.login || "").toLowerCase(),
+        authorName: (commit?.commit?.author?.name || "").toLowerCase(),
+        email:      (commit?.commit?.author?.email || "").toLowerCase(),
       };
     }));
     return results;
-  } catch (e) { console.warn("[adoption] getGithubBranchAuthors:", e.message); return []; }
-}
-
-// ── Pre-fetch all recent commit authors from GitHub ───────────────────────────
-// Returns a Set of strings: { githubLogin, gitName, gitEmail } for fast lookup
-async function getGithubCommitAuthors(owner, repo, token, since) {
-  try {
-    const sinceParam = since ? `&since=${new Date(since).toISOString()}` : "";
-    const commits = await githubGet(`/repos/${owner}/${repo}/commits?per_page=100${sinceParam}`, token);
-    if (!Array.isArray(commits)) return { logins: new Set(), names: new Set(), emails: new Set() };
-    const logins = new Set(), names = new Set(), emails = new Set();
-    for (const c of commits) {
-      if (c.author?.login)           logins.add(c.author.login.toLowerCase());
-      if (c.commit?.author?.name)    names.add(c.commit.author.name.toLowerCase());
-      if (c.commit?.author?.email)   emails.add(c.commit.author.email.toLowerCase());
-    }
-    return { logins, names, emails };
-  } catch (e) { return { logins: new Set(), names: new Set(), emails: new Set() }; }
+  } catch (e) { return []; }
 }
 
 // ── GET /api/adoption/reset-config ───────────────────────────────────────────
-// Returns the current reset timestamp (or null if never reset)
 router.get("/adoption/reset-config", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
   try {
-    const [rows] = await pool.query(
-      `SELECT setting_value FROM platform_settings WHERE setting_key = 'adoption_reset_at' LIMIT 1`
-    );
+    const [rows] = await pool.query(`SELECT setting_value FROM platform_settings WHERE setting_key = 'adoption_reset_at' LIMIT 1`);
     res.json({ ok: true, resetAt: rows[0]?.setting_value || null });
-  } catch (e) {
-    // Table might not exist yet — just return null
-    res.json({ ok: true, resetAt: null });
-  }
+  } catch { res.json({ ok: true, resetAt: null }); }
 });
 
 // ── POST /api/adoption/reset ──────────────────────────────────────────────────
-// Sets reset timestamp to NOW — all checks will only look at activity after this date
 router.post("/adoption/reset", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
   try {
     const now = new Date().toISOString();
-    // Ensure table exists (idempotent)
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS platform_settings (
-        setting_key   VARCHAR(100) PRIMARY KEY,
-        setting_value TEXT,
-        updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-      )
-    `);
+    await pool.query(`CREATE TABLE IF NOT EXISTS platform_settings (
+      setting_key   VARCHAR(100) PRIMARY KEY,
+      setting_value TEXT,
+      updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )`);
     await pool.query(
       `INSERT INTO platform_settings (setting_key, setting_value) VALUES ('adoption_reset_at', ?)
        ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()`,
       [now, now]
     );
-    res.json({ ok: true, resetAt: now, message: "Tracking reset. Only activity after this date will count." });
+    res.json({ ok: true, resetAt: now });
   } catch (err) {
-    console.error("[adoption/reset] error:", err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-// ── GET /api/adoption/stats ───────────────────────────────────────────────────
+// ── GET /api/adoption/stats?projectId=xxx ────────────────────────────────────
 router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
   try {
-    const users    = await userStore.listUsers();
-    const projects = await projectStore.listProjects();
-    const mainProject = projects.find(p => p.githubOwner && p.githubRepo) || null;
+    const { projectId } = req.query;
 
-    // Resolve a working GitHub token
-    const githubToken   = await findAdminGithubToken();
-    const canQueryGithub = !!(githubToken && mainProject);
+    // Resolve the correct project — use projectId from query, fallback to active
+    const allProjects = await projectStore.listProjects();
+    let project = projectId
+      ? allProjects.find(p => p.id === projectId)
+      : allProjects.find(p => p.isActive) || allProjects[0];
 
-    // Get reset date (null = track all time)
+    const canQueryGithub = !!(project?.githubOwner && project?.githubRepo);
+    const owner = project?.githubOwner;
+    const repo  = project?.githubRepo;
+
+    console.log(`[adoption] Project: ${project?.name} | Repo: ${owner}/${repo}`);
+
+    // Get reset since date
     let since = null;
     try {
       await pool.query(`CREATE TABLE IF NOT EXISTS platform_settings (setting_key VARCHAR(100) PRIMARY KEY, setting_value TEXT, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`);
@@ -150,19 +185,46 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       since = cfg[0]?.setting_value || null;
     } catch { /* ignore */ }
 
-    // Pre-fetch GitHub data once for all users
-    let githubBranchAuthors = [];
-    let githubCommitAuthors = { logins: new Set(), names: new Set(), emails: new Set() };
-    if (canQueryGithub) {
-      [githubBranchAuthors, githubCommitAuthors] = await Promise.all([
-        getGithubBranchAuthors(mainProject.githubOwner, mainProject.githubRepo, githubToken),
-        getGithubCommitAuthors(mainProject.githubOwner, mainProject.githubRepo, githubToken, since)
+    // Get working GitHub token
+    const token = canQueryGithub ? await findWorkingToken() : null;
+    const githubOk = !!(token && canQueryGithub);
+
+    // Pre-fetch ALL commits across ALL branches + branch authors — ONE time for all users
+    let allCommits = [];
+    let branchAuthors = [];
+    if (githubOk) {
+      [allCommits, branchAuthors] = await Promise.all([
+        fetchAllCommits(owner, repo, token, since),
+        fetchBranchAuthors(owner, repo, token)
       ]);
-      console.log(`[adoption] GitHub: ${githubBranchAuthors.length} branches, ${githubCommitAuthors.logins.size} committer logins, ${githubCommitAuthors.names.size} names`);
+    }
+
+    // Get project members — only show users who have access to this project
+    let users = [];
+    if (project) {
+      try {
+        const [memberRows] = await pool.query(
+          `SELECT username FROM developer_access WHERE project_id = ?`,
+          [project.id]
+        );
+        const memberUsernames = new Set(memberRows.map(r => r.username.toLowerCase()));
+        const allUsers = await userStore.listUsers();
+        // Include: project members + admins
+        users = allUsers.filter(u =>
+          memberUsernames.has(u.username.toLowerCase()) ||
+          ["super_admin", "admin", "devops"].includes(u.userType)
+        );
+      } catch {
+        users = await userStore.listUsers();
+      }
+    } else {
+      users = await userStore.listUsers();
     }
 
     const stats = await Promise.all(users.map(async (u) => {
-      // Task 1 – Profile Setup: Auto-checked for all
+      const userIds = buildUserIdentifiers(u);
+
+      // ── Task 1: Profile Setup — auto ✅ for all ─────────────────────────
       const task1 = true;
 
       // ── Task 2: Branch Creation ─────────────────────────────────────────
@@ -170,23 +232,22 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       let task2 = false;
       try {
         const sinceClause = since ? ` AND created_at >= ?` : "";
-        const [branchRows] = await pool.query(
+        const [rows] = await pool.query(
           `SELECT id FROM branches WHERE LOWER(created_by) = ?${sinceClause} AND deleted_at IS NULL LIMIT 1`,
           [u.username.toLowerCase(), ...(since ? [since] : [])]
         );
-        if (branchRows.length > 0) task2 = true;
+        if (rows.length > 0) task2 = true;
       } catch { /* ignore */ }
 
-      // Source 2: GitHub branch head-commit author (by login OR git name OR email)
-      if (!task2 && githubBranchAuthors.length > 0) {
-        const ghLogin = (u.githubUsername || "").toLowerCase();
-        const uName   = u.username.toLowerCase();
-        const uEmail  = (u.email || "").toLowerCase();
-        const match = githubBranchAuthors.find(b =>
-          (ghLogin && b.authorLogin === ghLogin) ||
-          b.authorName === uName ||
-          (uEmail && b.authorEmail === uEmail)
-        );
+      // Source 2: GitHub branch head-commit author — match by any identifier
+      if (!task2 && branchAuthors.length > 0) {
+        const match = branchAuthors.find(b => {
+          const ePart = b.email.split("@")[0];
+          return (b.login  && userIds.has(b.login))  ||
+                 (b.authorName && userIds.has(b.authorName)) ||
+                 (b.email && userIds.has(b.email))   ||
+                 (ePart && ePart.length > 2 && userIds.has(ePart));
+        });
         if (match) task2 = true;
       }
 
@@ -199,26 +260,23 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       }
 
       // ── Task 3: Commit / Merge / Rebase ────────────────────────────────
-      // Source 1: GitHub API — match by login, git name, OR email
+      // Source 1: GitHub — check ALL commits across ALL branches
       let task3 = false;
-      if (githubCommitAuthors.logins.size > 0 || githubCommitAuthors.names.size > 0) {
-        const ghLogin = (u.githubUsername || "").toLowerCase();
-        const uName   = u.username.toLowerCase();
-        const uEmail  = (u.email || "").toLowerCase();
-        if ((ghLogin && githubCommitAuthors.logins.has(ghLogin)) ||
-            githubCommitAuthors.names.has(uName) ||
-            (uEmail && githubCommitAuthors.emails.has(uEmail))) {
-          task3 = true;
-        }
+      if (allCommits.length > 0) {
+        task3 = allCommits.some(c => commitMatchesUser(c, userIds));
       }
       // Source 2: audit_log fallback
       if (!task3) {
         task3 = await hasAuditLog(u.username, [
           "Executed git command: git commit", "Executed git command: git merge",
-          "Executed git command: git rebase", "Executed git command: git pull",
-          "Executed git command: git push", "Merged \"", "already up to date"
+          "Executed git command: git rebase", "Executed git command: git push",
+          "Merged \"", "already up to date"
         ], since);
       }
+
+      // ── Dependency Logic: commit done → branch done ─────────────────────
+      // If someone committed to a branch they didn't create, they've still done branch work
+      if (task3 && !task2) task2 = true;
 
       // ── Task 4: Pull Request / Change Request ───────────────────────────
       let task4 = await hasAuditLog(u.username, [
@@ -227,11 +285,11 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       if (!task4) {
         try {
           const sinceClause = since ? ` AND created_at >= ?` : "";
-          const [crRows] = await pool.query(
+          const [rows] = await pool.query(
             `SELECT id FROM change_requests WHERE LOWER(author) = ?${sinceClause} LIMIT 1`,
             [u.username.toLowerCase(), ...(since ? [since] : [])]
           );
-          if (crRows.length > 0) task4 = true;
+          if (rows.length > 0) task4 = true;
         } catch { /* ignore */ }
       }
 
@@ -245,17 +303,25 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       const progress = Math.round((completedCount / 5) * 100);
 
       return {
-        username: u.username, userType: u.userType,
+        username:       u.username,
+        userType:       u.userType,
         githubUsername: u.githubUsername || null,
-        avatarUrl: u.avatarUrl || null,
-        isOnline: u.isOnline || false,
+        avatarUrl:      u.avatarUrl || null,
+        isOnline:       u.isOnline || false,
         tasks: { profile: task1, branch: task2, commit: task3, pr: task4, deploy: task5 },
         progress
       };
     }));
 
     stats.sort((a, b) => b.progress - a.progress);
-    res.json({ ok: true, stats, githubConnected: canQueryGithub, since });
+    res.json({
+      ok: true,
+      stats,
+      projectName: project?.name || "Unknown",
+      githubRepo:  canQueryGithub ? `${owner}/${repo}` : null,
+      githubConnected: githubOk,
+      since
+    });
   } catch (err) {
     console.error("[adoption/stats] error:", err);
     res.status(500).json({ ok: false, error: err.message });
