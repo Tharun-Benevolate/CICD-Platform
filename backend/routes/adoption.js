@@ -54,32 +54,19 @@ async function hasAuditLog(username, matchers, since) {
   } catch { return false; }
 }
 
-// ── Build a rich "identity set" for a user ────────────────────────────────────
-// Used to match against GitHub commit author fields from any direction
-function buildUserIdentifiers(u) {
-  const ids = new Set();
-  const add = (v) => { if (v && v.trim()) ids.add(v.trim().toLowerCase()); };
-
-  add(u.githubUsername);           // stored GitHub username (may be wrong org account)
-  add(u.username);                 // platform username
-  add(u.email);                    // full email
-  if (u.username) add(u.username.split("@")[0]);  // email-prefix e.g. "tharun"
-  if (u.email)    add(u.email.split("@")[0]);
-
-  return ids;
+// ── Strict GitHub login match — ONLY stored githubUsername counts ─────────────
+// No name/email fuzzy matching: prevents wrong attribution if two people share
+// similar names or email prefixes.
+function getUserGithubLogin(u) {
+  return (u.githubUsername || "").toLowerCase().trim();
 }
 
-// ── Match commit to user ──────────────────────────────────────────────────────
-function commitMatchesUser(commit, userIds) {
-  const login  = (commit.author?.login          || "").toLowerCase();
-  const name   = (commit.commit?.author?.name   || "").toLowerCase();
-  const email  = (commit.commit?.author?.email  || "").toLowerCase();
-  const ePart  = email.split("@")[0];
-
-  return (login  && userIds.has(login))  ||
-         (name   && userIds.has(name))   ||
-         (email  && userIds.has(email))  ||
-         (ePart  && ePart.length > 2 && userIds.has(ePart));
+// A commit belongs to a user only if the GitHub author login exactly matches
+// the user's stored githubUsername (org account, not personal).
+function commitMatchesUser(commit, ghLogin) {
+  if (!ghLogin) return false;
+  const commitLogin = (commit.author?.login || "").toLowerCase();
+  return commitLogin === ghLogin;
 }
 
 // ── Fetch all commits across ALL branches (paginated up to 5 pages each) ──────
@@ -222,7 +209,8 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
     }
 
     const stats = await Promise.all(users.map(async (u) => {
-      const userIds = buildUserIdentifiers(u);
+      // Strict: only the stored org githubUsername is used — no fuzzy name/email guessing
+      const ghLogin = getUserGithubLogin(u); // e.g. "tharun-benevolate"
 
       // ── Task 1: Profile Setup — auto ✅ for all ─────────────────────────
       const task1 = true;
@@ -239,15 +227,9 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
         if (rows.length > 0) task2 = true;
       } catch { /* ignore */ }
 
-      // Source 2: GitHub branch head-commit author — match by any identifier
-      if (!task2 && branchAuthors.length > 0) {
-        const match = branchAuthors.find(b => {
-          const ePart = b.email.split("@")[0];
-          return (b.login  && userIds.has(b.login))  ||
-                 (b.authorName && userIds.has(b.authorName)) ||
-                 (b.email && userIds.has(b.email))   ||
-                 (ePart && ePart.length > 2 && userIds.has(ePart));
-        });
+      // Source 2: GitHub branch head-commit — strict login match only
+      if (!task2 && ghLogin && branchAuthors.length > 0) {
+        const match = branchAuthors.find(b => b.login === ghLogin);
         if (match) task2 = true;
       }
 
@@ -260,10 +242,10 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       }
 
       // ── Task 3: Commit / Merge / Rebase ────────────────────────────────
-      // Source 1: GitHub — check ALL commits across ALL branches
+      // Source 1: GitHub — strict login match across ALL branches
       let task3 = false;
-      if (allCommits.length > 0) {
-        task3 = allCommits.some(c => commitMatchesUser(c, userIds));
+      if (ghLogin && allCommits.length > 0) {
+        task3 = allCommits.some(c => commitMatchesUser(c, ghLogin));
       }
       // Source 2: audit_log fallback
       if (!task3) {
