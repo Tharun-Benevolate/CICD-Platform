@@ -247,6 +247,78 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   }
 
+  /* Expandable Details Panel */
+  .user-card {
+    cursor: pointer;
+  }
+  .user-card:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+  }
+  .user-details-panel {
+    display: none;
+    padding: 24px 32px;
+    background: var(--color-bg-primary);
+    border-top: 1px solid var(--color-border);
+    animation: slideDown 0.3s ease;
+  }
+  .user-card.expanded .user-details-panel {
+    display: block;
+  }
+  .details-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .feed-section {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .feed-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--color-text-primary);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 8px;
+  }
+  .feed-item {
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .feed-item:last-child {
+    border-bottom: none;
+  }
+  .feed-hash {
+    font-family: monospace;
+    font-size: 11px;
+    color: #6366f1;
+    background: rgba(99, 102, 241, 0.1);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .feed-msg {
+    font-size: 12px;
+    color: var(--color-text-secondary);
+    margin-top: 4px;
+    line-height: 1.4;
+  }
+  .feed-date {
+    font-size: 10px;
+    color: var(--color-text-tertiary);
+    margin-top: 2px;
+  }
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
   /* Skeleton Loading State */
   .skeleton {
     background: linear-gradient(90deg, var(--color-border) 25%, var(--color-bg-secondary) 50%, var(--color-border) 75%);
@@ -297,6 +369,33 @@
 
   <div class="summary-grid" id="summaryGrid">
     <!-- Populated by JS -->
+  </div>
+
+  <div class="filters-toolbar" style="display:flex; gap:16px; margin-bottom: 24px; padding: 16px; background: var(--color-bg-secondary); border-radius: 8px; border: 1px solid var(--color-border); align-items: center; flex-wrap: wrap;">
+    <div style="flex:1; min-width:200px; position:relative;">
+      <i data-lucide="search" style="position:absolute; left:12px; top:10px; width:16px; height:16px; color:var(--color-text-secondary);"></i>
+      <input type="text" id="filterSearch" placeholder="Search users or GitHub handle..." style="width:100%; padding:8px 12px 8px 36px; border-radius:6px; border:1px solid var(--color-border); background:var(--color-bg-primary); color:var(--color-text-primary); font-size:13px;" onkeyup="window.applyFilters && window.applyFilters()">
+    </div>
+    <div style="display:flex; gap:12px; align-items:center;">
+      <select id="filterRole" style="padding:8px 12px; border-radius:6px; border:1px solid var(--color-border); background:var(--color-bg-primary); color:var(--color-text-primary); font-size:13px;" onchange="window.applyFilters && window.applyFilters()">
+        <option value="">All Roles</option>
+        <option value="super_admin">Super Admin</option>
+        <option value="admin">Admin</option>
+        <option value="devops">DevOps</option>
+        <option value="developer">Developer</option>
+      </select>
+      <select id="filterStatus" style="padding:8px 12px; border-radius:6px; border:1px solid var(--color-border); background:var(--color-bg-primary); color:var(--color-text-primary); font-size:13px;" onchange="window.applyFilters && window.applyFilters()">
+        <option value="">All Statuses</option>
+        <option value="100">Fully Adopted (100%)</option>
+        <option value="progress">In Progress (1% - 99%)</option>
+        <option value="0">Not Started (0%)</option>
+      </select>
+      <select id="sortProgress" style="padding:8px 12px; border-radius:6px; border:1px solid var(--color-border); background:var(--color-bg-primary); color:var(--color-text-primary); font-size:13px;" onchange="window.applyFilters && window.applyFilters()">
+        <option value="desc">Sort: Progress High ➔ Low</option>
+        <option value="asc">Sort: Progress Low ➔ High</option>
+        <option value="name">Sort: Alphabetical</option>
+      </select>
+    </div>
   </div>
 
   <div class="user-list" id="userList">

@@ -40,18 +40,18 @@ async function findWorkingToken() {
 
 // ── Audit log check with optional since filter ────────────────────────────────
 // NOTE: table is "audit_log" (singular)
-async function hasAuditLog(username, matchers, since) {
-  if (!username) return false;
+async function getAuditLogs(username, matchers, since) {
+  if (!username) return { has: false, logs: [] };
   const likeConditions = matchers.map(() => `action LIKE ?`).join(" OR ");
   const sinceClause = since ? ` AND timestamp >= ?` : "";
   const values = [username.toLowerCase(), ...matchers.map(m => `%${m}%`), ...(since ? [since] : [])];
   try {
     const [rows] = await pool.query(
-      `SELECT id FROM audit_log WHERE LOWER(username) = ? AND (${likeConditions})${sinceClause} LIMIT 1`,
+      `SELECT action, timestamp FROM audit_log WHERE LOWER(username) = ? AND (${likeConditions})${sinceClause} ORDER BY timestamp DESC`,
       values
     );
-    return rows.length > 0;
-  } catch { return false; }
+    return { has: rows.length > 0, logs: rows };
+  } catch { return { has: false, logs: [] }; }
 }
 
 // ── Strict GitHub login match — ONLY stored githubUsername counts ─────────────
@@ -130,18 +130,22 @@ router.get("/adoption/reset-config", auth.requireRole(...auth.ADMIN_ROLES), asyn
 // ── POST /api/adoption/reset ──────────────────────────────────────────────────
 router.post("/adoption/reset", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
   try {
+    const { username } = req.body;
     const now = new Date().toISOString();
     await pool.query(`CREATE TABLE IF NOT EXISTS platform_settings (
       setting_key   VARCHAR(100) PRIMARY KEY,
       setting_value TEXT,
       updated_at    DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )`);
+    
+    const key = username ? `adoption_reset_at_${username.toLowerCase()}` : 'adoption_reset_at';
+    
     await pool.query(
-      `INSERT INTO platform_settings (setting_key, setting_value) VALUES ('adoption_reset_at', ?)
+      `INSERT INTO platform_settings (setting_key, setting_value) VALUES (?, ?)
        ON DUPLICATE KEY UPDATE setting_value = ?, updated_at = NOW()`,
-      [now, now]
+      [key, now, now]
     );
-    res.json({ ok: true, resetAt: now });
+    res.json({ ok: true, resetAt: now, username: username || 'all' });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -164,12 +168,22 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
 
     console.log(`[adoption] Project: ${project?.name} | Repo: ${owner}/${repo}`);
 
-    // Get reset since date
-    let since = null;
+    // Get reset since date (global and individual)
+    let globalSince = null;
+    let userResets = {};
     try {
       await pool.query(`CREATE TABLE IF NOT EXISTS platform_settings (setting_key VARCHAR(100) PRIMARY KEY, setting_value TEXT, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)`);
-      const [cfg] = await pool.query(`SELECT setting_value FROM platform_settings WHERE setting_key = 'adoption_reset_at' LIMIT 1`);
-      since = cfg[0]?.setting_value || null;
+      const [cfgs] = await pool.query(`SELECT setting_key, setting_value FROM platform_settings WHERE setting_key LIKE 'adoption_reset_at%'`);
+      
+      const globalCfg = cfgs.find(c => c.setting_key === 'adoption_reset_at');
+      if (globalCfg) globalSince = globalCfg.setting_value;
+      
+      cfgs.forEach(c => {
+        if (c.setting_key.startsWith('adoption_reset_at_')) {
+          const u = c.setting_key.replace('adoption_reset_at_', '');
+          userResets[u] = c.setting_value;
+        }
+      });
     } catch { /* ignore */ }
 
     // Get working GitHub token
@@ -209,6 +223,13 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
     }
 
     const stats = await Promise.all(users.map(async (u) => {
+      // Determine the effective 'since' date for this specific user
+      let since = globalSince;
+      const userSince = userResets[u.username.toLowerCase()];
+      if (userSince && (!since || new Date(userSince) > new Date(since))) {
+        since = userSince;
+      }
+
       // Strict: only the stored org githubUsername is used — no fuzzy name/email guessing
       const ghLogin = getUserGithubLogin(u); // e.g. "tharun-benevolate"
 
@@ -216,7 +237,6 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       const task1 = true;
 
       // ── Task 2: Branch Creation ─────────────────────────────────────────
-      // Source 1: platform branches table
       let task2 = false;
       try {
         const sinceClause = since ? ` AND created_at >= ?` : "";
@@ -227,43 +247,45 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
         if (rows.length > 0) task2 = true;
       } catch { /* ignore */ }
 
-      // Source 2: GitHub branch head-commit — strict login match only
       if (!task2 && ghLogin && branchAuthors.length > 0) {
         const match = branchAuthors.find(b => b.login === ghLogin);
         if (match) task2 = true;
       }
 
-      // Source 3: audit_log fallback
       if (!task2) {
-        task2 = await hasAuditLog(u.username, [
+        const audit = await getAuditLogs(u.username, [
           "Created GitHub branch", "Executed git command: git branch",
           "Executed git command: git checkout -b", "Executed git command: git switch -c"
         ], since);
+        task2 = audit.has;
       }
 
       // ── Task 3: Commit / Merge / Rebase ────────────────────────────────
-      // Source 1: GitHub — strict login match across ALL branches
       let task3 = false;
+      let userCommits = [];
       if (ghLogin && allCommits.length > 0) {
-        task3 = allCommits.some(c => commitMatchesUser(c, ghLogin));
+        userCommits = allCommits.filter(c => commitMatchesUser(c, ghLogin));
+        if (userCommits.length > 0) task3 = true;
       }
-      // Source 2: audit_log fallback
-      if (!task3) {
-        task3 = await hasAuditLog(u.username, [
-          "Executed git command: git commit", "Executed git command: git merge",
-          "Executed git command: git rebase", "Executed git command: git push",
-          "Merged \"", "already up to date"
-        ], since);
-      }
+      
+      const commitAudit = await getAuditLogs(u.username, [
+        "Executed git command: git commit", "Executed git command: git merge",
+        "Executed git command: git rebase", "Executed git command: git push",
+        "Merged \"", "already up to date"
+      ], since);
+      
+      if (commitAudit.has) task3 = true;
 
-      // ── Dependency Logic: commit done → branch done ─────────────────────
-      // If someone committed to a branch they didn't create, they've still done branch work
+      // Dependency Logic: commit done → branch done
       if (task3 && !task2) task2 = true;
 
       // ── Task 4: Pull Request / Change Request ───────────────────────────
-      let task4 = await hasAuditLog(u.username, [
+      let task4 = false;
+      const prAudit = await getAuditLogs(u.username, [
         "Created Change Request", "Merged CR", "Submitted CR for review"
       ], since);
+      task4 = prAudit.has;
+      
       if (!task4) {
         try {
           const sinceClause = since ? ` AND created_at >= ?` : "";
@@ -276,10 +298,11 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       }
 
       // ── Task 5: Deployment ──────────────────────────────────────────────
-      const task5 = await hasAuditLog(u.username, [
+      const deployAudit = await getAuditLogs(u.username, [
         "Triggered manual pipeline execution", "Pipeline execution",
         "Ad-hoc build started", "Beta environment started", "Promoted beta image"
       ], since);
+      const task5 = deployAudit.has;
 
       const completedCount = [task1, task2, task3, task4, task5].filter(Boolean).length;
       const progress = Math.round((completedCount / 5) * 100);
@@ -291,7 +314,16 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
         avatarUrl:      u.avatarUrl || null,
         isOnline:       u.isOnline || false,
         tasks: { profile: task1, branch: task2, commit: task3, pr: task4, deploy: task5 },
-        progress
+        progress,
+        since, // this user's effective since date
+        details: {
+          commits: userCommits.map(c => ({
+            sha: c.sha,
+            message: c.commit?.message || '',
+            date: c.commit?.author?.date || null
+          })),
+          auditLogs: commitAudit.logs
+        }
       };
     }));
 
@@ -302,7 +334,7 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       projectName: project?.name || "Unknown",
       githubRepo:  canQueryGithub ? `${owner}/${repo}` : null,
       githubConnected: githubOk,
-      since
+      since: globalSince
     });
   } catch (err) {
     console.error("[adoption/stats] error:", err);
