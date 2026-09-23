@@ -307,6 +307,10 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       const completedCount = [task1, task2, task3, task4, task5].filter(Boolean).length;
       const progress = Math.round((completedCount / 5) * 100);
 
+      const fullGitAudit = await getAuditLogs(u.username, [
+        "git ", "branch", "commit", "merge", "rebase", "push", "pull", "checkout"
+      ], since);
+
       return {
         username:       u.username,
         userType:       u.userType,
@@ -322,7 +326,7 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
             message: c.commit?.message || '',
             date: c.commit?.author?.date || null
           })),
-          auditLogs: commitAudit.logs
+          auditLogs: fullGitAudit.logs
         }
       };
     }));

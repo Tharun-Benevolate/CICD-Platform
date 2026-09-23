@@ -330,6 +330,20 @@
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
   }
+
+  /* Custom Filter Dropdowns */
+  .filter-select {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    font-size: 13px;
+  }
+  .filter-select option {
+    background: #1e293b; /* Enforce dark background on the options to ensure white text is visible */
+    color: #f8fafc;
+  }
 </style>
 
 <div class="adoption-container">
@@ -377,20 +391,20 @@
       <input type="text" id="filterSearch" placeholder="Search users or GitHub handle..." style="width:100%; padding:8px 12px 8px 36px; border-radius:6px; border:1px solid var(--color-border); background:var(--color-bg-primary); color:var(--color-text-primary); font-size:13px;" onkeyup="window.applyFilters && window.applyFilters()">
     </div>
     <div style="display:flex; gap:12px; align-items:center;">
-      <select id="filterRole" style="padding:8px 12px; border-radius:6px; border:1px solid var(--color-border); background:var(--color-bg-primary); color:var(--color-text-primary); font-size:13px;" onchange="window.applyFilters && window.applyFilters()">
+      <select id="filterRole" class="filter-select" onchange="window.applyFilters && window.applyFilters()">
         <option value="">All Roles</option>
         <option value="super_admin">Super Admin</option>
         <option value="admin">Admin</option>
         <option value="devops">DevOps</option>
         <option value="developer">Developer</option>
       </select>
-      <select id="filterStatus" style="padding:8px 12px; border-radius:6px; border:1px solid var(--color-border); background:var(--color-bg-primary); color:var(--color-text-primary); font-size:13px;" onchange="window.applyFilters && window.applyFilters()">
+      <select id="filterStatus" class="filter-select" onchange="window.applyFilters && window.applyFilters()">
         <option value="">All Statuses</option>
         <option value="100">Fully Adopted (100%)</option>
         <option value="progress">In Progress (1% - 99%)</option>
         <option value="0">Not Started (0%)</option>
       </select>
-      <select id="sortProgress" style="padding:8px 12px; border-radius:6px; border:1px solid var(--color-border); background:var(--color-bg-primary); color:var(--color-text-primary); font-size:13px;" onchange="window.applyFilters && window.applyFilters()">
+      <select id="sortProgress" class="filter-select" onchange="window.applyFilters && window.applyFilters()">
         <option value="desc">Sort: Progress High ➔ Low</option>
         <option value="asc">Sort: Progress Low ➔ High</option>
         <option value="name">Sort: Alphabetical</option>
