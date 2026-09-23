@@ -179,7 +179,7 @@ function renderUserCard(u) {
     '</div>' +
     '<div class="tasks-timeline">' +
       '<div class="timeline-connector"></div>' +
-      '<div class="timeline-connector-fill" style="position:absolute;top:36px;left:48px;height:3px;width:calc(' + u.progress + '% * 0.86);max-width:calc(100% - 96px);"></div>' +
+      '<div class="timeline-connector-fill" style="position:absolute;top:42.5px;left:48px;height:3px;width:calc(' + u.progress + '% * 0.86);max-width:calc(100% - 96px);"></div>' +
       taskNode(t.profile, 'Setup Profile',    'user-check') +
       taskNode(t.branch,  'Create Branch',    'git-branch') +
       taskNode(t.commit,  'Commit / Merge',   'git-commit') +

@@ -167,7 +167,7 @@
   }
   .timeline-connector {
     position: absolute;
-    top: 36px;
+    top: 42.5px;
     left: 48px;
     right: 48px;
     height: 3px;
@@ -197,20 +197,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-bg-secondary);
+    background-color: var(--color-bg-tertiary);
+    background-image: none;
     border: 2px solid var(--color-border);
     color: var(--color-text-secondary);
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
   .task-node.completed .task-icon-wrap {
-    background: rgba(16, 185, 129, 0.15);
+    background-color: var(--color-bg-tertiary);
+    background-image: linear-gradient(rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.15));
     border-color: #10b981;
     color: #10b981;
     box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
   }
   .task-node.pending .task-icon-wrap {
-    background: rgba(239, 68, 68, 0.05);
+    background-color: var(--color-bg-tertiary);
+    background-image: linear-gradient(rgba(239, 68, 68, 0.05), rgba(239, 68, 68, 0.05));
     border-color: rgba(239, 68, 68, 0.2);
     color: #ef4444;
   }
