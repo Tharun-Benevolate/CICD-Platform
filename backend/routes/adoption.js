@@ -195,7 +195,7 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
     let branchAuthors = [];
     if (githubOk) {
       [allCommits, branchAuthors] = await Promise.all([
-        fetchAllCommits(owner, repo, token, since),
+        fetchAllCommits(owner, repo, token, globalSince),
         fetchBranchAuthors(owner, repo, token)
       ]);
     }
