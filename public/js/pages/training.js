@@ -176,24 +176,30 @@ function renderUserCard(u) {
         '</div>' +
       '</div>' +
     '</div>' +
-    '<div class="tasks-grid">' +
-      taskBox(t.profile, 'Setup Profile',    'user-check') +
-      taskBox(t.branch,  'Create Branch',    'git-branch') +
-      taskBox(t.commit,  'Commit / Merge',   'git-commit') +
-      taskBox(t.pr,      'Pull Request',     'git-pull-request') +
-      taskBox(t.deploy,  'Deployment',       'rocket') +
+    '</div>' +
+    '<div class="tasks-timeline">' +
+      '<div class="timeline-connector"></div>' +
+      '<div class="timeline-connector-fill" style="position:absolute;top:36px;left:48px;height:3px;width:calc(' + u.progress + '% * 0.86);max-width:calc(100% - 96px);"></div>' +
+      taskNode(t.profile, 'Setup Profile',    'user-check') +
+      taskNode(t.branch,  'Create Branch',    'git-branch') +
+      taskNode(t.commit,  'Commit / Merge',   'git-commit') +
+      taskNode(t.pr,      'Pull Request',     'git-pull-request') +
+      taskNode(t.deploy,  'Deployment',       'rocket') +
     '</div>' +
   '</div>';
 }
 
-function taskBox(isDone, label, icon) {
+function taskNode(isDone, label, icon) {
   var cls = isDone ? 'completed' : 'pending';
-  var iconColor = isDone ? '#10b981' : '#ef4444';
-  return '<div class="task-item ' + cls + '">' +
-    '<i data-lucide="' + icon + '" style="width:18px;height:18px;color:' + iconColor + ';flex-shrink:0;"></i>' +
-    (isDone
-      ? '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
-      : '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>') +
+  var statusIcon = isDone 
+    ? '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>'
+    : '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>';
+
+  return '<div class="task-node ' + cls + '">' +
+    '<div class="task-icon-wrap">' +
+      '<i data-lucide="' + icon + '" style="width:20px;height:20px;"></i>' +
+      '<div class="task-status-badge">' + statusIcon + '</div>' +
+    '</div>' +
     '<div class="task-label">' + label + '</div>' +
   '</div>';
 }
