@@ -219,14 +219,26 @@ router.post("/ecs/deploy", async (req, res) => {
     try {
       const slackService = require("../services/slackService");
       if (env === "uat" || env === "prod") {
+        // Fetch latest execution ID from CodePipeline for traceability
+        let executionId = "N/A";
+        if (project.pipelineName) {
+          try {
+            const executions = await aws.listPipelineExecutions(project.region, project.pipelineName);
+            executionId = (executions && executions[0] && executions[0].pipelineExecutionId) || "N/A";
+          } catch (_) {}
+        }
+
         slackService.sendSlackNotification({
           channelType: 'both',
-          title: `✅ Deployed to ${env.toUpperCase()}: ${project.name}`,
+          title: `\u2705 Deployed to ${env.toUpperCase()}: ${project.name}`,
           message: `Manual deployment to *${env.toUpperCase()}* for *${project.name}* was successful.`,
           fields: [
-            { title: "Project", value: project.name },
+            { title: "Project",      value: project.name },
+            { title: "Environment",  value: env.toUpperCase() },
             { title: "Triggered By", value: `@${user}` },
-            { title: "Approved By", value: `@${user}` }
+            { title: "Approved By",  value: `@${user}` },
+            { title: "Build #",      value: buildNumber ? `#${buildNumber}` : "N/A" },
+            { title: "Execution ID", value: executionId }
           ],
           color: "#10b981",
           link: "https://devops.benevolaite.com/deploy"
