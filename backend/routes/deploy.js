@@ -216,6 +216,24 @@ router.post("/ecs/deploy", async (req, res) => {
       : `Manually deployed Build #${buildNumber || "unknown"} to ${env.toUpperCase()}`;
     auditStore.logAction(user, auditMsg, project.name, "Success");
 
+    try {
+      const slackService = require("../services/slackService");
+      if (env === "uat" || env === "prod") {
+        slackService.sendSlackNotification({
+          channelType: 'both',
+          title: `✅ Deployed to ${env.toUpperCase()}: ${project.name}`,
+          message: `Manual deployment to *${env.toUpperCase()}* for *${project.name}* was successful.`,
+          fields: [
+            { title: "Project", value: project.name },
+            { title: "Triggered By", value: `@${user}` },
+            { title: "Approved By", value: `@${user}` }
+          ],
+          color: "#10b981",
+          link: "https://devops.benevolaite.com/deploy"
+        }).catch(() => {});
+      }
+    } catch (_) {}
+
     res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });

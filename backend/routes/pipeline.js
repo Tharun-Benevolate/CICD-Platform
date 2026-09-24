@@ -203,10 +203,12 @@ router.post("/pipeline/start", async (req, res) => {
             const slackService = require("../services/slackService");
             slackService.sendOpsAlert({
               title: `Pipeline Succeeded: ${projectName}`,
-              message: `Pipeline execution for *${projectName}* completed successfully across all stages.`,
+              message: `Build successful and deployed to dev for *${projectName}*.`,
               fields: [
                 { title: "Project", value: projectName },
+                { title: "Environment", value: "dev" },
                 { title: "Status", value: "Succeeded" },
+                { title: "Triggered By", value: `@${user || "system"}` },
                 { title: "Execution ID", value: executionId }
               ],
               level: "success",

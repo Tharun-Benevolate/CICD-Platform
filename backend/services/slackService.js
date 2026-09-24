@@ -1106,10 +1106,14 @@ async function notifyPipelineExecution({ projectName, status, triggeredBy, branc
   const title = isSuccess ? '✅ Pipeline Succeeded' : '🚨 Pipeline Alert: Build Failed';
   const color = isSuccess ? '#10b981' : '#ef4444';
   
-  let message = `Pipeline execution for *${projectName}* completed with status *${status}*.`;
+  let message = '';
   
-  if (!isSuccess && errorMsg) {
+  if (isSuccess) {
+    message = `Build successful and deployed to dev for *${projectName}*.`;
+  } else if (errorMsg) {
     message = `Pipeline execution for *${projectName}* failed with status *${status}*.\n\n*Error Details:*\n\`\`\`\n${errorMsg}\n\`\`\``;
+  } else {
+    message = `Pipeline execution for *${projectName}* ended with status *${status}*.`;
   }
 
   return sendSlackNotification({
