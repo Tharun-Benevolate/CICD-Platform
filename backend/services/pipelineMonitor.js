@@ -86,11 +86,13 @@ async function pollProject(project) {
     const execId  = latest.pipelineExecutionId;
     const status  = latest.status; // "InProgress" | "Succeeded" | "Failed" | "Stopped" | "Superseded"
 
-    // --- CHECK STAGE COMPLETIONS FOR UAT & PROD ---
-    // Even if pipeline is InProgress, UAT or PROD might have just finished deploying.
+    // --- CHECK STAGE COMPLETIONS FOR DEV, UAT & PROD ---
+    // Fire notifications per-stage as soon as each one succeeds,
+    // even if the pipeline is still InProgress waiting for approval gates.
     if (Array.isArray(stageStates)) {
       for (const stage of stageStates) {
-        if (stage.stageName === "Deploy-UAT" || stage.stageName === "Deploy-Prod") {
+        const isDeployStage = ["Deploy-Dev", "Deploy-UAT", "Deploy-Prod"].includes(stage.stageName);
+        if (isDeployStage) {
           const stageStatus = stage.latestExecution?.status;
           const stageExecId = stage.latestExecution?.pipelineExecutionId;
           if (stageExecId && stageStatus === "Succeeded") {
@@ -98,22 +100,26 @@ async function pollProject(project) {
             if (_seenStageStatuses.get(key) !== stageStatus) {
               _seenStageStatuses.set(key, stageStatus);
               
-              const envName = stage.stageName === "Deploy-UAT" ? "UAT" : "PROD";
+              const envMap = { "Deploy-Dev": "DEV", "Deploy-UAT": "UAT", "Deploy-Prod": "PROD" };
+              const envName = envMap[stage.stageName];
+              const isDevEnv = envName === "DEV";
               
-              // Find the reviewer by looking at the corresponding approval gate summary
-              const approveStageName = envName === "UAT" ? "Approve-UAT" : "Approve-Prod";
-              const approveStage = stageStates.find(s => s.stageName === approveStageName);
-              let reviewer = "system";
-              if (approveStage && approveStage.actionStates) {
-                const action = approveStage.actionStates.find(a => a.actionName === "Approve");
-                if (action?.latestExecution?.summary) {
-                  // e.g. "Approved by john@example.com" or our API comment
-                  reviewer = action.latestExecution.summary; 
-                  // Fallback string manipulation if AWS prefixes it
-                  if (reviewer.startsWith("Approved by ")) {
-                    reviewer = "@" + reviewer.replace("Approved by ", "").split(". ")[0];
+              // For UAT & PROD: find the reviewer from the approval gate summary
+              // For DEV: no approval gate, just show Triggered By
+              let reviewer = null;
+              if (!isDevEnv) {
+                const approveStageName = envName === "UAT" ? "Approve-UAT" : "Approve-Prod";
+                const approveStage = stageStates.find(s => s.stageName === approveStageName);
+                if (approveStage && approveStage.actionStates) {
+                  const action = approveStage.actionStates.find(a => a.actionName === "Approve");
+                  if (action?.latestExecution?.summary) {
+                    reviewer = action.latestExecution.summary;
+                    if (reviewer.startsWith("Approved by ")) {
+                      reviewer = "@" + reviewer.replace("Approved by ", "").split(". ")[0];
+                    }
                   }
                 }
+                if (!reviewer) reviewer = "system";
               }
 
               // Resolve pipeline triggerer
@@ -124,15 +130,17 @@ async function pollProject(project) {
                 triggeredBy = resolveTrigger(fullExec);
               } catch (_) {}
 
-              const title     = `\u2705 Deployed to ${envName}: ${project.name}`;
-              const color     = "#10b981";
-              const msgText   = `Automated pipeline deployment to *${envName}* for *${project.name}* was successful.`;
+              const title   = `\u2705 Deployed to ${envName}: ${project.name}`;
+              const color   = "#10b981";
+              const msgText = isDevEnv
+                ? `Build successful and deployed to *DEV* for *${project.name}*.`
+                : `Automated pipeline deployment to *${envName}* for *${project.name}* was successful.`;
 
               const stageFields = [
                 { title: "Project",      value: project.name },
                 { title: "Environment",  value: envName },
                 { title: "Triggered By", value: triggeredBy },
-                { title: "Approved By",  value: reviewer },
+                ...(!isDevEnv ? [{ title: "Approved By", value: reviewer }] : []),
                 { title: "Execution ID", value: stageExecId }
               ];
 
