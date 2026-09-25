@@ -327,37 +327,43 @@ async function resolveBuildspecForTerraform(project, isCodeCommit, repoName, git
     console.warn("Failed to check for buildspec.yml in repo:", err.message);
   }
 
-  if (project.customBuildspec) return project.customBuildspec;
+  let buildspec = "";
+  if (project.customBuildspec) {
+    buildspec = project.customBuildspec;
+  } else {
+    try {
+      const fs = require("fs");
+      const path = require("path");
+      const dataDir = path.join(__dirname, "../data");
+      const buildspecPath = path.join(dataDir, "generic-buildspec.yml");
+
+      if (!fs.existsSync(buildspecPath)) return "buildspec.yml";
+      buildspec = fs.readFileSync(buildspecPath, "utf8");
+    } catch (e) {
+      console.warn("[buildspec] Failed to load generic buildspec:", e.message);
+      return "buildspec.yml";
+    }
+  }
 
   try {
     const fs = require("fs");
     const path = require("path");
     const dataDir = path.join(__dirname, "../data");
-    const buildspecPath = path.join(dataDir, "generic-buildspec.yml");
     const scriptPath    = path.join(dataDir, "register_taskdefs.py");
 
-    if (!fs.existsSync(buildspecPath)) return "buildspec.yml";
-
-    let buildspec = fs.readFileSync(buildspecPath, "utf8");
-
-    // Inject the base64-encoded Python script so CodeBuild can decode and run it.
-    // Using base64 avoids YAML parsing issues (no colons at column 0, no heredoc conflicts).
     if (fs.existsSync(scriptPath)) {
       const scriptB64 = fs.readFileSync(scriptPath).toString("base64");
-      // replaceAll because the placeholder appears in both a comment and the echo command
       buildspec = buildspec.replaceAll("__TASKDEF_SCRIPT_B64__", scriptB64);
     } else {
       const noopB64 = Buffer.from('print("register_taskdefs.py not found - skipping task def registration")').toString("base64");
       buildspec = buildspec.replaceAll("__TASKDEF_SCRIPT_B64__", noopB64);
       console.warn("[buildspec] register_taskdefs.py not found — task def registration will be skipped");
     }
-
-    return buildspec;
   } catch (e) {
-    console.warn("[buildspec] Failed to load generic buildspec:", e.message);
+    console.warn("[buildspec] Failed to replace taskdef script placeholder:", e.message);
   }
 
-  return "buildspec.yml";
+  return buildspec;
 }
 
 // POST /api/terraform/initial/run — runs infra-initial, saves outputs to DB
