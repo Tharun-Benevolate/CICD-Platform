@@ -280,8 +280,24 @@ router.put("/projects/:id/buildspec", auth.requireRole(...auth.ADMIN_ROLES), asy
     console.log(`[buildspec] project.buildProjectName=${project.buildProjectName} initialTfApplied=${project.initialTfApplied}`);
     if (project.buildProjectName) {
       try {
+        let finalBuildspec = customBuildspec;
+        try {
+          const fs = require("fs");
+          const path = require("path");
+          const scriptPath = path.join(__dirname, "../data/register_taskdefs.py");
+          if (fs.existsSync(scriptPath)) {
+            const scriptB64 = fs.readFileSync(scriptPath).toString("base64");
+            finalBuildspec = finalBuildspec.replaceAll("__TASKDEF_SCRIPT_B64__", scriptB64);
+          } else {
+            const noopB64 = Buffer.from('print("register_taskdefs.py not found")').toString("base64");
+            finalBuildspec = finalBuildspec.replaceAll("__TASKDEF_SCRIPT_B64__", noopB64);
+          }
+        } catch (e) {
+          console.warn("[buildspec] Failed to inject register_taskdefs in projects API:", e.message);
+        }
+
         const aws = require("../aws");
-        await aws.updateBuildProject(project.region || "us-east-1", project.buildProjectName, customBuildspec);
+        await aws.updateBuildProject(project.region || "us-east-1", project.buildProjectName, finalBuildspec);
         console.log(`[buildspec] ✔ CodeBuild project '${project.buildProjectName}' updated successfully`);
       } catch (awsErr) {
         console.error(`[buildspec] ✘ Failed to update CodeBuild:`, awsErr.message);
