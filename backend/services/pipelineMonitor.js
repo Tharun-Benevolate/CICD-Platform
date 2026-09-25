@@ -124,21 +124,50 @@ async function pollProject(project) {
                 triggeredBy = resolveTrigger(fullExec);
               } catch (_) {}
 
-              // Send compact manual/stage deploy alert
-              slackService.sendSlackNotification({
-                channelType: 'both',
-                title: `\u2705 Deployed to ${envName}: ${project.name}`,
-                message: `Automated pipeline deployment to *${envName}* for *${project.name}* was successful.`,
-                fields: [
-                  { title: "Project", value: project.name },
-                  { title: "Environment", value: envName },
-                  { title: "Triggered By", value: triggeredBy },
-                  { title: "Approved By", value: reviewer },
-                  { title: "Execution ID", value: stageExecId }
-                ],
-                color: "#10b981",
+              const title     = `\u2705 Deployed to ${envName}: ${project.name}`;
+              const color     = "#10b981";
+              const msgText   = `Automated pipeline deployment to *${envName}* for *${project.name}* was successful.`;
+
+              const stageFields = [
+                { title: "Project",      value: project.name },
+                { title: "Environment",  value: envName },
+                { title: "Triggered By", value: triggeredBy },
+                { title: "Approved By",  value: reviewer },
+                { title: "Execution ID", value: stageExecId }
+              ];
+
+              // Build the same payload structure used for DEV notifications
+              const stagePayload = {
+                text: title,
+                attachments: [{
+                  color,
+                  blocks: [
+                    { type: "header",  text: { type: "plain_text", text: title, emoji: true } },
+                    { type: "section", text: { type: "mrkdwn", text: msgText } },
+                    {
+                      type: "section",
+                      fields: stageFields.map(f => ({ type: "mrkdwn", text: `*${f.title}:*\n${f.value}` }))
+                    }
+                  ]
+                }]
+              };
+
+              // Post to private project channel (same bot DM where DEV notifications go)
+              const privateChannelId = project.slack_channel_id || project.slackChannelId || null;
+              if (privateChannelId) {
+                const sent = await slackService.postToSlackChannelById(privateChannelId, stagePayload);
+                console.log(`[PipelineMonitor] ${envName} stage alert -> private channel ${privateChannelId}: ${sent ? "\u2714 sent" : "\u2718 failed"}`);
+              }
+
+              // Also send to global ops webhook for visibility in integrate-devops-alerts
+              slackService.sendOpsAlert({
+                title,
+                message: msgText,
+                fields: stageFields,
+                level: "success",
                 link: "https://devops.benevolaite.com/pipelines"
               }).catch(() => {});
+
               console.log(`[PipelineMonitor] Sent automated ${envName} deployment success alert for ${project.name}`);
             }
           }
