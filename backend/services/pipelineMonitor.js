@@ -17,8 +17,9 @@ const aws          = require("../config/aws");
 const projectStore = require("../stores/projectStore");
 const slackService = require("./slackService");
 
-// Map of executionId → last known status so we don't fire duplicate alerts
+// Map of executionId -> last known status so we don't fire duplicate alerts
 const _seenStatuses = new Map();
+const _seenStageStatuses = new Map();
 
 // How often to poll (ms)
 const POLL_INTERVAL_MS = 60 * 1000; // 60 seconds
@@ -85,7 +86,67 @@ async function pollProject(project) {
     const execId  = latest.pipelineExecutionId;
     const status  = latest.status; // "InProgress" | "Succeeded" | "Failed" | "Stopped" | "Superseded"
 
-    // Skip non-terminal states — we don't notify for InProgress
+    // --- CHECK STAGE COMPLETIONS FOR UAT & PROD ---
+    // Even if pipeline is InProgress, UAT or PROD might have just finished deploying.
+    if (Array.isArray(stageStates)) {
+      for (const stage of stageStates) {
+        if (stage.stageName === "Deploy-UAT" || stage.stageName === "Deploy-Prod") {
+          const stageStatus = stage.latestExecution?.status;
+          const stageExecId = stage.latestExecution?.pipelineExecutionId;
+          if (stageExecId && stageStatus === "Succeeded") {
+            const key = `${stageExecId}-${stage.stageName}`;
+            if (_seenStageStatuses.get(key) !== stageStatus) {
+              _seenStageStatuses.set(key, stageStatus);
+              
+              const envName = stage.stageName === "Deploy-UAT" ? "UAT" : "PROD";
+              
+              // Find the reviewer by looking at the corresponding approval gate summary
+              const approveStageName = envName === "UAT" ? "Approve-UAT" : "Approve-Prod";
+              const approveStage = stageStates.find(s => s.stageName === approveStageName);
+              let reviewer = "system";
+              if (approveStage && approveStage.actionStates) {
+                const action = approveStage.actionStates.find(a => a.actionName === "Approve");
+                if (action?.latestExecution?.summary) {
+                  // e.g. "Approved by john@example.com" or our API comment
+                  reviewer = action.latestExecution.summary; 
+                  // Fallback string manipulation if AWS prefixes it
+                  if (reviewer.startsWith("Approved by ")) {
+                    reviewer = "@" + reviewer.replace("Approved by ", "").split(". ")[0];
+                  }
+                }
+              }
+
+              // Resolve pipeline triggerer
+              let triggeredBy = "AWS CodePipeline";
+              try {
+                // Check if execId is available to resolve the triggerer
+                const fullExec = await aws.getPipelineExecution(project.region, project.pipelineName, stageExecId);
+                triggeredBy = resolveTrigger(fullExec);
+              } catch (_) {}
+
+              // Send compact manual/stage deploy alert
+              slackService.sendSlackNotification({
+                channelType: 'both',
+                title: `\u2705 Deployed to ${envName}: ${project.name}`,
+                message: `Automated pipeline deployment to *${envName}* for *${project.name}* was successful.`,
+                fields: [
+                  { title: "Project", value: project.name },
+                  { title: "Environment", value: envName },
+                  { title: "Triggered By", value: triggeredBy },
+                  { title: "Approved By", value: reviewer },
+                  { title: "Execution ID", value: stageExecId }
+                ],
+                color: "#10b981",
+                link: "https://devops.benevolaite.com/pipelines"
+              }).catch(() => {});
+              console.log(`[PipelineMonitor] Sent automated ${envName} deployment success alert for ${project.name}`);
+            }
+          }
+        }
+      }
+    }
+
+    // Skip non-terminal states \u2014 we don't notify for InProgress
     if (!["Succeeded", "Failed", "Stopped"].includes(status)) {
       // Still record it so we can detect transition later
       _seenStatuses.set(execId, status);
