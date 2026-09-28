@@ -130,7 +130,7 @@ router.get("/pipeline/live-status", async (req, res) => {
   };
 
   await poll(); // send immediately on connect
-  const iv = setInterval(poll, 8000);
+  const iv = setInterval(poll, 5000);
   req.on("close", () => clearInterval(iv));
 });
 

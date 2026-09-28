@@ -2,6 +2,7 @@
 var _activeProject = null;
 var _pipelineState = null;
 var _pipePollTimer = null;
+var _lastExecId = null;  // track execution ID to detect new runs
 
 window.initPipelinesPage = initPipelinesPage;
 
@@ -33,9 +34,10 @@ async function initPipelinesPage() {
       nameTag.innerHTML = 'Pipeline: <strong style="color:var(--color-text-primary);">' + pName + '</strong>';
     }
     fetchPipeline(false);
+    // Poll every 5s when pipeline is active for near-real-time updates
     _pipePollTimer = setInterval(function() {
       fetchPipeline(false);
-    }, 10000);
+    }, 5000);
   } else {
     var loadingEl = document.getElementById('pipeline-loading');
     var emptyEl = document.getElementById('pipeline-empty');
@@ -100,6 +102,19 @@ async function fetchPipeline(isManual) {
     var res = await api.get('/api/pipeline/state?projectId=' + _activeProject.id);
     if (res && res.ok) {
       _pipelineState = res;
+
+      // Detect a new execution — if execution ID changed, immediately
+      // re-fetch once more after 2s so stages show the freshest state
+      var latestExecId = res.executions && res.executions[0] && res.executions[0].pipelineExecutionId;
+      if (latestExecId && latestExecId !== _lastExecId) {
+        _lastExecId = latestExecId;
+        // Clear any "stale" stage state from previous execution immediately
+        var stagesList = document.getElementById('pipeline-stages-list');
+        if (stagesList) stagesList.innerHTML = '<div style="color:#8b949e;text-align:center;padding:30px;font-size:13px;">New pipeline execution detected — refreshing stages...</div>';
+        // Fetch again in 2s to pick up initial stage statuses
+        setTimeout(function() { fetchPipeline(false); }, 2000);
+      }
+
       renderPipeline();
       renderAutoTriggerStatus();
     } else {
@@ -276,7 +291,10 @@ async function handleStartPipeline() {
   try {
     var res = await api.post('/api/pipeline/start', { projectId: _activeProject.id });
     if (res && res.ok) {
+      // Immediately poll after 1s, 3s, 6s for a fast initial state read
       setTimeout(function() { fetchPipeline(false); }, 1000);
+      setTimeout(function() { fetchPipeline(false); }, 3000);
+      setTimeout(function() { fetchPipeline(false); }, 6000);
     }
   } catch (e) {}
 

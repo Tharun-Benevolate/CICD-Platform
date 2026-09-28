@@ -219,7 +219,7 @@ router.get("/:projectId/:env", auth.requireAuth, async (req, res) => {
       // "no matching activity" even though the event is sitting right there
       // in CloudWatch. Combined with the per-tab cache below, this is now
       // only paid once per tab (first visit), not on every switch.
-      params.startTime = startTime ? parseInt(startTime, 10) : Date.now() - (24 * 60 * 60 * 1000);
+      params.startTime = startTime ? parseInt(startTime, 10) : Date.now() - (5 * 60 * 1000);
     }
 
     const pattern = buildFilterPattern({ category: type });
