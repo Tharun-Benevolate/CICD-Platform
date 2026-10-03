@@ -463,8 +463,7 @@ function renderCommitsList() {
   _commits.forEach(function(c, i) {
     var sha = c.sha || c.commitId || '';
     var msg = c.message || (c.commit && c.commit.message) || 'No commit message';
-    var firstLine = msg.split('\n')[0];
-    var author = c.authorName || (c.commit && c.commit.author && c.commit.author.name) || c.author || 'Developer';
+    var author = c.authorName || c.authorLogin || (c.commit && c.commit.author && (c.commit.author.name || c.commit.author.login)) || (c.author && (c.author.login || c.author.name || (typeof c.author === 'string' ? c.author : null))) || 'Unknown';
     var date = c.date || (c.commit && c.commit.author && c.commit.author.date) || null;
 
     var item = document.createElement('div');

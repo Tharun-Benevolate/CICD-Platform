@@ -121,7 +121,7 @@ async function loadDeveloperCommits(repoId, projectId) {
         var msg = c.message || (c.commit && c.commit.message) || 'No message';
         var firstLine = msg.split('\n')[0];
         if (firstLine.length > 42) firstLine = firstLine.substring(0, 42) + '…';
-        var author = c.author || (c.commit && c.commit.author && c.commit.author.name) || 'Developer';
+        var author = c.authorName || c.authorLogin || (c.author && (c.author.login || c.author.name || (typeof c.author === 'string' ? c.author : null))) || (c.commit && c.commit.author && (c.commit.author.name || c.commit.author.login)) || c.committerName || 'Unknown';
         var dateStr = c.date ? new Date(c.date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
 
         return '<div style="padding:10px 14px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;gap:12px;">' +

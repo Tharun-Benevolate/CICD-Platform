@@ -129,7 +129,7 @@
         <div class="account-dropdown-header">
           Signed in as <strong style="color:var(--color-text-primary);"><%= user.username %></strong>
           <br>
-          Role: <strong style="color:var(--color-primary);"><%= user.jobTitle || user.userType %></strong>
+          Role: <% if (user && user.jobTitle) { %><strong style="color:var(--color-primary);"><%= user.jobTitle %></strong><% } else { %><span style="color:var(--color-text-tertiary);font-weight:500;">Not set</span><% } %>
         </div>
         <% if (user.userType === 'devops' || user.userType === 'admin' || user.userType === 'super_admin') { %>
         <a href="/admin/users" class="account-dropdown-item">

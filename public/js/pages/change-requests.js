@@ -492,8 +492,7 @@ function renderDiffResults(diff, base, head) {
         var sha = c.sha || c.commitId || '';
         var isSelected = _crSelectedCommitSha && (sha === _crSelectedCommitSha || sha.startsWith(_crSelectedCommitSha));
         var msg = c.message || (c.commit && c.commit.message) || 'No message';
-        var firstLine = msg.split('\n')[0];
-        var author = c.authorName || (c.commit && c.commit.author && c.commit.author.name) || 'Developer';
+        var author = c.authorName || c.authorLogin || (c.commit && c.commit.author && (c.commit.author.name || c.commit.author.login)) || (c.author && (c.author.login || c.author.name || (typeof c.author === 'string' ? c.author : null))) || 'Unknown';
         var date = c.date || (c.commit && c.commit.author && c.commit.author.date) || null;
         var avatar = c.authorAvatar || '';
 
