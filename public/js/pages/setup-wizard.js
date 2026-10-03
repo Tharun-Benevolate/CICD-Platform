@@ -23,7 +23,9 @@ function initSetupWizardPage() {
   // Clear any previous polling timer
   if (_setupPollTimer) clearInterval(_setupPollTimer);
   loadProjectsAndSetup();
-  _setupPollTimer = setInterval(checkActiveRun, 4000);
+  if (canManageProdSecrets()) {
+    _setupPollTimer = setInterval(checkActiveRun, 4000);
+  }
 }
 
 async function loadProjectsAndSetup() {
@@ -35,8 +37,10 @@ async function loadProjectsAndSetup() {
     }
     
     updateSetupUI();
-    checkFoundationStatus();
-    checkActiveRun();
+    if (canManageProdSecrets()) {
+      checkFoundationStatus();
+      checkActiveRun();
+    }
     loadSecrets();
   } catch (e) {
     console.error('Failed to load projects for setup wizard:', e);

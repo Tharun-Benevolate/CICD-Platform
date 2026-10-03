@@ -39,8 +39,13 @@ async function fetchTeamData() {
   if (layoutEl)  layoutEl.style.display  = 'none';
 
   try {
-    var userRes = await api.get('/api/users');
-    _allUsers = (userRes && userRes.ok && userRes.users) ? userRes.users : [];
+    // Full user directory is only required by Admins/DevOps to assign project access
+    if (typeof auth !== 'undefined' && typeof auth.isAdmin === 'function' && auth.isAdmin()) {
+      var userRes = await api.get('/api/users');
+      _allUsers = (userRes && userRes.ok && userRes.users) ? userRes.users : [];
+    } else {
+      _allUsers = [];
+    }
 
     if (_activeProject) {
       var memRes = await api.get('/api/projects/' + _activeProject.id + '/members');
@@ -270,11 +275,20 @@ async function renderTeamActivity() {
 // ─────────────────────────────────────────────────────────────────
 // Manage Access Modal
 // ─────────────────────────────────────────────────────────────────
-function openAccessModal() {
+async function openAccessModal() {
   _tempSelectedUsernames = _projectMembers.map(function(m) { return m.username; });
-  document.getElementById('access-search-input').value = '';
+  var searchInput = document.getElementById('access-search-input');
+  if (searchInput) searchInput.value = '';
   var roleFilter = document.getElementById('access-role-filter');
   if (roleFilter) roleFilter.value = '';
+
+  if (!_allUsers || _allUsers.length === 0) {
+    try {
+      var userRes = await api.get('/api/users');
+      _allUsers = (userRes && userRes.ok && userRes.users) ? userRes.users : [];
+    } catch (_) {}
+  }
+
   renderAccessModalList();
   document.getElementById('modal-manage-access').style.display = 'flex';
   if (window.lucide) lucide.createIcons();

@@ -175,8 +175,8 @@ router.get("/beta", requireAuth, checkPageRole(), (req, res) => renderPage(res, 
 router.get("/release", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "release"));
 
 router.get("/team", requireAuth, (req, res) => renderPage(res, req, "team-access"));
-router.get("/setup", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "setup-wizard"));
-router.get("/setup/:step", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "setup-wizard"));
+router.get("/setup", requireAuth, (req, res) => renderPage(res, req, "setup-wizard"));
+router.get("/setup/:step", requireAuth, (req, res) => renderPage(res, req, "setup-wizard"));
 
 router.get("/admin/users", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "admin-users"));
 router.get("/training", requireAuth, (req, res) => renderPage(res, req, "training"));
