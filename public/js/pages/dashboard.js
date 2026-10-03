@@ -153,7 +153,11 @@ async function loadHealth() {
     document.getElementById('db-dot').style.background = dbOk ? 'var(--color-success)' : 'var(--color-danger)';
     document.getElementById('db-status').textContent = dbOk ? 'Connected (MySQL)' : 'Offline';
     if (dbOk && res.db) {
-      document.getElementById('db-host').textContent = res.db;
+      var dbHostLabel = res.db;
+      if (typeof dbHostLabel === 'string' && (dbHostLabel.includes('.rds.amazonaws.com') || dbHostLabel.includes(':3306') || /^\d+\.\d+\.\d+\.\d+/.test(dbHostLabel))) {
+        dbHostLabel = 'ONLINE (ACTIVE)';
+      }
+      document.getElementById('db-host').textContent = dbHostLabel;
     }
     // AWS
     var awsOk = res.aws === 'ok' || res.aws === 'configured';

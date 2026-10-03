@@ -54,7 +54,7 @@ const fallbackPool = hasFallback
 
 // This is what every store imports. Starts as primary, may be swapped to fallback.
 let activePool = primaryPool;
-let activeLabel = `${process.env.DB_HOST || "127.0.0.1"}:${process.env.DB_PORT || "3306"}`;
+let activeLabel = "ONLINE (PRIMARY)";
 
 // Named export so stores can do:  const { pool } = require("../db")
 // The proxy below makes `pool.query(...)` always call the CURRENT activePool.
@@ -74,8 +74,9 @@ async function verifyConnection() {
     await conn.query("SELECT 1");
     conn.release();
     activePool  = primaryPool;
-    activeLabel = `${process.env.DB_HOST || "127.0.0.1"}:${process.env.DB_PORT || "3306"}`;
-    console.log(`✔  DB connected  [PRIMARY]  → ${activeLabel}/${process.env.DB_NAME || "cicd_admin"}`);
+    activeLabel = "ONLINE (PRIMARY)";
+    const hostInfo = `${process.env.DB_HOST || "127.0.0.1"}:${process.env.DB_PORT || "3306"}`;
+    console.log(`✔  DB connected  [PRIMARY]  → ${hostInfo}/${process.env.DB_NAME || "cicd_admin"}`);
     return;
   } catch (primaryErr) {
     const isFallback = primaryErr.code === "ETIMEDOUT" ||
@@ -96,8 +97,9 @@ async function verifyConnection() {
       await conn.query("SELECT 1");
       conn.release();
       activePool  = fallbackPool;
-      activeLabel = `${process.env.DB_FALLBACK_HOST}:${process.env.DB_FALLBACK_PORT || "3306"}`;
-      console.log(`✔  DB connected  [FALLBACK] → ${activeLabel}/${process.env.DB_FALLBACK_NAME}`);
+      activeLabel = "ONLINE (FAILOVER POOL)";
+      const fallbackHostInfo = `${process.env.DB_FALLBACK_HOST}:${process.env.DB_FALLBACK_PORT || "3306"}`;
+      console.log(`✔  DB connected  [FALLBACK] → ${fallbackHostInfo}/${process.env.DB_FALLBACK_NAME}`);
       console.log("   ⚡ Running against Aurora. Start Docker MySQL to switch back to local.");
     } catch (fallbackErr) {
       console.error("✘  Both primary AND fallback DB are unreachable.");
@@ -105,7 +107,7 @@ async function verifyConnection() {
       console.error(`   Fallback error: ${fallbackErr.message}`);
       throw new Error(
         `Cannot connect to any database.\n` +
-        `  Primary  (${activeLabel}): ${primaryErr.message}\n` +
+        `  Primary  (${process.env.DB_HOST || "127.0.0.1"}): ${primaryErr.message}\n` +
         `  Fallback (${process.env.DB_FALLBACK_HOST}): ${fallbackErr.message}`
       );
     }

@@ -272,14 +272,18 @@ router.get("/me", async (req, res) => {
 router.get("/audit-logs", auth.requireAuth, async (req, res) => {
   const { user, category, search, security, excludeSecurity } = req.query;
   const isAdmin = auth.ADMIN_ROLES.includes(req.user?.userType);
-  const shouldExcludeSecurity = excludeSecurity === "true" || (!isAdmin && security !== "true");
+
+  // Full audit trail is restricted to DevOps, Admin, and Super Admin
+  if (!isAdmin && (security === "true" || excludeSecurity !== "true")) {
+    return res.status(403).json({ ok: false, error: "Access denied. Audit logs are restricted to DevOps and Admin roles." });
+  }
 
   const result = await auditStore.getAuditLogs({
     username: user,
     category,
     search,
     securityOnly: security === "true",
-    excludeSecurity: shouldExcludeSecurity,
+    excludeSecurity: !isAdmin ? true : excludeSecurity === "true",
     page: req.query.page,
     limit: req.query.limit
   });

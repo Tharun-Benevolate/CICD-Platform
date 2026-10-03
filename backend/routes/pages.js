@@ -113,18 +113,10 @@ function checkPageRole(allowedRoles = ["devops", "admin", "super_admin"]) {
   return (req, res, next) => {
     const user = req.pageUser;
     if (user && !allowedRoles.includes(user.userType)) {
-      console.error(
-        `\x1b[31m[SECURITY ALERT] Unauthorized access attempt by @${user.username} (${user.userType}) to restricted route: ${req.originalUrl}\x1b[0m`
-      );
-      try {
-        auditStore.logAction(
-          user.username,
-          `UNAUTHORIZED ACCESS ATTEMPT to ${req.originalUrl}`,
-          "System",
-          "Denied",
-          "User Management"
-        );
-      } catch (e) {}
+      if (req.headers["x-requested-with"] === "XMLHttpRequest") {
+        return res.status(403).json({ ok: false, redirect: "/", error: "Access denied" });
+      }
+      return res.redirect("/");
     }
     next();
   };
@@ -142,7 +134,7 @@ router.get("/login", (req, res) => {
 // ── Protected Pages ──
 router.get("/", requireAuth, (req, res) => renderPage(res, req, "dashboard"));
 router.get("/monitoring", requireAuth, (req, res) => renderPage(res, req, "monitoring"));
-router.get("/audit-logs", requireAuth, (req, res) => renderPage(res, req, "audit-logs"));
+router.get("/audit-logs", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "audit-logs"));
 router.get("/pipelines", requireAuth, (req, res) => renderPage(res, req, "pipelines"));
 router.get("/build", requireAuth, (req, res) => renderPage(res, req, "build-logs"));
 router.get("/certificates", requireAuth, checkPageRole(), (req, res) => renderPage(res, req, "certificates"));

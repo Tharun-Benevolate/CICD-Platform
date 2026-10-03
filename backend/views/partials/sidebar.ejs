@@ -59,11 +59,11 @@
       <i data-lucide="activity" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Monitoring</span>
     </a>
+    <% if (isPrivileged) { %>
     <a href="/audit-logs" class="nav-item <%= activePage === 'audit-logs' ? 'active' : '' %>" title="Audit Logs">
       <i data-lucide="file-text" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Audit Logs</span>
     </a>
-    <% if (isPrivileged) { %>
     <a href="/certificates" class="nav-item <%= activePage === 'certificates' ? 'active' : '' %>" title="SSL Certificates">
       <i data-lucide="shield-check" class="nav-icon" style="width:18px;height:18px;"></i>
       <span class="nav-label">Certificates</span>

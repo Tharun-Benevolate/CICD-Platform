@@ -42,8 +42,13 @@ async function fetchHealthMetrics() {
     var awsEl = document.getElementById('mon-aws-status');
 
     if (dbEl) {
-      dbEl.textContent = (res && res.db && res.db !== 'error') ? (res.db || 'Connected') : 'Offline';
-      dbEl.style.color = (res && res.db && res.db !== 'error') ? 'var(--color-text-primary)' : 'var(--color-danger)';
+      var isDbOk = res && res.db && res.db !== 'error' && res.db !== 'offline';
+      var dbLabel = (isDbOk && res.db) ? res.db : (isDbOk ? 'ONLINE (ACTIVE)' : 'OFFLINE');
+      if (typeof dbLabel === 'string' && (dbLabel.includes('.rds.amazonaws.com') || dbLabel.includes(':3306') || /^\d+\.\d+\.\d+\.\d+/.test(dbLabel))) {
+        dbLabel = 'ONLINE (ACTIVE)';
+      }
+      dbEl.textContent = isDbOk ? dbLabel : 'OFFLINE';
+      dbEl.style.color = isDbOk ? 'var(--color-success)' : 'var(--color-danger)';
     }
 
     if (awsEl) {
