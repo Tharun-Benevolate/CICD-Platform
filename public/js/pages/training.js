@@ -109,6 +109,22 @@ async function loadAdoptionStats(isBackground) {
       }
     }
 
+    // Member vs Admin UI adjustments
+    var isMemberOnly = !!res.isMemberOnly;
+    window._canManageAdoption = !!res.canManage;
+
+    // Reset button visibility: only admins/devops can reset tracking
+    var resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) {
+      resetBtn.style.display = res.canManage ? 'inline-flex' : 'none';
+    }
+
+    // Filter toolbar visibility: if member-only, hide toolbar since members only see their own row
+    var filterToolbar = document.querySelector('.filters-toolbar');
+    if (filterToolbar) {
+      filterToolbar.style.display = isMemberOnly ? 'none' : 'flex';
+    }
+
     // Summary cards
     var totalUsers  = stats.length;
     var fullyDone   = stats.filter(function(s) { return s.progress === 100; }).length;
@@ -117,10 +133,19 @@ async function loadAdoptionStats(isBackground) {
       : 0;
 
     if (summary) {
-      summary.innerHTML =
-        summaryCard('users', totalUsers, 'Total Members', '#6366f1') +
-        summaryCard('check-circle-2', fullyDone, 'Fully Adopted', '#10b981') +
-        summaryCard('trending-up', avgProgress + '%', 'Avg Progress', avgProgress >= 60 ? '#10b981' : avgProgress >= 40 ? '#f59e0b' : '#ef4444');
+      if (isMemberOnly && stats.length > 0) {
+        var myStat = stats[0];
+        var completedCount = [myStat.tasks.profile, myStat.tasks.branch, myStat.tasks.commit, myStat.tasks.pr, myStat.tasks.deploy].filter(Boolean).length;
+        summary.innerHTML =
+          summaryCard('trending-up', myStat.progress + '%', 'My Progress', myStat.progress >= 60 ? '#10b981' : myStat.progress >= 40 ? '#f59e0b' : '#ef4444') +
+          summaryCard('check-circle-2', completedCount + ' / 5', 'Tasks Completed', completedCount === 5 ? '#10b981' : '#6366f1') +
+          summaryCard('award', myStat.progress === 100 ? 'Fully Adopted' : 'In Progress', 'Adoption Status', myStat.progress === 100 ? '#10b981' : '#f59e0b');
+      } else {
+        summary.innerHTML =
+          summaryCard('users', totalUsers, 'Total Members', '#6366f1') +
+          summaryCard('check-circle-2', fullyDone, 'Fully Adopted', '#10b981') +
+          summaryCard('trending-up', avgProgress + '%', 'Avg Progress', avgProgress >= 60 ? '#10b981' : avgProgress >= 40 ? '#f59e0b' : '#ef4444');
+      }
     }
 
     // User list
@@ -245,23 +270,27 @@ function renderUserCard(u, isExpanded) {
     auditHtml = '<div class="feed-msg" style="opacity:0.5;">No terminal logs found for git commits.</div>';
   }
 
-  var panelHtml = '<div class="user-details-panel" onclick="event.stopPropagation()">' +
-    '<div class="details-grid">' +
-      '<div class="feed-section">' +
-        '<div class="feed-title"><i data-lucide="github" style="width:14px;height:14px;"></i> GitHub Commits Feed</div>' +
-        commitHtml +
+    var resetUserBtn = window._canManageAdoption
+      ? '<div style="margin-top:20px;text-align:right;">' +
+          '<button class="btn-secondary" onclick="resetUserTracking(\'' + escapeHtml(u.username) + '\')" style="font-size:12px;padding:6px 12px;border-color:rgba(239,68,68,0.3);color:#ef4444;background:rgba(239,68,68,0.05);">' +
+            '<i data-lucide="rotate-ccw" style="width:12px;height:12px;margin-right:4px;"></i> Reset User Timeline' +
+          '</button>' +
+        '</div>'
+      : '';
+
+    var panelHtml = '<div class="user-details-panel" onclick="event.stopPropagation()">' +
+      '<div class="details-grid">' +
+        '<div class="feed-section">' +
+          '<div class="feed-title"><i data-lucide="github" style="width:14px;height:14px;"></i> GitHub Commits Feed</div>' +
+          commitHtml +
+        '</div>' +
+        '<div class="feed-section">' +
+          '<div class="feed-title"><i data-lucide="terminal" style="width:14px;height:14px;"></i> Platform Audit Logs (Proof)</div>' +
+          auditHtml +
+        '</div>' +
       '</div>' +
-      '<div class="feed-section">' +
-        '<div class="feed-title"><i data-lucide="terminal" style="width:14px;height:14px;"></i> Platform Audit Logs (Proof)</div>' +
-        auditHtml +
-      '</div>' +
-    '</div>' +
-    '<div style="margin-top:20px;text-align:right;">' +
-      '<button class="btn-secondary" onclick="resetUserTracking(\'' + escapeHtml(u.username) + '\')" style="font-size:12px;padding:6px 12px;border-color:rgba(239,68,68,0.3);color:#ef4444;background:rgba(239,68,68,0.05);">' +
-        '<i data-lucide="rotate-ccw" style="width:12px;height:12px;margin-right:4px;"></i> Reset User Timeline' +
-      '</button>' +
-    '</div>' +
-  '</div>';
+      resetUserBtn +
+    '</div>';
 
   var expandedCls = isExpanded ? ' expanded' : '';
   return '<div class="user-card' + expandedCls + '" onclick="this.classList.toggle(\'expanded\')">' +

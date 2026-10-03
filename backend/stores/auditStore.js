@@ -106,6 +106,14 @@ async function getAuditLogs(filters = {}) {
       )`);
       params.push('%secret%', '%credential%', '%password%', '%two factor%', '%totp%', '%session%');
     }
+    if (filters.excludeSecurity) {
+      conditions.push("result != 'Denied'");
+      conditions.push("LOWER(action) NOT LIKE ?");
+      params.push('%unauthorized%');
+      conditions.push("LOWER(action) NOT LIKE ?");
+      params.push('%security alert%');
+      conditions.push("category != 'Access Control'");
+    }
     if (filters.search) {
       const search = `%${String(filters.search).trim()}%`;
       if (search !== "%%") {

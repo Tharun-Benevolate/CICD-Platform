@@ -152,7 +152,7 @@ router.post("/adoption/reset", auth.requireRole(...auth.ADMIN_ROLES), async (req
 });
 
 // ── GET /api/adoption/stats?projectId=xxx ────────────────────────────────────
-router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.get("/adoption/stats", auth.requireAuth, async (req, res) => {
   try {
     const { projectId } = req.query;
 
@@ -220,6 +220,20 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       }
     } else {
       users = await userStore.listUsers();
+    }
+
+    // Role-based visibility: Admins/DevOps see entire team; developers and other members view ONLY their own status
+    const isAdmin = auth.ADMIN_ROLES.includes(req.user?.userType);
+    if (!isAdmin) {
+      const myUsername = (req.user?.username || "").toLowerCase();
+      let myUser = users.find(u => u.username.toLowerCase() === myUsername);
+      if (!myUser) {
+        try {
+          const directUser = await userStore.getUser(req.user?.username);
+          if (directUser) myUser = directUser;
+        } catch (_) {}
+      }
+      users = myUser ? [myUser] : [];
     }
 
     const stats = await Promise.all(users.map(async (u) => {
@@ -338,7 +352,10 @@ router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req,
       projectName: project?.name || "Unknown",
       githubRepo:  canQueryGithub ? `${owner}/${repo}` : null,
       githubConnected: githubOk,
-      since: globalSince
+      since: globalSince,
+      isMemberOnly: !isAdmin,
+      canManage: isAdmin,
+      viewerUsername: req.user?.username || null
     });
   } catch (err) {
     console.error("[adoption/stats] error:", err);

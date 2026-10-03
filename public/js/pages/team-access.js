@@ -184,26 +184,43 @@ async function renderTeamActivity() {
   if (!actEl) return;
 
   try {
-    var res = await api.get('/api/audit-logs?limit=60');
+    var res = await api.get('/api/audit-logs?limit=60&excludeSecurity=true');
     var rawLogs = (res && res.ok && res.logs) ? res.logs : [];
 
-    // Filter to strictly show: Git operations, Pipeline/Build updates, Deployments, and Team Access/Member notifications
+    // Filter to strictly show: Git operations, Pipeline/Build updates, Deployments, and legitimate Team Access/Member notifications
     var allowedKeywords = [
       'branch', 'commit', 'git', 'pull', 'merge', 'cr', 'review',
       'pipeline', 'build', 'deploy', 'webhook',
-      'granted', 'access', 'member'
+      'granted', 'member'
     ];
 
+    // Explicitly block all authentication, security alerts, and unauthorized attempts
     var blockedKeywords = [
       'logged', 'login', 'logout', 'sso', 'oauth', 'slack account', 'github account',
-      'role for', 'deleted user account', 'user account'
+      'role for', 'deleted user account', 'user account',
+      'unauthorized', 'security alert', 'denied', '403', 'blocked', 'access attempt',
+      'restricted route', 'permission denied'
     ];
 
     var logs = rawLogs.filter(function(l) {
+      // Hard reject any denied or security violation logs
+      if ((l.result || '').toLowerCase() === 'denied') return false;
+
       var act = (l.action || '').toLowerCase();
+
+      // Check blocked keywords first
       for (var b = 0; b < blockedKeywords.length; b++) {
         if (act.includes(blockedKeywords[b])) return false;
       }
+
+      // Special check for team access grants (must be positive grant/assignment, not an access violation)
+      if (act.includes('access')) {
+        if (act.includes('granted') || act.includes('added') || act.includes('assigned') || act.includes('project')) {
+          return true;
+        }
+        return false;
+      }
+
       for (var a = 0; a < allowedKeywords.length; a++) {
         if (act.includes(allowedKeywords[a])) return true;
       }

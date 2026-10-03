@@ -270,12 +270,16 @@ router.get("/me", async (req, res) => {
 
 // GET /api/audit-logs
 router.get("/audit-logs", auth.requireAuth, async (req, res) => {
-  const { user, category, search, security } = req.query;
+  const { user, category, search, security, excludeSecurity } = req.query;
+  const isAdmin = auth.ADMIN_ROLES.includes(req.user?.userType);
+  const shouldExcludeSecurity = excludeSecurity === "true" || (!isAdmin && security !== "true");
+
   const result = await auditStore.getAuditLogs({
     username: user,
     category,
     search,
     securityOnly: security === "true",
+    excludeSecurity: shouldExcludeSecurity,
     page: req.query.page,
     limit: req.query.limit
   });
