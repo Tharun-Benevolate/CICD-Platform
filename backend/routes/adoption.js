@@ -152,7 +152,7 @@ router.post("/adoption/reset", auth.requireRole(...auth.ADMIN_ROLES), async (req
 });
 
 // ── GET /api/adoption/stats?projectId=xxx ────────────────────────────────────
-router.get("/adoption/stats", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+router.get("/adoption/stats", auth.requireAuth, async (req, res) => {
   try {
     const { projectId } = req.query;
 
