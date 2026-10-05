@@ -639,18 +639,12 @@ function updateBroadcastPreview() {
   };
   var cfg = urgencyConfig[urgency] || urgencyConfig.normal;
 
-  // Slack preview updates matching Benevolate Integrate automated notification theme
+  // Slack preview updates
   var slackBox = document.getElementById('preview-slack-box');
   if (slackBox) slackBox.style.borderLeftColor = cfg.color;
 
   var statusIcon = document.getElementById('preview-status-icon');
   if (statusIcon) statusIcon.textContent = cfg.icon;
-
-  var fieldStatus = document.getElementById('preview-field-status');
-  if (fieldStatus) {
-    fieldStatus.textContent = cfg.label;
-    fieldStatus.style.color = cfg.color;
-  }
 
   var slackTitle = document.getElementById('preview-slack-title');
   if (slackTitle) slackTitle.textContent = title;
@@ -662,12 +656,6 @@ function updateBroadcastPreview() {
   if (timeEl) {
     var now = new Date();
     timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  var fieldTime = document.getElementById('preview-field-time');
-  if (fieldTime) {
-    var now = new Date();
-    fieldTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   // In-App preview updates

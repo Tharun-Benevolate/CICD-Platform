@@ -1936,26 +1936,6 @@ async function sendBroadcastToSlackChannel(channelId, { title, message, link = n
     });
   }
 
-  const fields = [
-    {
-      type: "mrkdwn",
-      text: `*Author:*\n@${sender}`
-    },
-    {
-      type: "mrkdwn",
-      text: `*Priority:*\n\`${(urgency || "normal").toUpperCase()}\``
-    },
-    {
-      type: "mrkdwn",
-      text: `*Dispatched:*\n${timeStr}`
-    }
-  ];
-
-  blocks.push({
-    type: "section",
-    fields: fields
-  });
-
   if (link && link.trim()) {
     blocks.push({
       type: "actions",
@@ -1979,7 +1959,7 @@ async function sendBroadcastToSlackChannel(channelId, { title, message, link = n
     elements: [
       {
         type: "mrkdwn",
-        text: "⚡ *Benevolate Integrate Notification* • Super Admin Broadcast"
+        text: `Author: @${sender} • Dispatched: ${timeStr} • *Benevolate Integrate*`
       }
     ]
   });
