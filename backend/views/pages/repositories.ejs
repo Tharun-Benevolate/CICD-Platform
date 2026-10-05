@@ -2,10 +2,8 @@
   <!-- Header -->
   <div class="repos-header">
     <div>
-      <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin-bottom:2px;">Repositories</h1>
-      <p style="font-size:13px;color:var(--color-text-secondary);">
-        Connected Git repositories for project <strong id="repo-project-name-label" style="color:var(--color-text-primary);">(<%= typeof activeProject !== 'undefined' && activeProject ? activeProject.name : 'active project' %>)</strong>
-      </p>
+      <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin:0;">Repositories</h1>
+      <span id="repo-project-name-label" style="display:none;"></span>
     </div>
     <div style="display:flex;gap:10px;">
       <button

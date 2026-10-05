@@ -38,8 +38,51 @@ async function fetchAdminUsers() {
 }
 
 // ─────────────────────────────────────────────────────────────────
-// Filter Tabs
+// Slide-Based Segmented Navigation & Filter Tabs
 // ─────────────────────────────────────────────────────────────────
+function switchAdminTab(tab) {
+  _adminFilterTab = tab;
+
+  var usersView = document.getElementById('admin-users-view');
+  var broadcastView = document.getElementById('admin-broadcast-view');
+
+  // Handle segmented buttons visual state
+  ['all', 'pending', 'blocked', 'broadcast'].forEach(function(t) {
+    var btn = document.getElementById('admin-seg-' + t);
+    if (!btn) return;
+    if (t === tab) {
+      btn.style.background = 'var(--color-surface)';
+      btn.style.color = 'var(--color-primary)';
+      btn.style.fontWeight = '700';
+      btn.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
+      var badge = btn.querySelector('#count-' + t + '-users');
+      if (badge) { badge.style.background = 'rgba(99,102,241,0.12)'; badge.style.color = 'var(--color-primary)'; }
+    } else {
+      btn.style.background = 'transparent';
+      btn.style.color = 'var(--color-text-secondary)';
+      btn.style.fontWeight = '600';
+      btn.style.boxShadow = 'none';
+      var badge2 = btn.querySelector('#count-' + t + '-users');
+      if (badge2) { badge2.style.background = 'var(--color-surface)'; badge2.style.color = 'var(--color-text-tertiary)'; }
+    }
+  });
+
+  if (tab === 'broadcast') {
+    if (usersView) usersView.style.display = 'none';
+    if (broadcastView) broadcastView.style.display = 'flex';
+    initBroadcastWorkspace();
+  } else {
+    if (broadcastView) broadcastView.style.display = 'none';
+    if (usersView) usersView.style.display = 'block';
+    setAdminFilterTab(tab);
+  }
+}
+window.switchAdminTab = switchAdminTab;
+
+window.openBroadcastModal = function() {
+  switchAdminTab('broadcast');
+};
+
 function setAdminFilterTab(tab) {
   _adminFilterTab = tab;
 
@@ -47,25 +90,6 @@ function setAdminFilterTab(tab) {
   var el = document.getElementById('admin-section-title');
   if (el) el.textContent = titles[tab] || 'Platform User Accounts';
 
-  ['all', 'pending', 'blocked'].forEach(function(t) {
-    var btn = document.getElementById('admin-tab-' + t);
-    if (!btn) return;
-    if (t === tab) {
-      btn.style.borderColor = '#6366f1';
-      btn.style.background  = 'rgba(99,102,241,0.07)';
-      btn.style.color       = '#6366f1';
-      btn.style.fontWeight  = '700';
-      var badge = btn.querySelector('span');
-      if (badge) { badge.style.background = '#e0e7ff'; badge.style.color = '#6366f1'; }
-    } else {
-      btn.style.borderColor = 'var(--color-border)';
-      btn.style.background  = 'var(--color-surface)';
-      btn.style.color       = 'var(--color-text-secondary)';
-      btn.style.fontWeight  = '600';
-      var badge2 = btn.querySelector('span');
-      if (badge2) { badge2.style.background = 'var(--color-bg)'; badge2.style.color = 'var(--color-text-secondary)'; }
-    }
-  });
   renderAdminUsers();
 }
 
@@ -388,3 +412,392 @@ async function openInspectUserModal(username) {
 function closeInspectUserModal() {
   document.getElementById('modal-inspect-user').style.display = 'none';
 }
+
+// ─────────────────────────────────────────────────────────────────
+// Broadcast Announcement Workspace Logic
+// ─────────────────────────────────────────────────────────────────
+var _broadcastWorkspaceMeta = null;
+var _slackTargetMode = 'all';
+
+async function initBroadcastWorkspace() {
+  updateBroadcastPreview();
+  if (window.lucide) lucide.createIcons();
+  await loadBroadcastWorkspaceMeta();
+}
+window.initBroadcastWorkspace = initBroadcastWorkspace;
+
+async function loadBroadcastWorkspaceMeta() {
+  try {
+    var res = await api.get('/api/admin/broadcast/meta');
+    if (!res || !res.ok) return;
+
+    _broadcastWorkspaceMeta = res;
+
+    // Audience count
+    var countEl = document.getElementById('broadcast-meta-user-count');
+    if (countEl) countEl.textContent = res.totalUsers || '0';
+
+    // Email SMTP status
+    var emailEl = document.getElementById('broadcast-email-status-badge');
+    if (emailEl) {
+      if (res.email && res.email.configured) {
+        emailEl.innerHTML = '<span style="color:#10b981;font-weight:700;">✔ SMTP Active (' + res.email.host + ')</span>';
+      } else {
+        emailEl.innerHTML = '<span style="color:#f59e0b;font-weight:600;">⚠ SMTP Inactive (Log only)</span>';
+      }
+    }
+
+    // Slack status
+    var slackEl = document.getElementById('broadcast-slack-status-badge');
+    var slackCb = document.getElementById('broadcast-chan-slack');
+    if (slackEl) {
+      if (res.slack && res.slack.connected) {
+        slackEl.innerHTML = '<span style="color:#10b981;font-weight:700;">✔ Slack Connected (' + (res.slack.channels ? res.slack.channels.length : 0) + ' channels)</span>';
+      } else {
+        slackEl.innerHTML = '<span style="color:#ef4444;font-weight:600;">✘ Slack Not Connected</span>';
+        if (slackCb) slackCb.checked = false;
+        toggleSlackTargetSection();
+      }
+    }
+
+    // Project channels
+    var projListEl = document.getElementById('broadcast-projects-list');
+    if (projListEl) {
+      var projs = res.projects || [];
+      if (projs.length === 0) {
+        projListEl.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);text-align:center;padding:12px;">No active projects found.</div>';
+      } else {
+        projListEl.innerHTML = projs.map(function(p) {
+          var hasSlack = Boolean(p.slack_channel_id);
+          var channelLabel = hasSlack ? '#' + (p.slack_channel_name || 'proj-' + p.name) : 'No channel linked';
+          return '<label style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;background:var(--color-bg);cursor:' + (hasSlack ? 'pointer' : 'not-allowed') + ';opacity:' + (hasSlack ? '1' : '0.6') + ';">' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<input type="checkbox" class="broadcast-project-checkbox" value="' + p.id + '" ' + (hasSlack ? 'checked' : 'disabled') + ' style="accent-color:#6366f1;" />' +
+              '<span style="font-size:12px;font-weight:600;color:var(--color-text-primary);">' + p.name + '</span>' +
+            '</div>' +
+            '<span style="font-size:11px;font-family:monospace;padding:1px 6px;border-radius:4px;background:var(--color-surface);color:' + (hasSlack ? '#10b981' : 'var(--color-text-tertiary)') + ';">' +
+              channelLabel +
+            '</span>' +
+          '</label>';
+        }).join('');
+      }
+    }
+
+    // All channels list
+    var chanListEl = document.getElementById('broadcast-channels-list');
+    if (chanListEl) {
+      var chans = (res.slack && res.slack.channels) || [];
+      if (chans.length === 0) {
+        chanListEl.innerHTML = '<div style="font-size:12px;color:var(--color-text-tertiary);text-align:center;padding:12px;">No Slack channels found.</div>';
+      } else {
+        chanListEl.innerHTML = chans.map(function(c) {
+          return '<label style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;background:var(--color-bg);cursor:pointer;">' +
+            '<div style="display:flex;align-items:center;gap:8px;">' +
+              '<input type="checkbox" class="broadcast-channel-checkbox" value="' + c.id + '" style="accent-color:#6366f1;" />' +
+              '<span style="font-size:12px;font-weight:600;color:var(--color-text-primary);">#' + c.name + '</span>' +
+            '</div>' +
+            '<span style="font-size:11px;color:var(--color-text-tertiary);">' + (c.is_private ? '🔒 private' : '🌐 public') + '</span>' +
+          '</label>';
+        }).join('');
+      }
+    }
+
+    if (window.lucide) lucide.createIcons();
+  } catch (err) {
+    console.error("[loadBroadcastWorkspaceMeta]", err);
+  }
+}
+
+function toggleSlackTargetSection() {
+  var slackCb = document.getElementById('broadcast-chan-slack');
+  var targetBox = document.getElementById('broadcast-slack-target-container');
+  if (targetBox) {
+    targetBox.style.display = (slackCb && slackCb.checked) ? 'block' : 'none';
+  }
+}
+window.toggleSlackTargetSection = toggleSlackTargetSection;
+
+function setSlackTargetMode(mode) {
+  _slackTargetMode = mode;
+  var modes = ['all', 'projects', 'select'];
+  modes.forEach(function(m) {
+    var btn = document.getElementById('btn-slack-mode-' + m);
+    if (!btn) return;
+    if (m === mode) {
+      btn.style.borderColor = '#6366f1';
+      btn.style.background = 'rgba(99,102,241,0.1)';
+      btn.style.color = '#6366f1';
+      btn.style.fontWeight = '700';
+    } else {
+      btn.style.borderColor = 'var(--color-border)';
+      btn.style.background = 'var(--color-surface)';
+      btn.style.color = 'var(--color-text-secondary)';
+      btn.style.fontWeight = '600';
+    }
+  });
+
+  var descEl = document.getElementById('broadcast-slack-mode-desc');
+  var projsContainer = document.getElementById('broadcast-projects-container');
+  var chansContainer = document.getElementById('broadcast-channels-container');
+
+  if (mode === 'all') {
+    if (descEl) descEl.textContent = 'Broadcasts message to every public Slack channel in the connected workspace.';
+    if (projsContainer) projsContainer.style.display = 'none';
+    if (chansContainer) chansContainer.style.display = 'none';
+  } else if (mode === 'projects') {
+    if (descEl) descEl.textContent = 'Delivers exclusively to the dedicated Slack channels connected to your active projects:';
+    if (projsContainer) projsContainer.style.display = 'block';
+    if (chansContainer) chansContainer.style.display = 'none';
+  } else if (mode === 'select') {
+    if (descEl) descEl.textContent = 'Pick specific Slack channels from your connected workspace below:';
+    if (projsContainer) projsContainer.style.display = 'none';
+    if (chansContainer) chansContainer.style.display = 'block';
+  }
+}
+window.setSlackTargetMode = setSlackTargetMode;
+
+function selectQuickTemplate(type) {
+  var titleInput = document.getElementById('broadcast-input-title');
+  var contentInput = document.getElementById('broadcast-input-content');
+  var urgencyRadios = document.getElementsByName('broadcast_urgency');
+
+  var templates = {
+    maintenance: {
+      urgency: 'high',
+      title: 'Scheduled Infrastructure Maintenance Window',
+      content: 'Hello Team,\n\nPlease be advised that scheduled maintenance on our core CI/CD infrastructure will take place tonight from 22:00 UTC to 23:30 UTC.\n\n• Expected downtime: 15-20 minutes for build runners\n• Affected services: AWS CodePipeline webhooks, container deployments\n• Recommended action: Please wrap up urgent PR merges prior to 21:45 UTC.'
+    },
+    release: {
+      urgency: 'normal',
+      title: 'New Platform Capabilities & Release Deployed',
+      content: 'Team,\n\nWe have deployed a new version of the platform featuring enhanced multi-channel notifications, slide-based navigation, and high-density dashboards.\n\nCheck out the updated dashboards and reach out in #devops if you experience any issues.'
+    },
+    incident: {
+      urgency: 'urgent',
+      title: 'CRITICAL ALERT: Buildspec Dispatch & API Degraded',
+      content: 'ATTENTION ALL ENGINEERS:\n\nWe are currently investigating elevated latency and transient timeouts affecting AWS CodeBuild job triggers.\n\n• Status: Active Investigation\n• Severity: P1 - Urgent\n• Incident Lead: DevOps On-Call\n\nUpdates will follow every 15 minutes.'
+    },
+    policy: {
+      urgency: 'normal',
+      title: 'Organization Security & Branch Protection Reminder',
+      content: 'Hi everyone,\n\nAs a reminder, all pull requests merging into protected branches require a minimum of 1 peer approval and passing automated test suites.\n\nDirect commits to production branches remain strictly disabled.'
+    }
+  };
+
+  var tpl = templates[type];
+  if (!tpl) return;
+
+  if (titleInput) titleInput.value = tpl.title;
+  if (contentInput) contentInput.value = tpl.content;
+
+  if (urgencyRadios) {
+    for (var i = 0; i < urgencyRadios.length; i++) {
+      if (urgencyRadios[i].value === tpl.urgency) {
+        urgencyRadios[i].checked = true;
+      }
+    }
+  }
+
+  updateBroadcastPreview();
+}
+window.selectQuickTemplate = selectQuickTemplate;
+
+function updateBroadcastPreview() {
+  var titleInput = document.getElementById('broadcast-input-title');
+  var contentInput = document.getElementById('broadcast-input-content');
+  var title = (titleInput && titleInput.value.trim()) || 'Scheduled Core Database Maintenance Window Tonight';
+  var body = (contentInput && contentInput.value.trim()) || 'Write your announcement in the composer to inspect live preview…';
+
+  var urgency = 'normal';
+  var radios = document.getElementsByName('broadcast_urgency');
+  for (var i = 0; i < radios.length; i++) {
+    if (radios[i].checked) { urgency = radios[i].value; break; }
+  }
+
+  var urgencyConfig = {
+    normal: { color: '#10b981', label: '🟢 NORMAL ANNOUNCEMENT', bg: 'rgba(16,185,129,0.15)' },
+    high:   { color: '#f59e0b', label: '🟡 HIGH PRIORITY ANNOUNCEMENT', bg: 'rgba(245,158,11,0.15)' },
+    urgent: { color: '#ef4444', label: '🔴 CRITICAL / INCIDENT ANNOUNCEMENT', bg: 'rgba(239,68,68,0.15)' }
+  };
+  var cfg = urgencyConfig[urgency] || urgencyConfig.normal;
+
+  // Slack preview updates
+  var slackBox = document.getElementById('preview-slack-box');
+  if (slackBox) slackBox.style.borderLeftColor = cfg.color;
+
+  var badgeEl = document.getElementById('preview-urgency-badge');
+  if (badgeEl) {
+    badgeEl.textContent = cfg.label;
+    badgeEl.style.color = cfg.color;
+    badgeEl.style.background = cfg.bg;
+  }
+
+  var slackTitle = document.getElementById('preview-slack-title');
+  if (slackTitle) slackTitle.textContent = title;
+
+  var slackBody = document.getElementById('preview-slack-body');
+  if (slackBody) slackBody.textContent = body;
+
+  var timeEl = document.getElementById('preview-slack-time');
+  if (timeEl) {
+    var now = new Date();
+    timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  // In-App preview updates
+  var inAppTitle = document.getElementById('preview-inapp-title');
+  if (inAppTitle) inAppTitle.textContent = title;
+
+  var inAppBody = document.getElementById('preview-inapp-snippet');
+  if (inAppBody) inAppBody.textContent = body;
+}
+window.updateBroadcastPreview = updateBroadcastPreview;
+
+async function handleSendBroadcast(e) {
+  if (e) e.preventDefault();
+
+  var titleInput = document.getElementById('broadcast-input-title');
+  var contentInput = document.getElementById('broadcast-input-content');
+  var feedbackEl = document.getElementById('broadcast-feedback-banner');
+  var sendBtn = document.getElementById('btn-submit-broadcast');
+
+  var title = titleInput ? titleInput.value.trim() : '';
+  var message = contentInput ? contentInput.value.trim() : '';
+
+  if (!title) {
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.style.background = 'rgba(239,68,68,0.1)';
+      feedbackEl.style.color = '#ef4444';
+      feedbackEl.style.border = '1px solid rgba(239,68,68,0.3)';
+      feedbackEl.textContent = 'Please provide an announcement title.';
+    }
+    if (titleInput) titleInput.focus();
+    return;
+  }
+
+  if (!message) {
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.style.background = 'rgba(239,68,68,0.1)';
+      feedbackEl.style.color = '#ef4444';
+      feedbackEl.style.border = '1px solid rgba(239,68,68,0.3)';
+      feedbackEl.textContent = 'Please provide announcement message content.';
+    }
+    if (contentInput) contentInput.focus();
+    return;
+  }
+
+  var chanInApp = document.getElementById('broadcast-chan-inapp');
+  var chanSlack = document.getElementById('broadcast-chan-slack');
+  var chanEmail = document.getElementById('broadcast-chan-email');
+
+  var channels = [];
+  if (chanInApp && chanInApp.checked) channels.push('in_app');
+  if (chanSlack && chanSlack.checked) channels.push('slack');
+  if (chanEmail && chanEmail.checked) channels.push('email');
+
+  if (channels.length === 0) {
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.style.background = 'rgba(239,68,68,0.1)';
+      feedbackEl.style.color = '#ef4444';
+      feedbackEl.style.border = '1px solid rgba(239,68,68,0.3)';
+      feedbackEl.textContent = 'Please select at least one delivery channel (In-App, Slack, or Email).';
+    }
+    return;
+  }
+
+  var urgency = 'normal';
+  var radios = document.getElementsByName('broadcast_urgency');
+  for (var i = 0; i < radios.length; i++) {
+    if (radios[i].checked) { urgency = radios[i].value; break; }
+  }
+
+  var targetChannelIds = [];
+  var targetProjectIds = [];
+
+  if (channels.includes('slack')) {
+    if (_slackTargetMode === 'projects') {
+      var pCbs = document.querySelectorAll('.broadcast-project-checkbox:checked');
+      pCbs.forEach(function(cb) { targetProjectIds.push(cb.value); });
+    } else if (_slackTargetMode === 'select') {
+      var cCbs = document.querySelectorAll('.broadcast-channel-checkbox:checked');
+      cCbs.forEach(function(cb) { targetChannelIds.push(cb.value); });
+    }
+  }
+
+  // Confirmation dialog
+  var confirmMsg = 'Confirm broadcast announcement to entire organization across selected channels (' + channels.join(', ') + ')?';
+  if (!confirm(confirmMsg)) return;
+
+  if (sendBtn) {
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i data-lucide="loader-2" class="animate-spin" style="width:15px;height:15px;"></i> <span>Broadcasting...</span>';
+    if (window.lucide) lucide.createIcons();
+  }
+  if (feedbackEl) feedbackEl.style.display = 'none';
+
+  try {
+    var res = await api.post('/api/admin/broadcast', {
+      title: title,
+      message: message,
+      urgency: urgency,
+      channels: channels,
+      slackTargetMode: _slackTargetMode,
+      targetChannelIds: targetChannelIds,
+      targetProjectIds: targetProjectIds
+    });
+
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = '<i data-lucide="send" style="width:15px;height:15px;"></i> <span>Broadcast Announcement Now</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+
+    if (res && res.ok) {
+      if (feedbackEl) {
+        feedbackEl.style.display = 'block';
+        feedbackEl.style.background = 'rgba(16,185,129,0.1)';
+        feedbackEl.style.color = '#10b981';
+        feedbackEl.style.border = '1px solid rgba(16,185,129,0.3)';
+        var detail = (res.inAppCount || 0) + ' users notified in-app';
+        if (res.slackDispatched) detail += ', ' + res.slackDispatched + ' Slack messages posted';
+        feedbackEl.innerHTML = '✔ <strong>Broadcast sent successfully!</strong> (' + detail + ')';
+      }
+
+      // Reset fields
+      if (titleInput) titleInput.value = '';
+      if (contentInput) contentInput.value = '';
+      updateBroadcastPreview();
+
+      // Return to All Accounts view after short delay
+      setTimeout(function() {
+        switchAdminTab('all');
+      }, 2500);
+    } else {
+      if (feedbackEl) {
+        feedbackEl.style.display = 'block';
+        feedbackEl.style.background = 'rgba(239,68,68,0.1)';
+        feedbackEl.style.color = '#ef4444';
+        feedbackEl.style.border = '1px solid rgba(239,68,68,0.3)';
+        feedbackEl.textContent = (res && res.error) || 'Failed to send broadcast announcement.';
+      }
+    }
+  } catch (err) {
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = '<i data-lucide="send" style="width:15px;height:15px;"></i> <span>Broadcast Announcement Now</span>';
+      if (window.lucide) lucide.createIcons();
+    }
+    if (feedbackEl) {
+      feedbackEl.style.display = 'block';
+      feedbackEl.style.background = 'rgba(239,68,68,0.1)';
+      feedbackEl.style.color = '#ef4444';
+      feedbackEl.style.border = '1px solid rgba(239,68,68,0.3)';
+      feedbackEl.textContent = 'Network error while broadcasting: ' + (err.message || err);
+    }
+  }
+}
+window.handleSendBroadcast = handleSendBroadcast;
+

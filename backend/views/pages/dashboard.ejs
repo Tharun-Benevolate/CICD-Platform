@@ -6,12 +6,9 @@
       <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(99,102,241,0.15);color:#6366f1;border-radius:12px;font-size:11px;font-weight:700;margin-bottom:8px;letter-spacing:0.5px;">
         <span>DEVELOPER WORKSPACE</span>
       </div>
-      <h1 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:4px;">
+      <h1 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin:0;">
         Welcome back, <%= user.username %> 👋
       </h1>
-      <p style="font-size:13px;color:var(--color-text-secondary);">
-        Overview of your assigned repositories, project build pipelines, code commits, and source files.
-      </p>
     </div>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
       <a href="/file-browser" class="btn-primary" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:var(--radius-md);font-weight:600;font-size:13px;text-decoration:none;">
@@ -103,12 +100,9 @@
   <!-- Admin Header Banner -->
   <div style="background:linear-gradient(135deg,var(--color-surface) 0%,var(--color-bg) 100%);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
     <div>
-      <h1 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin-bottom:2px;">
+      <h1 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin:0;">
         Welcome back, <span id="dash-username"><%= user.username %></span> 👋
       </h1>
-      <p style="font-size:13px;color:var(--color-text-secondary);">
-        Overview of your active infrastructure, deployments, and source repositories.
-      </p>
     </div>
     <a href="/new-project" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:var(--color-primary);color:white;border-radius:var(--radius-md);font-weight:600;font-size:13px;text-decoration:none;">
       <i data-lucide="plus" style="width:16px;height:16px;"></i> New Project

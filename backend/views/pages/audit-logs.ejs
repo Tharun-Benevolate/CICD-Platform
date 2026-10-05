@@ -2,12 +2,9 @@
   <!-- Header Bar -->
   <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
     <div>
-      <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin-bottom:2px;">
+      <h1 style="font-size:22px;font-weight:700;color:var(--color-text-primary);margin:0;">
         Audit Logs
       </h1>
-      <p style="font-size:13px;color:var(--color-text-secondary);">
-        Security audit trail for infrastructure actions, logins, and approvals.
-      </p>
     </div>
     <button onclick="fetchAuditLogs()" style="padding:8px 14px;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;font-size:13px;display:flex;align-items:center;gap:6px;color:var(--color-text-primary);">
       <i data-lucide="refresh-cw" id="btn-refresh-audit-icon" style="width:14px;height:14px;"></i> Refresh
