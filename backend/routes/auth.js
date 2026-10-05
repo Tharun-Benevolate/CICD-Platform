@@ -441,8 +441,7 @@ async function handleGetUserDetails(req, res) {
         githubUsername: user.githubUsername,
         avatarUrl: user.avatarUrl,
         isOnline: user.isOnline,
-        slackConnected,
-        slackUserId,
+        ...(isPrivileged ? { slackConnected, slackUserId } : {}),
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       },
