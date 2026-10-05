@@ -219,6 +219,22 @@
           </div>
         </div>
 
+        <!-- Editable Slack Header Banner -->
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <label style="font-size:12px;font-weight:800;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;">
+              Slack Header Banner
+            </label>
+            <span style="font-size:11px;color:var(--color-text-tertiary);">Customizable top banner text</span>
+          </div>
+          <div style="position:relative;display:flex;align-items:center;">
+            <span id="input-status-icon" style="position:absolute;left:12px;font-size:15px;pointer-events:none;">📢</span>
+            <input type="text" id="broadcast-input-header" value="PLATFORM ANNOUNCEMENT" placeholder="e.g., PLATFORM ANNOUNCEMENT, URGENT ADVISORY"
+              style="width:100%;padding:10px 14px 10px 38px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;font-weight:700;outline:none;box-sizing:border-box;letter-spacing:0.3px;"
+              oninput="updateBroadcastPreview()" />
+          </div>
+        </div>
+
         <!-- Title & Content Inputs -->
         <div>
           <label style="display:block;font-size:12px;font-weight:800;color:var(--color-text-secondary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:6px;">
@@ -277,10 +293,15 @@
               <span id="preview-slack-time" style="font-size:11px;color:#868686;margin-left:auto;">Just now</span>
             </div>
 
-            <!-- Header with Status Icon -->
-            <div style="font-size:14px;font-weight:700;color:#ffffff;line-height:1.3;display:flex;align-items:center;gap:6px;">
+            <!-- Header with Status Icon & Customizable Banner -->
+            <div style="font-size:14px;font-weight:800;color:#ffffff;line-height:1.3;display:flex;align-items:center;gap:6px;letter-spacing:0.3px;">
               <span id="preview-status-icon">📢</span>
-              <span id="preview-slack-title">Scheduled Core Database Maintenance Window Tonight</span>
+              <span id="preview-slack-header">PLATFORM ANNOUNCEMENT</span>
+            </div>
+
+            <!-- Title -->
+            <div id="preview-slack-title" style="font-size:13px;font-weight:700;color:#ffffff;line-height:1.3;">
+              Scheduled Core Database Maintenance Window Tonight
             </div>
 
             <!-- Body Message -->
@@ -290,7 +311,7 @@
 
             <!-- Bottom Line with Author Field -->
             <div style="margin-top:6px;padding-top:8px;border-top:1px solid #2c3136;display:flex;align-items:center;justify-content:space-between;font-size:11px;">
-              <span style="color:#868686;">Author: @<%= user.username %></span>
+              <span style="color:#868686;">Author: @<%= user.username %> &bull; Benevolate Integrate</span>
               <span style="font-weight:700;color:#6366f1;text-decoration:underline;">View in Platform →</span>
             </div>
           </div>

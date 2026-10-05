@@ -479,6 +479,7 @@ router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res
     let slackSent = 0;
     let slackFailed = 0;
     let targetSlackChannels = [];
+    let failedSlackChannels = [];
     let emailSent = 0;
     let emailStatus = "Not requested";
 
@@ -556,7 +557,6 @@ router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res
         });
       }
 
-      const failedSlackChannels = [];
       for (const target of channelsToPost) {
         try {
           const sent = await slackService.sendBroadcastToSlackChannel(target.id, {
@@ -565,7 +565,8 @@ router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res
             link: link && link.trim() ? link.trim() : null,
             urgency,
             sender: req.user?.username || "Super Admin",
-            projectName: target.projectName || null
+            projectName: target.projectName || null,
+            headerBanner: req.body.headerBanner || null
           });
           if (sent) {
             slackSent++;

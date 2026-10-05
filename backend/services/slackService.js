@@ -1888,13 +1888,18 @@ async function notifyProjectDeployedLive({ projectName, environment = "dev", liv
  * 📢 BROADCAST TO SLACK CHANNEL
  * Sends a rich, structured Benevolate announcement to a designated Slack channel.
  */
-async function sendBroadcastToSlackChannel(channelId, { title, message, link = null, urgency = "normal", sender = "Super Admin", projectName = null }) {
+async function sendBroadcastToSlackChannel(channelId, { title, message, link = null, urgency = "normal", sender = "Super Admin", projectName = null, headerBanner = null }) {
   if (!channelId) return false;
 
   const colorMap = {
     urgent: "#ef4444",
     important: "#f59e0b",
     normal: "#6366f1"
+  };
+  const iconMap = {
+    urgent: "🚨",
+    important: "⚠️",
+    normal: "📢"
   };
   const badgeMap = {
     urgent: "🚨 URGENT BROADCAST",
@@ -1903,8 +1908,10 @@ async function sendBroadcastToSlackChannel(channelId, { title, message, link = n
   };
 
   const chosenColor = colorMap[urgency] || colorMap.normal;
-  const chosenBadge = badgeMap[urgency] || badgeMap.normal;
-  const timeStr = typeof formatTimeCstIst === "function" ? formatTimeCstIst(new Date()) : new Date().toUTCString();
+  const chosenIcon = iconMap[urgency] || iconMap.normal;
+  const chosenBadge = headerBanner && headerBanner.trim()
+    ? (headerBanner.trim().startsWith(chosenIcon) ? headerBanner.trim() : `${chosenIcon} ${headerBanner.trim()}`)
+    : (badgeMap[urgency] || badgeMap.normal);
 
   const blocks = [
     {
@@ -1923,18 +1930,6 @@ async function sendBroadcastToSlackChannel(channelId, { title, message, link = n
       }
     }
   ];
-
-  if (projectName) {
-    blocks.push({
-      type: "context",
-      elements: [
-        {
-          type: "mrkdwn",
-          text: `📁 *Project Context:* *${projectName}*`
-        }
-      ]
-    });
-  }
 
   if (link && link.trim()) {
     blocks.push({
@@ -1959,7 +1954,7 @@ async function sendBroadcastToSlackChannel(channelId, { title, message, link = n
     elements: [
       {
         type: "mrkdwn",
-        text: `Author: @${sender} • Dispatched: ${timeStr} • *Benevolate Integrate*`
+        text: `Author: @${sender} • *Benevolate Integrate*`
       }
     ]
   });

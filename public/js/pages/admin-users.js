@@ -531,6 +531,22 @@ function selectUrgency(urgency) {
       card.style.boxShadow = 'none';
     }
   });
+
+  var bannerDefaults = {
+    normal: { icon: '📢', header: 'PLATFORM ANNOUNCEMENT' },
+    high:   { icon: '⚠️', header: 'IMPORTANT ANNOUNCEMENT' },
+    urgent: { icon: '🚨', header: 'URGENT BROADCAST' }
+  };
+  var curCfg = bannerDefaults[urgency] || bannerDefaults.normal;
+  var inputStatusIcon = document.getElementById('input-status-icon');
+  if (inputStatusIcon) inputStatusIcon.textContent = curCfg.icon;
+
+  var headerInput = document.getElementById('broadcast-input-header');
+  if (headerInput) {
+    var isDefaultText = !headerInput.value || Object.values(bannerDefaults).some(function(d) { return d.header === headerInput.value.trim(); });
+    if (isDefaultText) headerInput.value = curCfg.header;
+  }
+
   updateBroadcastPreview();
 }
 window.selectUrgency = selectUrgency;
@@ -646,6 +662,11 @@ function updateBroadcastPreview() {
   var statusIcon = document.getElementById('preview-status-icon');
   if (statusIcon) statusIcon.textContent = cfg.icon;
 
+  var headerInput = document.getElementById('broadcast-input-header');
+  var headerText = (headerInput && headerInput.value.trim()) || 'PLATFORM ANNOUNCEMENT';
+  var slackHeader = document.getElementById('preview-slack-header');
+  if (slackHeader) slackHeader.textContent = headerText;
+
   var slackTitle = document.getElementById('preview-slack-title');
   if (slackTitle) slackTitle.textContent = title;
 
@@ -753,10 +774,14 @@ async function handleSendBroadcast(e) {
   if (feedbackEl) feedbackEl.style.display = 'none';
 
   try {
+    var headerInput = document.getElementById('broadcast-input-header');
+    var headerBanner = headerInput ? headerInput.value.trim() : '';
+
     var res = await api.post('/api/admin/broadcast', {
       title: title,
       message: message,
       urgency: urgency,
+      headerBanner: headerBanner,
       channels: {
         inApp: channels.includes('in_app'),
         email: channels.includes('email'),
