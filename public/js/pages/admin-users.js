@@ -388,8 +388,17 @@ async function openInspectUserModal(username) {
             '<span style="display:inline-block;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;background:#dcfce7;color:#15803d;">✓ Approved</span>' :
             '<span style="display:inline-block;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;background:#fffbeb;color:#d97706;">⏳ Pending Approval</span>') +
         '</div>' +
-        // Joined Date
+        // Slack Integration
         '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;">' +
+          '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;display:flex;align-items:center;gap:5px;">' +
+            '<i data-lucide="message-square" style="width:11px;height:11px;"></i> SLACK INTEGRATION' +
+          '</div>' +
+          (u.slackConnected ?
+            '<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;background:#dcfce7;color:#15803d;">✓ Connected' + (u.slackUserId ? ' (' + u.slackUserId + ')' : '') + '</span>' :
+            '<span style="display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;background:#f1f5f9;color:#64748b;">✕ Not Connected</span>') +
+        '</div>' +
+        // Joined Date
+        '<div style="border:1px solid #e5e7eb;border-radius:10px;padding:14px;grid-column:span 2;">' +
           '<div style="font-size:10px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px;display:flex;align-items:center;gap:5px;">' +
             '<i data-lucide="calendar" style="width:11px;height:11px;"></i> JOINED DATE' +
           '</div>' +

@@ -391,21 +391,42 @@ router.patch("/users/:username/approve", auth.requireRole(...auth.ADMIN_ROLES), 
   }
 });
 
-// GET /api/admin/users/:username/details — User details + recent activity logs
-router.get("/admin/users/:username/details", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {
+// GET /api/admin/users/:username/details (and /api/users/:username/details) — User details + activity logs
+router.get("/admin/users/:username/details", auth.requireAuth, handleGetUserDetails);
+router.get("/users/:username/details", auth.requireAuth, handleGetUserDetails);
+
+async function handleGetUserDetails(req, res) {
   const target = req.params.username.toLowerCase().trim();
   try {
     const user = await userStore.getUser(target);
     if (!user) return res.status(404).json({ ok: false, error: "User not found" });
-    const clientIp = auditStore.extractClientIp(req);
-    const auditPage = await auditStore.getAuditLogs({ username: user.username, limit: 15 });
-    const rawLogs = auditPage.logs;
-    const userLogs = rawLogs.map(log => {
-      if (!log.ipAddress || log.ipAddress === "127.0.0.1" || log.ipAddress === "::1") {
-        return { ...log, ipAddress: clientIp !== "127.0.0.1" ? clientIp : (log.ipAddress || "127.0.0.1") };
+
+    // Determine Slack connection status
+    let slackConnected = false;
+    let slackUserId = null;
+    try {
+      const slackService = require("../services/slackService");
+      const slackCreds = await slackService.getUserSlackCreds(user.username);
+      if (slackCreds && (slackCreds.token || slackCreds.userToken || slackCreds.slackUserId || slackCreds.channelId)) {
+        slackConnected = true;
+        slackUserId = slackCreds.slackUserId || null;
       }
-      return log;
-    });
+    } catch (_) {}
+
+    const isPrivileged = ["super_admin", "admin", "devops"].includes(req.user?.userType) || req.user?.username?.toLowerCase() === target;
+    let userLogs = [];
+
+    if (isPrivileged) {
+      const clientIp = auditStore.extractClientIp(req);
+      const auditPage = await auditStore.getAuditLogs({ username: user.username, limit: 15 });
+      const rawLogs = auditPage.logs || [];
+      userLogs = rawLogs.map(log => {
+        if (!log.ipAddress || log.ipAddress === "127.0.0.1" || log.ipAddress === "::1") {
+          return { ...log, ipAddress: clientIp !== "127.0.0.1" ? clientIp : (log.ipAddress || "127.0.0.1") };
+        }
+        return log;
+      });
+    }
     
     res.json({
       ok: true,
@@ -420,6 +441,8 @@ router.get("/admin/users/:username/details", auth.requireRole(...auth.ADMIN_ROLE
         githubUsername: user.githubUsername,
         avatarUrl: user.avatarUrl,
         isOnline: user.isOnline,
+        slackConnected,
+        slackUserId,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt
       },
@@ -428,7 +451,7 @@ router.get("/admin/users/:username/details", auth.requireRole(...auth.ADMIN_ROLE
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
-});
+}
 
 // DELETE /api/users/:username — Admin deletion of user account
 router.delete("/users/:username", auth.requireRole(...auth.ADMIN_ROLES), async (req, res) => {

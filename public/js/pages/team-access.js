@@ -421,6 +421,7 @@ async function openMemberDetailsModal(username) {
           '<div><strong>Username:</strong> ' + u.username + '</div>' +
           '<div><strong>Email:</strong> ' + (u.email || 'Not configured') + '</div>' +
           '<div><strong>Role:</strong> ' + role + '</div>' +
+          '<div><strong>Slack:</strong> ' + (u.slackConnected ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:#dcfce7;color:#15803d;">✓ Connected' + (u.slackUserId ? ' (' + u.slackUserId + ')' : '') + '</span>' : '<span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:#f1f5f9;color:#64748b;">✕ Not Connected</span>') + '</div>' +
           '<div><strong>Status:</strong> <span style="display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;background:' + (isOnline ? '#dcfce7' : '#f1f5f9') + ';color:' + (isOnline ? '#15803d' : '#64748b') + ';">' + (isOnline ? 'Online' : 'Offline') + '</span></div>' +
         '</div>' +
       '</div>' +
