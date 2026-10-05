@@ -471,7 +471,7 @@ function renderCommitsList() {
 
     var html =
       '<div style="flex:1;min-width:0;">' +
-        '<div style="font-size:13px;font-weight:600;color:var(--color-text-primary);line-height:1.4;margin-bottom:6px;">' + firstLine + '</div>' +
+        '<div style="font-size:13px;font-weight:600;color:var(--color-text-primary);line-height:1.4;margin-bottom:6px;">' + (msg.split('\n')[0].length > 80 ? msg.split('\n')[0].substring(0, 80) + '…' : msg.split('\n')[0]) + '</div>' +
         '<div style="display:flex;gap:14px;flex-wrap:wrap;align-items:center;">' +
           '<span style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--color-text-tertiary);">' +
             (c.authorAvatar ? '<img src="' + c.authorAvatar + '" style="width:16px;height:16px;border-radius:50%;object-fit:cover;" />' : '<i data-lucide="user" style="width:12px;height:12px;"></i>') +
