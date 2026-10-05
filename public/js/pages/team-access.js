@@ -400,23 +400,9 @@ async function openMemberDetailsModal(username) {
     var isOnline = !!u.isOnline;
     var role     = roleLabel(u);
 
-    var logsHtml = '';
-    if (logs.length > 0) {
-      logsHtml = '<div style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;">' +
-        logs.slice(0, 10).map(function(log) {
-          return '<div style="padding:8px 12px;border:1px solid #f3f4f6;border-radius:8px;background:#f9fafb;font-size:12px;">' +
-            '<div style="font-weight:600;color:#111827;">' + (log.action || 'Action') + '</div>' +
-            '<div style="color:#9ca3af;margin-top:2px;">' + new Date(log.timestamp).toLocaleString() + '</div>' +
-            '</div>';
-        }).join('') +
-      '</div>';
-    } else {
-      logsHtml = '<div style="color:#9ca3af;font-size:13px;text-align:center;padding:16px 0;">No audit activity recorded for this member.</div>';
-    }
-
     bodyEl.innerHTML =
       // Profile info card
-      '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin-bottom:20px;">' +
+      '<div style="background:#f8fafc;border:1px solid #e5e7eb;border-radius:12px;padding:16px;">' +
         '<div style="font-size:13px;color:#374151;line-height:2;">' +
           '<div><strong>Username:</strong> ' + u.username + '</div>' +
           '<div><strong>Email:</strong> ' + (u.email || 'Not configured') + '</div>' +
@@ -424,10 +410,7 @@ async function openMemberDetailsModal(username) {
           '<div><strong>Slack:</strong> ' + (u.slackConnected ? '<span style="display:inline-flex;align-items:center;gap:4px;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:#dcfce7;color:#15803d;">✓ Connected' + (u.slackUserId ? ' (' + u.slackUserId + ')' : '') + '</span>' : '<span style="display:inline-flex;align-items:center;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:#f1f5f9;color:#64748b;">✕ Not Connected</span>') + '</div>' +
           '<div><strong>Status:</strong> <span style="display:inline-flex;align-items:center;padding:2px 10px;border-radius:999px;font-size:12px;font-weight:600;background:' + (isOnline ? '#dcfce7' : '#f1f5f9') + ';color:' + (isOnline ? '#15803d' : '#64748b') + ';">' + (isOnline ? 'Online' : 'Offline') + '</span></div>' +
         '</div>' +
-      '</div>' +
-      // Activity trail
-      '<div style="font-size:15px;font-weight:700;color:#111827;margin-bottom:12px;">Member Activity Trail</div>' +
-      logsHtml;
+      '</div>';
   } catch (e) {
     bodyEl.innerHTML = '<div style="color:#ef4444;font-size:13px;">Failed to load details.</div>';
   }
