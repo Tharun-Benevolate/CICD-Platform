@@ -1847,6 +1847,118 @@ async function notifyProjectDeployedLive({ projectName, environment = "dev", liv
   }
 }
 
+/**
+ * 📢 BROADCAST TO SLACK CHANNEL
+ * Sends a rich, structured Benevolate announcement to a designated Slack channel.
+ */
+async function sendBroadcastToSlackChannel(channelId, { title, message, link = null, urgency = "normal", sender = "Super Admin", projectName = null }) {
+  if (!channelId) return false;
+
+  const colorMap = {
+    urgent: "#ef4444",
+    important: "#f59e0b",
+    normal: "#6366f1"
+  };
+  const badgeMap = {
+    urgent: "🚨 URGENT BROADCAST",
+    important: "⚠️ IMPORTANT ANNOUNCEMENT",
+    normal: "📢 PLATFORM ANNOUNCEMENT"
+  };
+
+  const chosenColor = colorMap[urgency] || colorMap.normal;
+  const chosenBadge = badgeMap[urgency] || badgeMap.normal;
+  const timeStr = typeof formatTimeCstIst === "function" ? formatTimeCstIst(new Date()) : new Date().toUTCString();
+
+  const blocks = [
+    {
+      type: "header",
+      text: {
+        type: "plain_text",
+        text: chosenBadge,
+        emoji: true
+      }
+    },
+    {
+      type: "section",
+      text: {
+        type: "mrkdwn",
+        text: `*${title}*\n\n${message}`
+      }
+    }
+  ];
+
+  if (projectName) {
+    blocks.push({
+      type: "context",
+      elements: [
+        {
+          type: "mrkdwn",
+          text: `📁 *Project Context:* *${projectName}*`
+        }
+      ]
+    });
+  }
+
+  const fields = [
+    {
+      type: "mrkdwn",
+      text: `*Author:*\n@${sender}`
+    },
+    {
+      type: "mrkdwn",
+      text: `*Priority:*\n\`${(urgency || "normal").toUpperCase()}\``
+    },
+    {
+      type: "mrkdwn",
+      text: `*Dispatched:*\n${timeStr}`
+    }
+  ];
+
+  blocks.push({
+    type: "section",
+    fields: fields
+  });
+
+  if (link && link.trim()) {
+    blocks.push({
+      type: "actions",
+      elements: [
+        {
+          type: "button",
+          text: {
+            type: "plain_text",
+            text: "🔗 Open Action Link",
+            emoji: true
+          },
+          url: link.trim(),
+          style: urgency === "urgent" ? "danger" : "primary"
+        }
+      ]
+    });
+  }
+
+  blocks.push({
+    type: "context",
+    elements: [
+      {
+        type: "mrkdwn",
+        text: "⚡ *Benevolate Integrate Notification* • Super Admin Broadcast"
+      }
+    ]
+  });
+
+  const payload = {
+    attachments: [
+      {
+        color: chosenColor,
+        blocks: blocks
+      }
+    ]
+  };
+
+  return await postToSlackChannelById(channelId, payload);
+}
+
 module.exports = {
   getSlackConfig,
   saveSlackConfig,
@@ -1854,6 +1966,7 @@ module.exports = {
   sendSlackNotification,
   sendSlackDM,
   postToSlackChannelById,
+  sendBroadcastToSlackChannel,
   autoJoinSlackChannel,
   autoProvisionProjectSlackChannel,
   syncProjectMembersToSlackChannel,

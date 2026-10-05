@@ -1,0 +1,225 @@
+<% if (typeof user !== 'undefined' && user && user.userType === 'super_admin') { %>
+<!-- ── Super Admin Broadcast Announcement Modal ────────────────────────────── -->
+<div id="broadcast-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div class="broadcast-modal-card" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:16px;width:100%;max-width:760px;max-height:90vh;display:flex;flex-direction:column;box-shadow:0 25px 50px -12px rgba(0,0,0,0.35);overflow:hidden;position:relative;">
+    
+    <!-- Modal Header -->
+    <div style="padding:18px 24px;border-bottom:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;background:linear-gradient(135deg,rgba(99,102,241,0.06) 0%,rgba(168,85,247,0.04) 100%);">
+      <div style="display:flex;align-items:center;gap:12px;">
+        <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(99,102,241,0.3);">
+          <i data-lucide="megaphone" style="width:18px;height:18px;"></i>
+        </div>
+        <div>
+          <h2 style="font-size:16px;font-weight:700;color:var(--color-text-primary);margin:0;display:flex;align-items:center;gap:8px;">
+            Broadcast Announcement
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:12px;background:rgba(99,102,241,0.12);color:#818cf8;">SUPER ADMIN ONLY</span>
+          </h2>
+          <p style="font-size:12px;color:var(--color-text-secondary);margin:2px 0 0 0;">
+            Dispatch multi-channel notifications to all platform users across In-App, Slack, and Email.
+          </p>
+        </div>
+      </div>
+      <button type="button" onclick="closeBroadcastModal()" style="border:none;background:transparent;color:var(--color-text-tertiary);cursor:pointer;padding:6px;border-radius:6px;display:flex;align-items:center;justify-content:center;">
+        <i data-lucide="x" style="width:18px;height:18px;"></i>
+      </button>
+    </div>
+
+    <!-- Modal Body (Scrollable) -->
+    <div style="padding:22px 24px;overflow-y:auto;display:flex;flex-direction:column;gap:18px;flex:1;">
+      
+      <!-- Row 1: Title & Urgency -->
+      <div style="display:flex;gap:14px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:280px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--color-text-secondary);margin-bottom:6px;">
+            ANNOUNCEMENT TITLE <span style="color:var(--color-danger);">*</span>
+          </label>
+          <input type="text" id="broadcast-title" placeholder="e.g. Scheduled Infrastructure Maintenance Window" 
+            style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;font-family:inherit;outline:none;"
+            oninput="updateBroadcastPreview()" />
+        </div>
+        <div style="width:200px;">
+          <label style="display:block;font-size:12px;font-weight:700;color:var(--color-text-secondary);margin-bottom:6px;">
+            URGENCY LEVEL
+          </label>
+          <select id="broadcast-urgency" onchange="updateBroadcastPreview()"
+            style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;font-family:inherit;cursor:pointer;">
+            <option value="normal">📢 Normal Announcement</option>
+            <option value="important">⚠️ Important Notice</option>
+            <option value="urgent">🚨 Urgent / Action Required</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 2: Message Body -->
+      <div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--color-text-secondary);margin-bottom:6px;">
+          MESSAGE BODY <span style="color:var(--color-danger);">*</span>
+        </label>
+        <textarea id="broadcast-message" rows="4" placeholder="Enter full details of the notice... Markdown, bullet points, and code snippets are supported."
+          style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;font-family:inherit;resize:vertical;outline:none;line-height:1.5;"
+          oninput="updateBroadcastPreview()"></textarea>
+      </div>
+
+      <!-- Row 3: Action Link URL -->
+      <div>
+        <label style="display:block;font-size:12px;font-weight:700;color:var(--color-text-secondary);margin-bottom:6px;">
+          ACTION / DOCUMENTATION LINK <span style="font-weight:400;color:var(--color-text-tertiary);">(Optional)</span>
+        </label>
+        <div style="position:relative;">
+          <i data-lucide="link" style="position:absolute;left:10px;top:10px;width:15px;height:15px;color:var(--color-text-tertiary);"></i>
+          <input type="url" id="broadcast-link" placeholder="https://benevolate.com/docs/release-notes" 
+            style="width:100%;padding:9px 12px 9px 34px;border-radius:8px;border:1px solid var(--color-border);background:var(--color-bg);color:var(--color-text-primary);font-size:13px;font-family:inherit;outline:none;"
+            oninput="updateBroadcastPreview()" />
+        </div>
+      </div>
+
+      <!-- Delivery Channels Config Box -->
+      <div style="background:var(--color-bg);border:1px solid var(--color-border);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:14px;">
+        <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);letter-spacing:0.5px;display:flex;align-items:center;justify-content:space-between;">
+          <span>DELIVERY CHANNELS</span>
+          <span style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);">Select all applicable targets</span>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;">
+          <!-- Channel 1: In-App -->
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);cursor:pointer;">
+            <input type="checkbox" id="broadcast-chan-inapp" checked style="margin-top:2px;accent-color:#6366f1;" onchange="updateBroadcastPreview()" />
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
+                <i data-lucide="bell" style="width:14px;height:14px;color:#6366f1;"></i> In-App Alerts
+              </div>
+              <div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px;">
+                Pings all <span id="broadcast-meta-user-count" style="font-weight:700;color:var(--color-text-secondary);">...</span> registered user notification bells
+              </div>
+            </div>
+          </label>
+
+          <!-- Channel 2: Email -->
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);cursor:pointer;">
+            <input type="checkbox" id="broadcast-chan-email" style="margin-top:2px;accent-color:#6366f1;" onchange="updateBroadcastPreview()" />
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
+                <i data-lucide="mail" style="width:14px;height:14px;color:#0ea5e9;"></i> Email Digest
+              </div>
+              <div id="broadcast-email-status-badge" style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px;">
+                Checking SMTP configuration...
+              </div>
+            </div>
+          </label>
+
+          <!-- Channel 3: Slack -->
+          <label style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);cursor:pointer;">
+            <input type="checkbox" id="broadcast-chan-slack" checked style="margin-top:2px;accent-color:#6366f1;" onchange="toggleSlackTargetSection(); updateBroadcastPreview();" />
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:6px;">
+                <i data-lucide="message-square" style="width:14px;height:14px;color:#10b981;"></i> Slack Workspace
+              </div>
+              <div id="broadcast-slack-status-badge" style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px;">
+                Connected to Slack Workspace
+              </div>
+            </div>
+          </label>
+        </div>
+
+        <!-- Slack Routing Options (Nested) -->
+        <div id="broadcast-slack-options" style="border-top:1px dashed var(--color-border);padding-top:14px;display:flex;flex-direction:column;gap:10px;">
+          <div style="font-size:12px;font-weight:700;color:var(--color-text-secondary);display:flex;align-items:center;gap:6px;">
+            <i data-lucide="sliders" style="width:14px;height:14px;color:#6366f1;"></i> Slack Routing Target
+          </div>
+
+          <div style="display:flex;gap:16px;flex-wrap:wrap;">
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--color-text-primary);cursor:pointer;">
+              <input type="radio" name="broadcast-slack-mode" value="all" checked onchange="switchSlackMode('all')" style="accent-color:#6366f1;" />
+              All Workspace Channels
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--color-text-primary);cursor:pointer;">
+              <input type="radio" name="broadcast-slack-mode" value="projects" onchange="switchSlackMode('projects')" style="accent-color:#6366f1;" />
+              Project-Connected Channels Only
+            </label>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--color-text-primary);cursor:pointer;">
+              <input type="radio" name="broadcast-slack-mode" value="individual" onchange="switchSlackMode('individual')" style="accent-color:#6366f1;" />
+              Select Specific Channels
+            </label>
+          </div>
+
+          <!-- Mode All: Safety Checkbox -->
+          <div id="slack-mode-all-box" style="margin-top:4px;">
+            <label style="display:flex;align-items:center;gap:8px;font-size:11px;color:var(--color-text-secondary);cursor:pointer;">
+              <input type="checkbox" id="broadcast-slack-exclude-system" checked style="accent-color:#6366f1;" />
+              Exclude sensitive system channels (e.g. #integrate-security-alerts, #integrate-devops-alerts)
+            </label>
+          </div>
+
+          <!-- Mode Projects: Project Selector -->
+          <div id="slack-mode-projects-box" style="display:none;margin-top:4px;">
+            <div style="font-size:11px;font-weight:600;color:var(--color-text-tertiary);margin-bottom:6px;">
+              Choose which project channels will receive this alert (routes to #proj-&lt;name&gt;):
+            </div>
+            <div id="broadcast-projects-list" style="max-height:140px;overflow-y:auto;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);padding:8px;display:flex;flex-direction:column;gap:6px;">
+              <div style="font-size:12px;color:var(--color-text-tertiary);text-align:center;padding:12px;">Loading project channels...</div>
+            </div>
+          </div>
+
+          <!-- Mode Individual: Channel Selector -->
+          <div id="slack-mode-individual-box" style="display:none;margin-top:4px;">
+            <div style="margin-bottom:6px;">
+              <input type="text" id="broadcast-channel-search" placeholder="Filter channels..." oninput="filterSlackChannelList()"
+                style="width:100%;padding:6px 10px;font-size:12px;border-radius:6px;border:1px solid var(--color-border);background:var(--color-surface);color:var(--color-text-primary);outline:none;" />
+            </div>
+            <div id="broadcast-channels-list" style="max-height:140px;overflow-y:auto;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);padding:8px;display:flex;flex-direction:column;gap:6px;">
+              <div style="font-size:12px;color:var(--color-text-tertiary);text-align:center;padding:12px;">Loading channels...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Live Preview Accordion -->
+      <div style="border:1px solid var(--color-border);border-radius:12px;padding:14px;background:var(--color-surface);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:11px;font-weight:700;color:var(--color-text-secondary);letter-spacing:0.5px;display:flex;align-items:center;gap:6px;">
+            <i data-lucide="eye" style="width:13px;height:13px;color:#6366f1;"></i> LIVE PREVIEW CARD
+          </div>
+          <span id="preview-urgency-badge" style="font-size:10px;font-weight:800;padding:2px 8px;border-radius:12px;background:rgba(99,102,241,0.1);color:#6366f1;">
+            📢 NORMAL ANNOUNCEMENT
+          </span>
+        </div>
+        <div style="padding:12px 14px;border-left:4px solid #6366f1;background:var(--color-bg);border-radius:0 8px 8px 0;" id="preview-card-box">
+          <div id="preview-title" style="font-size:14px;font-weight:700;color:var(--color-text-primary);margin-bottom:4px;">
+            [Title will appear here]
+          </div>
+          <div id="preview-body" style="font-size:12px;color:var(--color-text-secondary);line-height:1.5;white-space:pre-wrap;">
+            [Message text will appear here]
+          </div>
+          <div id="preview-link-box" style="margin-top:8px;display:none;">
+            <span style="font-size:11px;font-weight:600;color:#6366f1;display:inline-flex;align-items:center;gap:4px;">
+              🔗 <span id="preview-link-text">https://...</span>
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error banner inside modal -->
+      <div id="broadcast-modal-error" style="display:none;padding:10px 14px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:var(--color-danger);font-size:12px;"></div>
+
+    </div>
+
+    <!-- Modal Footer Actions -->
+    <div style="padding:14px 24px;border-top:1px solid var(--color-border);background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;">
+      <div style="font-size:12px;color:var(--color-text-tertiary);">
+        Sent as: <strong style="color:var(--color-text-primary);">@<%= user.username %> (Super Admin)</strong>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <button type="button" onclick="closeBroadcastModal()" 
+          style="padding:8px 16px;border-radius:8px;border:1px solid var(--color-border);background:transparent;color:var(--color-text-secondary);font-size:13px;font-weight:600;cursor:pointer;">
+          Cancel
+        </button>
+        <button type="button" id="broadcast-submit-btn" onclick="submitBroadcastAnnouncement()" 
+          style="padding:8px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#6366f1,#4f46e5);color:white;font-size:13px;font-weight:700;display:inline-flex;align-items:center;gap:8px;cursor:pointer;box-shadow:0 2px 8px rgba(99,102,241,0.3);">
+          <i data-lucide="send" style="width:15px;height:15px;"></i> Send Broadcast
+        </button>
+      </div>
+    </div>
+
+  </div>
+</div>
+<% } %>

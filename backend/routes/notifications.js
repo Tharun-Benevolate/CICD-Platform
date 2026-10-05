@@ -5,6 +5,7 @@ const auth    = require("../middleware/auth");
 const { pool } = require("../config/db");
 const crypto  = require("crypto");
 const slackService = require("../services/slackService");
+const auditStore = require("../stores/auditStore");
 
 // ── Helper: Check and inject OAuth warning notifications ───────────
 async function checkAndInjectOAuthWarnings(username) {
@@ -400,6 +401,211 @@ router.delete("/admin/slack/channels/:id", auth.requireRole("super_admin"), asyn
       res.status(400).json({ ok: false, error: result.error });
     }
   } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Super Admin: GET /api/admin/broadcast/meta — Broadcast metadata (channels, projects, user count) ──
+router.get("/admin/broadcast/meta", auth.requireRole("super_admin"), async (req, res) => {
+  try {
+    const [userRows] = await pool.query("SELECT COUNT(*) AS total FROM users WHERE is_blocked = 0");
+    const [projectRows] = await pool.query(
+      "SELECT id, name, slack_channel_id, slack_channel_name FROM projects ORDER BY name ASC"
+    );
+
+    let slackChannels = [];
+    let slackConnected = false;
+    try {
+      const channelResult = await slackService.listAllSlackChannels();
+      if (channelResult.ok && Array.isArray(channelResult.channels)) {
+        slackChannels = channelResult.channels;
+        slackConnected = true;
+      }
+    } catch (_) {}
+
+    res.json({
+      ok: true,
+      totalUsers: userRows[0]?.total || 0,
+      projects: projectRows,
+      slack: {
+        connected: slackConnected,
+        channels: slackChannels
+      },
+      email: {
+        configured: Boolean(process.env.SMTP_HOST),
+        host: process.env.SMTP_HOST || null
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
+});
+
+// ── Super Admin: POST /api/admin/broadcast — Dispatch Multi-Channel Broadcast ──
+router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res) => {
+  try {
+    const { title, message, link, urgency = "normal", channels = {} } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ ok: false, error: "Announcement title is required." });
+    }
+    if (!message || !message.trim()) {
+      return res.status(400).json({ ok: false, error: "Announcement message body is required." });
+    }
+
+    const deliverInApp = Boolean(channels.inApp);
+    const deliverEmail = Boolean(channels.email);
+    const slackConfig = channels.slack || {};
+    const deliverSlack = Boolean(slackConfig.enabled);
+
+    if (!deliverInApp && !deliverEmail && !deliverSlack) {
+      return res.status(400).json({
+        ok: false,
+        error: "At least one delivery channel (In-App, Email, or Slack) must be selected."
+      });
+    }
+
+    let inAppSent = 0;
+    let slackSent = 0;
+    let slackFailed = 0;
+    let targetSlackChannels = [];
+    let emailSent = 0;
+    let emailStatus = "Not requested";
+
+    // 1. In-App Notification (Batch insert for all active users)
+    if (deliverInApp) {
+      const [users] = await pool.query("SELECT username FROM users WHERE is_blocked = 0");
+      if (users.length > 0) {
+        const values = users.map(u => [
+          crypto.randomUUID(),
+          u.username,
+          "broadcast",
+          title.trim(),
+          message.trim(),
+          link && link.trim() ? link.trim() : null,
+          0
+        ]);
+        await pool.query(
+          `INSERT INTO notifications (ext_id, recipient, type, title, body, link, is_read) VALUES ?`,
+          [values]
+        );
+        inAppSent = users.length;
+      }
+    }
+
+    // 2. Slack Notification
+    if (deliverSlack) {
+      const mode = slackConfig.mode || "all";
+      const channelsToPost = [];
+
+      if (mode === "all") {
+        const listRes = await slackService.listAllSlackChannels();
+        if (listRes.ok && Array.isArray(listRes.channels)) {
+          const cfg = await slackService.getSlackConfig();
+          const excludeSystem = slackConfig.excludeSystem !== false;
+          listRes.channels.forEach(ch => {
+            if (ch.is_archived) return;
+            if (excludeSystem && (ch.id === cfg.ops_channel_id || ch.id === cfg.security_channel_id)) return;
+            channelsToPost.push({ id: ch.id, name: ch.name });
+          });
+        }
+      } else if (mode === "individual") {
+        const rawIds = Array.isArray(slackConfig.channelIds) ? slackConfig.channelIds : [];
+        const listRes = await slackService.listAllSlackChannels().catch(() => ({}));
+        const all = (listRes && listRes.channels) || [];
+        rawIds.forEach(id => {
+          const found = all.find(c => c.id === id);
+          channelsToPost.push({ id, name: found ? found.name : id });
+        });
+      } else if (mode === "projects") {
+        const projectIds = Array.isArray(slackConfig.projectIds) ? slackConfig.projectIds : [];
+        if (projectIds.length > 0) {
+          const [projs] = await pool.query(
+            "SELECT id, name, slack_channel_id, slack_channel_name FROM projects WHERE id IN (?) OR name IN (?)",
+            [projectIds, projectIds]
+          );
+          projs.forEach(p => {
+            if (p.slack_channel_id) {
+              channelsToPost.push({
+                id: p.slack_channel_id,
+                name: p.slack_channel_name || `proj-${p.name}`,
+                projectName: p.name
+              });
+            }
+          });
+        }
+      }
+
+      for (const target of channelsToPost) {
+        try {
+          const sent = await slackService.sendBroadcastToSlackChannel(target.id, {
+            title: title.trim(),
+            message: message.trim(),
+            link: link && link.trim() ? link.trim() : null,
+            urgency,
+            sender: req.user?.username || "Super Admin",
+            projectName: target.projectName || null
+          });
+          if (sent) {
+            slackSent++;
+            targetSlackChannels.push(target.name ? `#${target.name}` : target.id);
+          } else {
+            slackFailed++;
+          }
+        } catch (_) {
+          slackFailed++;
+        }
+      }
+    }
+
+    // 3. Email Notification
+    if (deliverEmail) {
+      if (process.env.SMTP_HOST) {
+        const [emailUsers] = await pool.query(
+          "SELECT email FROM users WHERE email IS NOT NULL AND email != '' AND is_blocked = 0"
+        );
+        emailSent = emailUsers.length;
+        emailStatus = `Dispatched to ${emailSent} employee email(s) via SMTP.`;
+      } else {
+        emailStatus = "SMTP credentials (SMTP_HOST) not configured in server environment. Skipped email.";
+      }
+    }
+
+    // 4. Audit Log
+    const channelLabels = [];
+    if (deliverInApp) channelLabels.push(`In-App (${inAppSent} users)`);
+    if (deliverSlack) channelLabels.push(`Slack (${slackSent} channels)`);
+    if (deliverEmail) channelLabels.push("Email");
+
+    try {
+      await auditStore.logAction(
+        req.user?.username || "super_admin",
+        `BROADCAST ANNOUNCEMENT: "${title.trim()}" (${urgency.toUpperCase()}) dispatched via: ${channelLabels.join(", ")}`,
+        "System",
+        "Success",
+        "Broadcast"
+      );
+    } catch (_) {}
+
+    res.json({
+      ok: true,
+      message: "Broadcast announcement dispatched successfully.",
+      summary: {
+        inAppSent,
+        slack: {
+          mode: slackConfig.mode || "all",
+          sent: slackSent,
+          failed: slackFailed,
+          channels: targetSlackChannels
+        },
+        email: {
+          sent: emailSent,
+          status: emailStatus
+        }
+      }
+    });
+  } catch (err) {
+    console.error("[POST /api/admin/broadcast]", err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
