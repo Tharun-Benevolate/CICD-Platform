@@ -472,7 +472,7 @@ async function loadBroadcastWorkspaceMeta() {
           var channelLabel = hasSlack ? '#' + (p.slack_channel_name || 'proj-' + p.name) : 'No channel linked';
           return '<label style="display:flex;align-items:center;justify-content:space-between;padding:6px 8px;border-radius:6px;background:var(--color-bg);cursor:' + (hasSlack ? 'pointer' : 'not-allowed') + ';opacity:' + (hasSlack ? '1' : '0.6') + ';">' +
             '<div style="display:flex;align-items:center;gap:8px;">' +
-              '<input type="checkbox" class="broadcast-project-checkbox" value="' + p.id + '" ' + (hasSlack ? 'checked' : 'disabled') + ' style="accent-color:#6366f1;" />' +
+              '<input type="checkbox" class="broadcast-project-checkbox" value="' + p.id + '" ' + (hasSlack ? '' : 'disabled') + ' style="accent-color:#6366f1;" />' +
               '<span style="font-size:12px;font-weight:600;color:var(--color-text-primary);">' + p.name + '</span>' +
             '</div>' +
             '<span style="font-size:11px;font-family:monospace;padding:1px 6px;border-radius:4px;background:var(--color-surface);color:' + (hasSlack ? '#10b981' : 'var(--color-text-tertiary)') + ';">' +
@@ -507,6 +507,33 @@ async function loadBroadcastWorkspaceMeta() {
     console.error("[loadBroadcastWorkspaceMeta]", err);
   }
 }
+
+function selectUrgency(urgency) {
+  var cards = ['normal', 'high', 'urgent'];
+  cards.forEach(function(u) {
+    var card = document.getElementById('card-urgency-' + u);
+    var radio = card ? card.querySelector('input[type="radio"]') : null;
+    if (!card) return;
+    if (u === urgency) {
+      if (radio) radio.checked = true;
+      var activeColors = {
+        normal: { border: '#10b981', bg: 'rgba(16,185,129,0.08)' },
+        high: { border: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
+        urgent: { border: '#ef4444', bg: 'rgba(239,68,68,0.08)' }
+      };
+      card.style.borderColor = activeColors[u].border;
+      card.style.background = activeColors[u].bg;
+      card.style.boxShadow = '0 0 0 1px ' + activeColors[u].border;
+    } else {
+      if (radio) radio.checked = false;
+      card.style.borderColor = 'var(--color-border)';
+      card.style.background = 'var(--color-bg)';
+      card.style.boxShadow = 'none';
+    }
+  });
+  updateBroadcastPreview();
+}
+window.selectUrgency = selectUrgency;
 
 function toggleSlackTargetSection() {
   var slackCb = document.getElementById('broadcast-chan-slack');
@@ -559,7 +586,6 @@ window.setSlackTargetMode = setSlackTargetMode;
 function selectQuickTemplate(type) {
   var titleInput = document.getElementById('broadcast-input-title');
   var contentInput = document.getElementById('broadcast-input-content');
-  var urgencyRadios = document.getElementsByName('broadcast_urgency');
 
   var templates = {
     maintenance: {
@@ -590,15 +616,7 @@ function selectQuickTemplate(type) {
   if (titleInput) titleInput.value = tpl.title;
   if (contentInput) contentInput.value = tpl.content;
 
-  if (urgencyRadios) {
-    for (var i = 0; i < urgencyRadios.length; i++) {
-      if (urgencyRadios[i].value === tpl.urgency) {
-        urgencyRadios[i].checked = true;
-      }
-    }
-  }
-
-  updateBroadcastPreview();
+  selectUrgency(tpl.urgency);
 }
 window.selectQuickTemplate = selectQuickTemplate;
 
@@ -615,21 +633,23 @@ function updateBroadcastPreview() {
   }
 
   var urgencyConfig = {
-    normal: { color: '#10b981', label: '🟢 NORMAL ANNOUNCEMENT', bg: 'rgba(16,185,129,0.15)' },
-    high:   { color: '#f59e0b', label: '🟡 HIGH PRIORITY ANNOUNCEMENT', bg: 'rgba(245,158,11,0.15)' },
-    urgent: { color: '#ef4444', label: '🔴 CRITICAL / INCIDENT ANNOUNCEMENT', bg: 'rgba(239,68,68,0.15)' }
+    normal: { color: '#10b981', icon: '📢', label: '🟢 Normal', bg: 'rgba(16,185,129,0.15)' },
+    high:   { color: '#f59e0b', icon: '⚠️', label: '🟡 Elevated', bg: 'rgba(245,158,11,0.15)' },
+    urgent: { color: '#ef4444', icon: '🚨', label: '🔴 Critical', bg: 'rgba(239,68,68,0.15)' }
   };
   var cfg = urgencyConfig[urgency] || urgencyConfig.normal;
 
-  // Slack preview updates
+  // Slack preview updates matching Benevolate Integrate automated notification theme
   var slackBox = document.getElementById('preview-slack-box');
   if (slackBox) slackBox.style.borderLeftColor = cfg.color;
 
-  var badgeEl = document.getElementById('preview-urgency-badge');
-  if (badgeEl) {
-    badgeEl.textContent = cfg.label;
-    badgeEl.style.color = cfg.color;
-    badgeEl.style.background = cfg.bg;
+  var statusIcon = document.getElementById('preview-status-icon');
+  if (statusIcon) statusIcon.textContent = cfg.icon;
+
+  var fieldStatus = document.getElementById('preview-field-status');
+  if (fieldStatus) {
+    fieldStatus.textContent = cfg.label;
+    fieldStatus.style.color = cfg.color;
   }
 
   var slackTitle = document.getElementById('preview-slack-title');
@@ -642,6 +662,12 @@ function updateBroadcastPreview() {
   if (timeEl) {
     var now = new Date();
     timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  var fieldTime = document.getElementById('preview-field-time');
+  if (fieldTime) {
+    var now = new Date();
+    fieldTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
   // In-App preview updates
@@ -743,7 +769,16 @@ async function handleSendBroadcast(e) {
       title: title,
       message: message,
       urgency: urgency,
-      channels: channels,
+      channels: {
+        inApp: channels.includes('in_app'),
+        email: channels.includes('email'),
+        slack: {
+          enabled: channels.includes('slack'),
+          mode: _slackTargetMode,
+          channelIds: targetChannelIds,
+          projectIds: targetProjectIds
+        }
+      },
       slackTargetMode: _slackTargetMode,
       targetChannelIds: targetChannelIds,
       targetProjectIds: targetProjectIds

@@ -453,10 +453,20 @@ router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res
       return res.status(400).json({ ok: false, error: "Announcement message body is required." });
     }
 
-    const deliverInApp = Boolean(channels.inApp);
-    const deliverEmail = Boolean(channels.email);
-    const slackConfig = channels.slack || {};
-    const deliverSlack = Boolean(slackConfig.enabled);
+    const deliverInApp = Boolean(
+      (channels && channels.inApp) ||
+      (Array.isArray(channels) && channels.includes("in_app"))
+    );
+    const deliverEmail = Boolean(
+      (channels && channels.email) ||
+      (Array.isArray(channels) && channels.includes("email"))
+    );
+    const slackConfig = (channels && typeof channels.slack === 'object' && channels.slack !== null) ? channels.slack : {};
+    const deliverSlack = Boolean(
+      slackConfig.enabled ||
+      (channels && channels.slack === true) ||
+      (Array.isArray(channels) && channels.includes("slack"))
+    );
 
     if (!deliverInApp && !deliverEmail && !deliverSlack) {
       return res.status(400).json({
@@ -495,7 +505,9 @@ router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res
 
     // 2. Slack Notification
     if (deliverSlack) {
-      const mode = slackConfig.mode || "all";
+      const mode = req.body.slackTargetMode || slackConfig.mode || "all";
+      const targetChannelIds = req.body.targetChannelIds || (Array.isArray(slackConfig.channelIds) ? slackConfig.channelIds : []);
+      const targetProjectIds = req.body.targetProjectIds || (Array.isArray(slackConfig.projectIds) ? slackConfig.projectIds : []);
       const channelsToPost = [];
 
       if (mode === "all") {
@@ -509,8 +521,8 @@ router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res
             channelsToPost.push({ id: ch.id, name: ch.name });
           });
         }
-      } else if (mode === "individual") {
-        const rawIds = Array.isArray(slackConfig.channelIds) ? slackConfig.channelIds : [];
+      } else if (mode === "select" || mode === "individual") {
+        const rawIds = Array.isArray(targetChannelIds) ? targetChannelIds : [];
         const listRes = await slackService.listAllSlackChannels().catch(() => ({}));
         const all = (listRes && listRes.channels) || [];
         rawIds.forEach(id => {
@@ -518,22 +530,30 @@ router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res
           channelsToPost.push({ id, name: found ? found.name : id });
         });
       } else if (mode === "projects") {
-        const projectIds = Array.isArray(slackConfig.projectIds) ? slackConfig.projectIds : [];
+        const projectIds = Array.isArray(targetProjectIds) ? targetProjectIds : [];
+        let projs = [];
         if (projectIds.length > 0) {
-          const [projs] = await pool.query(
-            "SELECT id, name, slack_channel_id, slack_channel_name FROM projects WHERE id IN (?) OR name IN (?)",
+          const [rows] = await pool.query(
+            "SELECT id, name, slack_channel_id, slack_channel_name FROM projects WHERE (id IN (?) OR name IN (?)) AND slack_channel_id IS NOT NULL",
             [projectIds, projectIds]
           );
-          projs.forEach(p => {
-            if (p.slack_channel_id) {
-              channelsToPost.push({
-                id: p.slack_channel_id,
-                name: p.slack_channel_name || `proj-${p.name}`,
-                projectName: p.name
-              });
-            }
-          });
+          projs = rows;
+        } else {
+          // If no specific project chosen, select all projects with slack channels
+          const [rows] = await pool.query(
+            "SELECT id, name, slack_channel_id, slack_channel_name FROM projects WHERE slack_channel_id IS NOT NULL AND slack_channel_id != ''"
+          );
+          projs = rows;
         }
+        projs.forEach(p => {
+          if (p.slack_channel_id) {
+            channelsToPost.push({
+              id: p.slack_channel_id,
+              name: p.slack_channel_name || `proj-${p.name}`,
+              projectName: p.name
+            });
+          }
+        });
       }
 
       for (const target of channelsToPost) {

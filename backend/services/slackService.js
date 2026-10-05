@@ -686,6 +686,43 @@ async function listAllSlackChannels() {
       };
     });
 
+    // Ensure system and project private channels are always present in list even if awaiting bot sync
+    if (config.ops_channel_id && !enriched.some(c => c.id === config.ops_channel_id)) {
+      enriched.push({
+        id: config.ops_channel_id,
+        name: config.ops_channel_name || "integrate-devops-alerts",
+        is_private: true,
+        is_archived: false,
+        num_members: 0,
+        linked: "DevOps Alerts (#integrate-devops-alerts)"
+      });
+    }
+    if (config.security_channel_id && !enriched.some(c => c.id === config.security_channel_id)) {
+      enriched.push({
+        id: config.security_channel_id,
+        name: config.security_channel_name || "integrate-security-alerts",
+        is_private: true,
+        is_archived: false,
+        num_members: 0,
+        linked: "Security Alerts (#integrate-security-alerts)"
+      });
+    }
+    for (const p of projects) {
+      if (p.slack_channel_id && !enriched.some(c => c.id === p.slack_channel_id)) {
+        enriched.push({
+          id: p.slack_channel_id,
+          name: p.slack_channel_name || `proj-${p.name}`,
+          is_private: true,
+          is_archived: false,
+          num_members: 0,
+          linked: `Project: ${p.name}`
+        });
+      }
+    }
+
+    // Sort alphabetically by name
+    enriched.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+
     return { ok: true, channels: enriched };
   } catch (err) {
     console.error("[listAllSlackChannels]", err.message);
