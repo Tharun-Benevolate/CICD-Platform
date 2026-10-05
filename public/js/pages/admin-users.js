@@ -784,9 +784,14 @@ async function handleSendBroadcast(e) {
         feedbackEl.style.background = 'rgba(16,185,129,0.1)';
         feedbackEl.style.color = '#10b981';
         feedbackEl.style.border = '1px solid rgba(16,185,129,0.3)';
-        var detail = (res.inAppCount || 0) + ' users notified in-app';
-        if (res.slackDispatched) detail += ', ' + res.slackDispatched + ' Slack messages posted';
-        feedbackEl.innerHTML = '✔ <strong>Broadcast sent successfully!</strong> (' + detail + ')';
+        var details = [];
+        var inAppNum = (res.summary && res.summary.inAppSent != null) ? res.summary.inAppSent : (res.inAppCount || 0);
+        var slackNum = (res.summary && res.summary.slack && res.summary.slack.sent != null) ? res.summary.slack.sent : (res.slackDispatched || 0);
+        var emailNum = (res.summary && res.summary.email && res.summary.email.sent != null) ? res.summary.email.sent : 0;
+        if (channels.includes('in_app')) details.push(inAppNum + ' users notified in-app');
+        if (channels.includes('slack')) details.push(slackNum + ' Slack message(s) posted');
+        if (channels.includes('email')) details.push(emailNum + ' emails sent');
+        feedbackEl.innerHTML = '✔ <strong>Broadcast sent successfully!</strong> (' + details.join(', ') + ')';
       }
 
       // Reset fields
@@ -804,7 +809,7 @@ async function handleSendBroadcast(e) {
         feedbackEl.style.background = 'rgba(239,68,68,0.1)';
         feedbackEl.style.color = '#ef4444';
         feedbackEl.style.border = '1px solid rgba(239,68,68,0.3)';
-        feedbackEl.textContent = (res && res.error) || 'Failed to send broadcast announcement.';
+        feedbackEl.innerHTML = '<strong>Broadcast failed:</strong> ' + ((res && res.error) || 'Failed to dispatch broadcast.');
       }
     }
   } catch (err) {

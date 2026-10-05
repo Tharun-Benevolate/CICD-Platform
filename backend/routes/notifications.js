@@ -556,6 +556,7 @@ router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res
         });
       }
 
+      const failedSlackChannels = [];
       for (const target of channelsToPost) {
         try {
           const sent = await slackService.sendBroadcastToSlackChannel(target.id, {
@@ -571,9 +572,11 @@ router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res
             targetSlackChannels.push(target.name ? `#${target.name}` : target.id);
           } else {
             slackFailed++;
+            failedSlackChannels.push(target.name ? `#${target.name}` : target.id);
           }
         } catch (_) {
           slackFailed++;
+          failedSlackChannels.push(target.name ? `#${target.name}` : target.id);
         }
       }
     }
@@ -602,21 +605,46 @@ router.post("/admin/broadcast", auth.requireRole("super_admin"), async (req, res
         req.user?.username || "super_admin",
         `BROADCAST ANNOUNCEMENT: "${title.trim()}" (${urgency.toUpperCase()}) dispatched via: ${channelLabels.join(", ")}`,
         "System",
-        "Success",
+        slackFailed > 0 && slackSent === 0 ? "Partial Failure" : "Success",
         "Broadcast"
       );
     } catch (_) {}
 
+    const totalDelivered = inAppSent + slackSent + emailSent;
+    const isTotalFailure = totalDelivered === 0 && (slackFailed > 0 || !deliverInApp && !deliverEmail);
+
+    if (isTotalFailure) {
+      let failureReason = "Broadcast could not be delivered to selected targets.";
+      if (deliverSlack && slackFailed > 0) {
+        failureReason = `Slack failed to post to ${failedSlackChannels.join(', ')}. If channels are private, please type '/invite @Benevolate Integrate' in Slack first so the bot can post.`;
+      }
+      return res.status(400).json({
+        ok: false,
+        error: failureReason,
+        failedSlackChannels,
+        summary: {
+          inAppSent,
+          slack: { sent: slackSent, failed: slackFailed, channels: targetSlackChannels, failedChannels: failedSlackChannels },
+          email: { sent: emailSent, status: emailStatus }
+        }
+      });
+    }
+
     res.json({
       ok: true,
       message: "Broadcast announcement dispatched successfully.",
+      inAppCount: inAppSent,
+      slackDispatched: slackSent,
+      slackFailed,
+      failedSlackChannels,
       summary: {
         inAppSent,
         slack: {
           mode: slackConfig.mode || "all",
           sent: slackSent,
           failed: slackFailed,
-          channels: targetSlackChannels
+          channels: targetSlackChannels,
+          failedChannels: failedSlackChannels
         },
         email: {
           sent: emailSent,
