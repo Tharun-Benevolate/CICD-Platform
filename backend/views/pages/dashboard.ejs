@@ -1,203 +1,275 @@
 <% if (user.userType === 'developer' || user.userType === 'sales') { %>
-<div style="padding-bottom:24px;display:flex;flex-direction:column;">
-  <!-- Developer Welcome Banner -->
-  <div style="background:linear-gradient(135deg,rgba(99,102,241,0.09) 0%,rgba(139,92,246,0.04) 100%);border:1px solid rgba(99,102,241,0.25);border-radius:var(--radius-xl);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-    <div>
-      <div style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px;background:rgba(99,102,241,0.15);color:#6366f1;border-radius:12px;font-size:11px;font-weight:700;margin-bottom:8px;letter-spacing:0.5px;">
-        <span>DEVELOPER WORKSPACE</span>
+<div class="bento-dashboard">
+  <!-- Developer Bento Hero Tile -->
+  <div class="bento-hero">
+    <div class="bento-hero-info">
+      <div class="bento-role-badge">
+        <i data-lucide="terminal"></i>
+        <span>Developer Workspace</span>
       </div>
-      <h1 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin:0;">
-        Welcome back, <%= user.username %> 👋
+      <h1 class="bento-hero-title">
+        <span>Welcome back, <%= user.username %></span>
+        <span class="bento-system-beacon">
+          <span class="live-beacon online"></span>
+          <span>Online</span>
+        </span>
       </h1>
     </div>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-      <a href="/file-browser" class="btn-primary" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:var(--radius-md);font-weight:600;font-size:13px;text-decoration:none;">
-        <i data-lucide="folder-code" style="width:15px;height:15px;"></i> Browse Code Files
+    <div class="bento-hero-actions">
+      <a href="/file-browser" class="bento-btn bento-btn-primary">
+        <i data-lucide="folder-code" style="width:16px;height:16px;"></i> Browse Code Files
       </a>
-      <a href="/branches" class="btn-secondary" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:var(--radius-md);font-weight:600;font-size:13px;text-decoration:none;">
-        <i data-lucide="git-branch" style="width:15px;height:15px;"></i> View Branches
+      <a href="/branches" class="bento-btn bento-btn-secondary">
+        <i data-lucide="git-branch" style="width:16px;height:16px;"></i> View Branches
       </a>
     </div>
   </div>
 
-  <!-- Metric Cards Grid (Developer) -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px;">
+  <!-- Developer 4-Metric Bento Grid -->
+  <div class="bento-grid-4">
     <!-- Assigned Projects Card -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;">ASSIGNED PROJECTS</span>
-        <i data-lucide="boxes" style="width:16px;height:16px;color:#6366f1;"></i>
+    <div class="bento-metric-card">
+      <div class="bento-metric-header">
+        <span class="bento-metric-label">Assigned Projects</span>
+        <div class="bento-icon-pod">
+          <i data-lucide="boxes"></i>
+        </div>
       </div>
-      <div id="dev-projects-count" style="font-size:17px;font-weight:700;color:var(--color-text-primary);">Loading…</div>
-    </div>
-
-    <!-- Active Repo Card -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;">CONNECTED REPO</span>
-        <i data-lucide="folder" style="width:16px;height:16px;color:#6366f1;"></i>
-      </div>
-      <div id="dev-repo-name" style="font-size:14px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Loading…</div>
-    </div>
-
-    <!-- Pipeline Status Card -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;">PIPELINE STATUS</span>
-        <i data-lucide="activity" style="width:16px;height:16px;color:#10b981;"></i>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div id="dev-pipeline-dot" style="width:9px;height:9px;border-radius:50%;background:#94a3b8;"></div>
-        <span id="dev-pipeline-status" style="font-size:15px;font-weight:700;color:var(--color-text-primary);">Idle / Ready</span>
-      </div>
-    </div>
-
-    <!-- Git Branch Card -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;">DEFAULT BRANCH</span>
-        <i data-lucide="git-branch" style="width:16px;height:16px;color:#6366f1;"></i>
-      </div>
-      <div id="dev-branch-name" style="font-size:15px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">main</div>
-    </div>
-  </div>
-
-  <!-- Main Content Grid: Pipeline Tracker + Recent Commits -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px;flex:1;">
-    <!-- Left: Project Pipeline -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;display:flex;flex-direction:column;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <h2 style="font-size:15px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;margin:0;">
-          <i data-lucide="activity" style="width:16px;height:16px;color:#6366f1;"></i> Project Build &amp; Deployment Pipeline
-        </h2>
-        <a href="/pipelines" style="font-size:12px;color:#6366f1;text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
-          View Pipelines <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
-        </a>
-      </div>
-      <div id="dev-pipeline-content" style="flex:1;">
-        <div style="text-align:center;padding:30px;color:var(--color-text-tertiary);font-size:12px;">Loading pipeline status…</div>
-      </div>
-    </div>
-
-    <!-- Right: Recent Code Commits -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;display:flex;flex-direction:column;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <h2 style="font-size:15px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;margin:0;">
-          <i data-lucide="git-commit" style="width:16px;height:16px;color:#6366f1;"></i> Recent Project Commits
-        </h2>
-        <a href="/file-browser" style="font-size:12px;color:#6366f1;text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
-          File Browser <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
-        </a>
-      </div>
-      <div id="dev-commits-list" style="flex:1;display:flex;flex-direction:column;gap:8px;">
-        <div style="text-align:center;padding:30px;color:var(--color-text-tertiary);font-size:12px;">Loading recent commits…</div>
-      </div>
-    </div>
-  </div>
-</div>
-<% } else { %>
-<div style="padding-bottom:24px;display:flex;flex-direction:column;">
-  <!-- Admin Header Banner -->
-  <div style="background:linear-gradient(135deg,var(--color-surface) 0%,var(--color-bg) 100%);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px 24px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
-    <div>
-      <h1 style="font-size:20px;font-weight:700;color:var(--color-text-primary);margin:0;">
-        Welcome back, <span id="dash-username"><%= user.username %></span> 👋
-      </h1>
-    </div>
-    <a href="/new-project" style="display:inline-flex;align-items:center;gap:8px;padding:9px 16px;background:var(--color-primary);color:white;border-radius:var(--radius-md);font-weight:600;font-size:13px;text-decoration:none;">
-      <i data-lucide="plus" style="width:16px;height:16px;"></i> New Project
-    </a>
-  </div>
-
-  <!-- System Health Grid: DATABASE | AWS REGION | UPTIME | TOTAL PROJECTS -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px;">
-    <!-- DB Status -->
-    <div id="card-db" style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;overflow:hidden;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:12px;font-weight:600;color:var(--color-text-tertiary);">DATABASE</span>
-        <i data-lucide="database" style="width:16px;height:16px;color:var(--color-primary);"></i>
-      </div>
-      <div style="display:flex;align-items:center;gap:8px;min-width:0;">
-        <div id="db-dot" style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:var(--color-text-tertiary);"></div>
-        <div style="display:flex;flex-direction:column;min-width:0;overflow:hidden;">
-          <span id="db-status" style="font-size:15px;font-weight:700;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Checking...</span>
-          <span id="db-host" style="font-size:11px;color:var(--color-text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px;"></span>
+      <div class="bento-metric-body">
+        <div>
+          <div id="dev-projects-count" class="bento-metric-val">Loading…</div>
+          <div class="bento-metric-sub">Active workspace scope</div>
         </div>
       </div>
     </div>
 
-    <!-- AWS Region -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:12px;font-weight:600;color:var(--color-text-tertiary);">AWS REGION</span>
-        <i data-lucide="server" style="width:16px;height:16px;color:var(--color-primary);"></i>
+    <!-- Connected Repository Card -->
+    <div class="bento-metric-card">
+      <div class="bento-metric-header">
+        <span class="bento-metric-label">Connected Repo</span>
+        <div class="bento-icon-pod">
+          <i data-lucide="git-fork"></i>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;">
-        <div id="aws-dot" style="width:9px;height:9px;border-radius:50%;background:var(--color-text-tertiary);"></div>
-        <span id="aws-status" style="font-size:15px;font-weight:700;color:var(--color-text-primary);">Checking...</span>
+      <div class="bento-metric-body">
+        <div style="min-width:0;width:100%;">
+          <div id="dev-repo-name" class="bento-metric-val">Loading…</div>
+          <div class="bento-metric-sub">Synced with Git provider</div>
+        </div>
       </div>
     </div>
 
-    <!-- Uptime -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:12px;font-weight:600;color:var(--color-text-tertiary);">UPTIME</span>
-        <i data-lucide="clock" style="width:16px;height:16px;color:var(--color-primary);"></i>
+    <!-- Pipeline Health Status Card -->
+    <div class="bento-metric-card">
+      <div class="bento-metric-header">
+        <span class="bento-metric-label">Pipeline Status</span>
+        <div class="bento-icon-pod">
+          <i data-lucide="activity"></i>
+        </div>
       </div>
-      <div id="uptime-value" style="font-size:15px;font-weight:700;color:var(--color-text-primary);">0 min</div>
+      <div class="bento-metric-body">
+        <div id="dev-pipeline-dot" class="live-beacon online" style="margin-right:2px;"></div>
+        <div>
+          <div id="dev-pipeline-status" class="bento-metric-val">Idle / Ready</div>
+          <div class="bento-metric-sub">Automated CI/CD runner</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Default Branch Card -->
+    <div class="bento-metric-card">
+      <div class="bento-metric-header">
+        <span class="bento-metric-label">Default Branch</span>
+        <div class="bento-icon-pod">
+          <i data-lucide="git-branch"></i>
+        </div>
+      </div>
+      <div class="bento-metric-body">
+        <div>
+          <div id="dev-branch-name" class="bento-metric-val" style="font-family:ui-monospace,monospace;">main</div>
+          <div class="bento-metric-sub">Tracking production HEAD</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Developer Main Operations Split: Pipeline Tracker + Recent Commits -->
+  <div class="bento-grid-main">
+    <!-- Left: Project Pipeline Stream -->
+    <div class="bento-stream-card">
+      <div class="bento-stream-header">
+        <h2 class="bento-stream-title">
+          <i data-lucide="cpu"></i> Project Build &amp; Deployment Pipeline
+        </h2>
+        <a href="/pipelines" class="bento-stream-link">
+          <span>View Pipelines</span>
+          <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+        </a>
+      </div>
+      <div id="dev-pipeline-content" class="bento-stream-body">
+        <div style="text-align:center;padding:48px 16px;color:var(--color-text-tertiary);font-size:13px;">Loading pipeline status…</div>
+      </div>
+    </div>
+
+    <!-- Right: Recent Commits Stream -->
+    <div class="bento-stream-card">
+      <div class="bento-stream-header">
+        <h2 class="bento-stream-title">
+          <i data-lucide="git-commit"></i> Recent Project Commits
+        </h2>
+        <a href="/file-browser" class="bento-stream-link">
+          <span>File Browser</span>
+          <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+        </a>
+      </div>
+      <div id="dev-commits-list" class="bento-stream-body" style="gap:8px;">
+        <div style="text-align:center;padding:48px 16px;color:var(--color-text-tertiary);font-size:13px;">Loading recent commits…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<% } else { %>
+
+<div class="bento-dashboard">
+  <!-- Admin / DevOps Bento Hero Tile -->
+  <div class="bento-hero">
+    <div class="bento-hero-info">
+      <div class="bento-role-badge">
+        <i data-lucide="shield-check"></i>
+        <span>Enterprise Control Plane</span>
+      </div>
+      <h1 class="bento-hero-title">
+        <span>Welcome back, <span id="dash-username"><%= user.username %></span></span>
+        <span class="bento-system-beacon">
+          <span class="live-beacon online"></span>
+          <span>System Healthy</span>
+        </span>
+      </h1>
+    </div>
+    <div class="bento-hero-actions">
+      <a href="/new-project" class="bento-btn bento-btn-primary">
+        <i data-lucide="plus" style="width:16px;height:16px;"></i> New Project
+      </a>
+      <a href="/pipelines" class="bento-btn bento-btn-secondary">
+        <i data-lucide="play" style="width:16px;height:16px;"></i> Trigger Build
+      </a>
+    </div>
+  </div>
+
+  <!-- System Health 4-Card Bento Strip -->
+  <div class="bento-grid-4">
+    <!-- Database Cluster -->
+    <div id="card-db" class="bento-metric-card">
+      <div class="bento-metric-header">
+        <span class="bento-metric-label">Database Cluster</span>
+        <div class="bento-icon-pod">
+          <i data-lucide="database"></i>
+        </div>
+      </div>
+      <div class="bento-metric-body">
+        <div id="db-dot" class="live-beacon"></div>
+        <div style="min-width:0;overflow:hidden;">
+          <div id="db-status" class="bento-metric-val">Checking…</div>
+          <div id="db-host" class="bento-metric-sub">Aurora MySQL Cluster</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AWS Cloud Telemetry -->
+    <div class="bento-metric-card">
+      <div class="bento-metric-header">
+        <span class="bento-metric-label">AWS Region</span>
+        <div class="bento-icon-pod">
+          <i data-lucide="server"></i>
+        </div>
+      </div>
+      <div class="bento-metric-body">
+        <div id="aws-dot" class="live-beacon"></div>
+        <div>
+          <div id="aws-status" class="bento-metric-val">Checking…</div>
+          <div class="bento-metric-sub">us-east-1 (N. Virginia)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLA Operational Uptime -->
+    <div class="bento-metric-card">
+      <div class="bento-metric-header">
+        <span class="bento-metric-label">Operational Uptime</span>
+        <div class="bento-icon-pod">
+          <i data-lucide="clock"></i>
+        </div>
+      </div>
+      <div class="bento-metric-body">
+        <div class="live-beacon online"></div>
+        <div>
+          <div id="uptime-value" class="bento-metric-val">0 min</div>
+          <div class="bento-metric-sub">99.98% High Availability</div>
+        </div>
+      </div>
     </div>
 
     <!-- Total Projects -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:16px;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-        <span style="font-size:12px;font-weight:600;color:var(--color-text-tertiary);">TOTAL PROJECTS</span>
-        <i data-lucide="cpu" style="width:16px;height:16px;color:var(--color-primary);"></i>
+    <div class="bento-metric-card">
+      <div class="bento-metric-header">
+        <span class="bento-metric-label">Total Projects</span>
+        <div class="bento-icon-pod">
+          <i data-lucide="cpu"></i>
+        </div>
       </div>
-      <div id="projects-count" style="font-size:15px;font-weight:700;color:var(--color-text-primary);">0 Active</div>
+      <div class="bento-metric-body">
+        <div class="live-beacon online"></div>
+        <div>
+          <div id="projects-count" class="bento-metric-val">0 Active</div>
+          <div class="bento-metric-sub">Active release pipelines</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <div id="deploy-endpoint" style="display:none;background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-lg);padding:14px 18px;margin-bottom:20px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-    <div style="display:flex;align-items:center;gap:10px;flex:1;">
-      <div>
-        <div style="font-size:11px;font-weight:700;color:var(--color-text-tertiary);letter-spacing:0.5px;margin-bottom:8px;">ECS ENVIRONMENT STATUS</div>
-        <div id="deploy-endpoint-text" style="display:flex;flex-wrap:wrap;gap:10px;align-items:stretch;"></div>
-      </div>
+  <!-- ECS Environment Live Status (Conditionally revealed by client JS) -->
+  <div id="deploy-endpoint" class="bento-env-section" style="display:none;">
+    <div class="bento-section-heading">
+      <i data-lucide="layers" style="width:14px;height:14px;color:var(--color-primary);"></i>
+      <span>ECS Deployment Environments</span>
     </div>
+    <div id="deploy-endpoint-text" style="display:flex;flex-wrap:wrap;gap:12px;align-items:stretch;"></div>
   </div>
 
-  <!-- Main Content Grid: Pipeline + Audit -->
-  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;flex:1;">
-    <!-- Active Pipeline -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;display:flex;flex-direction:column;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <h2 style="font-size:15px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;">
-          <i data-lucide="activity" style="width:16px;height:16px;color:var(--color-primary);"></i> Active Pipeline
+  <!-- Operations Split Bento: Active Pipeline + Audit Stream -->
+  <div class="bento-grid-main">
+    <!-- Active Pipeline Execution Stream -->
+    <div class="bento-stream-card">
+      <div class="bento-stream-header">
+        <h2 class="bento-stream-title">
+          <i data-lucide="activity"></i> Active Pipeline Execution
         </h2>
-        <a href="/pipelines" style="font-size:12px;color:var(--color-primary);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
-          View Pipeline <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
+        <a href="/pipelines" class="bento-stream-link">
+          <span>View Pipelines</span>
+          <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
         </a>
       </div>
-      <div id="pipeline-content">
-        <div style="text-align:center;padding:20px;color:var(--color-text-tertiary);font-size:12px;">Loading pipeline status...</div>
+      <div id="pipeline-content" class="bento-stream-body">
+        <div style="text-align:center;padding:48px 16px;color:var(--color-text-tertiary);font-size:13px;">Loading pipeline status…</div>
       </div>
     </div>
 
-    <!-- Recent Activity -->
-    <div style="background:var(--color-surface);border:1px solid var(--color-border);border-radius:var(--radius-xl);padding:20px;display:flex;flex-direction:column;">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-        <h2 style="font-size:15px;font-weight:700;color:var(--color-text-primary);display:flex;align-items:center;gap:8px;">
-          <i data-lucide="shield" style="width:16px;height:16px;color:var(--color-primary);"></i> Recent Activity
+    <!-- Recent Audit Logs Stream -->
+    <div class="bento-stream-card">
+      <div class="bento-stream-header">
+        <h2 class="bento-stream-title">
+          <i data-lucide="shield"></i> Security &amp; Audit Trail
         </h2>
-        <a href="/audit-logs" style="font-size:12px;color:var(--color-primary);text-decoration:none;font-weight:600;display:flex;align-items:center;gap:4px;">
-          All Logs <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
+        <a href="/audit-logs" class="bento-stream-link">
+          <span>All Audit Logs</span>
+          <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
         </a>
       </div>
-      <div id="recent-activity">
-        <div style="text-align:center;padding:20px;color:var(--color-text-tertiary);font-size:12px;">Loading recent activity...</div>
+      <div id="recent-activity" class="bento-stream-body">
+        <div style="text-align:center;padding:48px 16px;color:var(--color-text-tertiary);font-size:13px;">Loading recent activity…</div>
       </div>
     </div>
   </div>
 </div>
 <% } %>
-

@@ -9,12 +9,15 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <%# ── Apply saved theme BEFORE paint (uses correct key 'benevolate-theme') ── %>
+  <%# ── Apply saved theme & palette BEFORE paint ── %>
   <script>
     (function() {
       try {
-        var saved = localStorage.getItem('benevolate-theme');
-        var theme = saved || (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+        var savedPalette = localStorage.getItem('benevolate-palette');
+        var savedTheme = localStorage.getItem('benevolate-theme');
+        var palette = savedPalette || (savedTheme === 'light' ? 'sandstone' : 'indigo');
+        var theme = palette === 'sandstone' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-palette', palette);
         document.documentElement.setAttribute('data-theme', theme);
       } catch(e) {}
     })();

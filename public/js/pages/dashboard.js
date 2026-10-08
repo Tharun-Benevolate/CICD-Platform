@@ -239,10 +239,11 @@ async function loadEnvStatus(project) {
         ? (env.url.replace(/^https?:\/\//, '').replace(/\/$/, ''))
         : null;
       var shortUrl = displayUrl && displayUrl.length > 24 ? displayUrl.slice(0, 22) + '…' : (displayUrl || '—');
+      var globeSvg = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
       var urlHtml = '<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.06);font-size:9px;color:' +
-        (env.url ? '#6366f1' : 'var(--color-text-tertiary)') +
+        (env.url ? 'var(--color-primary)' : 'var(--color-text-tertiary)') +
         ';font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + (displayUrl || 'No endpoint') + '">' +
-        (env.url ? '🌐 ' : '') + shortUrl +
+        (env.url ? globeSvg : '') + shortUrl +
       '</div>';
 
       var linkStart = (env.url && isActive) ? '<a href="' + (env.url.startsWith('http') ? env.url : 'https://' + env.url) + '" target="_blank" style="text-decoration:none;color:inherit;">' : '<span>';

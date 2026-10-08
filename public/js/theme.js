@@ -1,39 +1,62 @@
-// public/js/theme.js — Dark/Light theme toggle
+// public/js/theme.js — 4-Palette Multi-Theme System
 (function() {
-  function getPreferred() {
-    const saved = localStorage.getItem('benevolate-theme');
-    if (saved) return saved;
-    return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+  var PALETTES = ['indigo', 'crimson', 'monolith', 'sandstone'];
+  var PALETTE_ICONS = {
+    sandstone: 'sun',
+    indigo: 'moon',
+    crimson: 'sparkles',
+    monolith: 'box'
+  };
+
+  function getPreferredPalette() {
+    try {
+      var savedPalette = localStorage.getItem('benevolate-palette');
+      if (savedPalette && PALETTES.indexOf(savedPalette) !== -1) return savedPalette;
+      var savedTheme = localStorage.getItem('benevolate-theme');
+      if (savedTheme === 'light') return 'sandstone';
+    } catch(e) {}
+    return 'indigo';
   }
 
-  function updateIcon(theme) {
-    // Run after DOM ready so lucide icons exist
+  function updateIcon(palette) {
     var btn = document.getElementById('btn-theme-toggle');
     if (!btn) return;
-    // In dark mode, show moon (current = dark). In light mode, show sun (current = light).
-    btn.innerHTML = theme === 'dark'
-      ? '<i data-lucide="moon" style="width:18px;height:18px;"></i>'
-      : '<i data-lucide="sun" style="width:18px;height:18px;"></i>';
+    var iconName = PALETTE_ICONS[palette] || 'moon';
+    btn.setAttribute('title', 'Theme: ' + palette.charAt(0).toUpperCase() + palette.slice(1) + ' (click to switch)');
+    btn.innerHTML = '<i data-lucide="' + iconName + '" style="width:18px;height:18px;"></i>';
     if (window.lucide) lucide.createIcons();
   }
 
-  function apply(theme) {
+  function applyPalette(palette) {
+    var theme = palette === 'sandstone' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-palette', palette);
     document.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem('benevolate-theme', theme);
-    updateIcon(theme);
+    try {
+      localStorage.setItem('benevolate-palette', palette);
+      localStorage.setItem('benevolate-theme', theme);
+    } catch(e) {}
+    updateIcon(palette);
   }
 
   // Apply on load
-  apply(getPreferred());
+  var currentPalette = getPreferredPalette();
+  applyPalette(currentPalette);
 
-  // Re-run icon update after DOM is ready (lucide may not be loaded yet)
   document.addEventListener('DOMContentLoaded', function() {
-    updateIcon(document.documentElement.getAttribute('data-theme') || 'dark');
+    updateIcon(document.documentElement.getAttribute('data-palette') || 'indigo');
   });
 
   // Expose toggle for topbar button
   window.toggleTheme = function() {
-    const current = document.documentElement.getAttribute('data-theme') || 'dark';
-    apply(current === 'dark' ? 'light' : 'dark');
+    var active = document.documentElement.getAttribute('data-palette') || 'indigo';
+    var nextIdx = (PALETTES.indexOf(active) + 1) % PALETTES.length;
+    var nextPalette = PALETTES[nextIdx];
+    applyPalette(nextPalette);
+  };
+
+  window.setPalette = function(palette) {
+    if (PALETTES.indexOf(palette) !== -1) {
+      applyPalette(palette);
+    }
   };
 })();
