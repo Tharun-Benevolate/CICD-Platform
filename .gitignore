@@ -65,4 +65,7 @@ docs-site/
 site/
 mkdocs.yml
 scratch/
+README.md
+walkthrough.md
+tests/
 
