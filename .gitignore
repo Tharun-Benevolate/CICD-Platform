@@ -53,6 +53,11 @@ aws_seed_db.sql
 frontend/
 .agents/
 .agent/
+.freebuff/
+.roo/
+design-system/
+public/ui-themes/
+*.png
 
 # Documentation & Scratch (do not track)
 docs/
