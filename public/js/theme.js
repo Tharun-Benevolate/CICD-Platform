@@ -1,34 +1,42 @@
 // public/js/theme.js — 4-Palette Multi-Theme System
 (function() {
-  var PALETTES = ['indigo', 'crimson', 'monolith', 'sandstone'];
+  var PALETTES = ['classic', 'sandstone', 'indigo', 'monolith'];
   var PALETTE_ICONS = {
-    sandstone: 'sun',
+    classic: 'sun',
+    sandstone: 'sun-medium',
     indigo: 'moon',
-    crimson: 'sparkles',
     monolith: 'box'
   };
 
   function getPreferredPalette() {
     try {
       var savedPalette = localStorage.getItem('benevolate-palette');
+      if (savedPalette === 'crimson') savedPalette = 'classic';
       if (savedPalette && PALETTES.indexOf(savedPalette) !== -1) return savedPalette;
       var savedTheme = localStorage.getItem('benevolate-theme');
-      if (savedTheme === 'light') return 'sandstone';
+      if (savedTheme === 'light') return 'classic';
     } catch(e) {}
-    return 'indigo';
+    return 'classic';
   }
 
   function updateIcon(palette) {
     var btn = document.getElementById('btn-theme-toggle');
     if (!btn) return;
-    var iconName = PALETTE_ICONS[palette] || 'moon';
-    btn.setAttribute('title', 'Theme: ' + palette.charAt(0).toUpperCase() + palette.slice(1) + ' (click to switch)');
+    var iconName = PALETTE_ICONS[palette] || 'sun';
+    var labelMap = {
+      classic: 'Enterprise Blue (Light)',
+      sandstone: 'Sandstone Ivory (Light)',
+      indigo: 'Electric Indigo (Dark)',
+      monolith: 'Titanium Monolith (Dark)'
+    };
+    btn.setAttribute('title', 'Theme: ' + (labelMap[palette] || palette) + ' (click to switch)');
     btn.innerHTML = '<i data-lucide="' + iconName + '" style="width:18px;height:18px;"></i>';
     if (window.lucide) lucide.createIcons();
   }
 
   function applyPalette(palette) {
-    var theme = palette === 'sandstone' ? 'light' : 'dark';
+    var isLight = palette === 'classic' || palette === 'sandstone';
+    var theme = isLight ? 'light' : 'dark';
     document.documentElement.setAttribute('data-palette', palette);
     document.documentElement.setAttribute('data-theme', theme);
     try {

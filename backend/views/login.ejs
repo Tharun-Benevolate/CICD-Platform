@@ -78,37 +78,37 @@
       --back-btn-color: #cbd5e1;
     }
 
-    [data-palette="crimson"] {
-      --palette-name: "Crimson Stealth";
-      --login-bg: #090406;
-      --login-text-primary: #fff1f2;
-      --login-text-secondary: #fda4af;
-      --login-surface: rgba(28, 12, 18, 0.86);
-      --login-border: rgba(244, 63, 94, 0.24);
-      --login-border-focus: rgba(251, 113, 133, 0.9);
-      --login-primary: #f43f5e;
-      --login-primary-hover: #e11d48;
-      --login-accent: #fb7185;
-      --login-glow: rgba(244, 63, 94, 0.38);
-      --login-cta-gradient: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
-      --login-cta-hover: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
-      --login-spotlight: rgba(244, 63, 94, 0.2);
-      --gemini-gradient: linear-gradient(135deg, #fb7185 0%, #f43f5e 50%, #ffe4e6 100%);
-      --droplet-wash: #090406;
-      --droplet-accent: rgba(244, 63, 94, 0.55);
-      --grid-line: rgba(255, 255, 255, 0.035);
-      --card-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.9), 0 0 35px -5px rgba(244, 63, 94, 0.35);
-      --input-bg: rgba(24, 10, 16, 0.7);
-      --input-color: #fff1f2;
-      --input-border: rgba(244, 63, 94, 0.2);
-      --input-placeholder: #881337;
+    [data-palette="classic"] {
+      --palette-name: "Enterprise Blue";
+      --login-bg: #f8fafc;
+      --login-text-primary: #0f172a;
+      --login-text-secondary: #475569;
+      --login-surface: rgba(255, 255, 255, 0.95);
+      --login-border: rgba(37, 99, 235, 0.2);
+      --login-border-focus: rgba(37, 99, 235, 0.85);
+      --login-primary: #2563eb;
+      --login-primary-hover: #1d4ed8;
+      --login-accent: #4f46e5;
+      --login-glow: rgba(37, 99, 235, 0.28);
+      --login-cta-gradient: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+      --login-cta-hover: linear-gradient(135deg, #1d4ed8 0%, #4338ca 100%);
+      --login-spotlight: rgba(37, 99, 235, 0.12);
+      --gemini-gradient: linear-gradient(135deg, #3b82f6 0%, #60a5fa 50%, #93c5fd 100%);
+      --droplet-wash: #f8fafc;
+      --droplet-accent: rgba(37, 99, 235, 0.45);
+      --grid-line: rgba(15, 23, 42, 0.04);
+      --card-shadow: 0 32px 70px -16px rgba(15, 23, 42, 0.12), 0 0 35px -5px rgba(37, 99, 235, 0.15);
+      --input-bg: rgba(255, 255, 255, 0.96);
+      --input-color: #0f172a;
+      --input-border: rgba(15, 23, 42, 0.12);
+      --input-placeholder: #94a3b8;
       --btn-text-color: #ffffff;
-      --google-btn-bg: rgba(255, 255, 255, 0.06);
-      --google-btn-border: rgba(244, 63, 94, 0.2);
-      --google-btn-text: #fff1f2;
-      --back-btn-bg: rgba(255, 255, 255, 0.06);
-      --back-btn-border: rgba(244, 63, 94, 0.2);
-      --back-btn-color: #fda4af;
+      --google-btn-bg: rgba(0, 0, 0, 0.04);
+      --google-btn-border: rgba(0, 0, 0, 0.12);
+      --google-btn-text: #0f172a;
+      --back-btn-bg: rgba(0, 0, 0, 0.04);
+      --back-btn-border: rgba(0, 0, 0, 0.1);
+      --back-btn-color: #475569;
     }
 
     [data-palette="monolith"] {
@@ -701,11 +701,10 @@
     var pending2FA = null;
     var GOOGLE_CLIENT_ID = '1018746602979-blog5afpgc9iv4ke0gllpam30v5fs8b7.apps.googleusercontent.com';
 
-    // ── 4 CURATED DISTINCT PALETTES: SANDSTONE | INDIGO | CRIMSON | MONOLITH ──
     var PALETTES = [
+      { id: 'classic',   name: 'Enterprise Blue (Clean Light)' },
       { id: 'sandstone', name: 'Sandstone (Warm Light)' },
       { id: 'indigo',    name: 'Electric Indigo (Cosmic Dark)' },
-      { id: 'crimson',   name: 'Crimson Stealth (Noir Dark)' },
       { id: 'monolith',  name: 'Monolith (Titanium Dark)' }
     ];
 

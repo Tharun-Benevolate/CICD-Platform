@@ -15,8 +15,9 @@
       try {
         var savedPalette = localStorage.getItem('benevolate-palette');
         var savedTheme = localStorage.getItem('benevolate-theme');
-        var palette = savedPalette || (savedTheme === 'light' ? 'sandstone' : 'indigo');
-        var theme = palette === 'sandstone' ? 'light' : 'dark';
+        if (savedPalette === 'crimson') savedPalette = 'classic';
+        var palette = savedPalette || (savedTheme === 'light' ? 'classic' : 'indigo');
+        var theme = (palette === 'classic' || palette === 'sandstone') ? 'light' : 'dark';
         document.documentElement.setAttribute('data-palette', palette);
         document.documentElement.setAttribute('data-theme', theme);
       } catch(e) {}
@@ -146,13 +147,13 @@
   <link rel="stylesheet" href="/css/global.css">
   <link rel="stylesheet" href="/css/layout.css">
   <% if (locals.pageCSS) { %>
-  <link rel="stylesheet" href="/css/pages/<%= pageCSS %>.css">
+  <link rel="stylesheet" href="/css/pages/<%= pageCSS %>.css?v=<%= typeof appVersion !== 'undefined' ? appVersion : Date.now() %>">
   <% } %>
   <link rel="prefetch" href="/js/pages/beta-environment.js">
   <link rel="prefetch" href="/js/pages/release.js">
   <link rel="prefetch" href="/js/pages/repositories.js">
   <link rel="prefetch" href="/js/pages/admin-users.js">
-  <script src="/js/theme.js"></script>
+  <script src="/js/theme.js?v=<%= typeof appVersion !== 'undefined' ? appVersion : Date.now() %>"></script>
 </head>
 <body>
   <div class="app-shell">

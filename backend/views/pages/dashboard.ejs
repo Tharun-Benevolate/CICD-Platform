@@ -1,129 +1,102 @@
 <% if (user.userType === 'developer' || user.userType === 'sales') { %>
-<div class="bento-dashboard">
-  <!-- Developer Bento Hero Tile -->
-  <div class="bento-hero">
-    <div class="bento-hero-info">
-      <div class="bento-role-badge">
-        <i data-lucide="terminal"></i>
-        <span>Developer Workspace</span>
-      </div>
-      <h1 class="bento-hero-title">
-        <span>Welcome back, <%= user.username %></span>
-        <span class="bento-system-beacon">
-          <span class="live-beacon online"></span>
-          <span>Online</span>
-        </span>
+<div class="dash-container">
+  <!-- Developer Workspace Banner -->
+  <div class="dash-hero-card">
+    <div class="dash-hero-content">
+      <h1 class="dash-hero-title">
+        Welcome back, <%= user.username %>
       </h1>
+      <p class="dash-hero-subtitle">
+        Overview of your assigned projects, repositories, and build pipelines.
+      </p>
     </div>
-    <div class="bento-hero-actions">
-      <a href="/file-browser" class="bento-btn bento-btn-primary">
-        <i data-lucide="folder-code" style="width:16px;height:16px;"></i> Browse Code Files
+    <div class="dash-hero-actions">
+      <a href="/file-browser" class="dash-btn-primary">
+        <i data-lucide="folder-code" style="width:15px;height:15px;"></i> Browse Code Files
       </a>
-      <a href="/branches" class="bento-btn bento-btn-secondary">
-        <i data-lucide="git-branch" style="width:16px;height:16px;"></i> View Branches
+      <a href="/branches" class="dash-btn-secondary">
+        <i data-lucide="git-branch" style="width:15px;height:15px;"></i> View Branches
       </a>
     </div>
   </div>
 
-  <!-- Developer 4-Metric Bento Grid -->
-  <div class="bento-grid-4">
+  <!-- Metric Cards Grid (Developer) -->
+  <div class="dash-metrics-grid">
     <!-- Assigned Projects Card -->
-    <div class="bento-metric-card">
-      <div class="bento-metric-header">
-        <span class="bento-metric-label">Assigned Projects</span>
-        <div class="bento-icon-pod">
-          <i data-lucide="boxes"></i>
-        </div>
+    <div class="dash-metric-card">
+      <div class="dash-metric-header">
+        <span class="dash-metric-label">ASSIGNED PROJECTS</span>
+        <i data-lucide="boxes" class="dash-metric-icon"></i>
       </div>
-      <div class="bento-metric-body">
-        <div>
-          <div id="dev-projects-count" class="bento-metric-val">Loading…</div>
-          <div class="bento-metric-sub">Active workspace scope</div>
-        </div>
+      <div class="dash-metric-value-row">
+        <span id="dev-projects-count" class="dash-metric-val">Loading…</span>
       </div>
     </div>
 
-    <!-- Connected Repository Card -->
-    <div class="bento-metric-card">
-      <div class="bento-metric-header">
-        <span class="bento-metric-label">Connected Repo</span>
-        <div class="bento-icon-pod">
-          <i data-lucide="git-fork"></i>
-        </div>
+    <!-- Connected Repo Card -->
+    <div class="dash-metric-card">
+      <div class="dash-metric-header">
+        <span class="dash-metric-label">CONNECTED REPO</span>
+        <i data-lucide="git-fork" class="dash-metric-icon"></i>
       </div>
-      <div class="bento-metric-body">
-        <div style="min-width:0;width:100%;">
-          <div id="dev-repo-name" class="bento-metric-val">Loading…</div>
-          <div class="bento-metric-sub">Synced with Git provider</div>
-        </div>
+      <div class="dash-metric-value-row">
+        <span id="dev-repo-name" class="dash-metric-val">Loading…</span>
       </div>
     </div>
 
-    <!-- Pipeline Health Status Card -->
-    <div class="bento-metric-card">
-      <div class="bento-metric-header">
-        <span class="bento-metric-label">Pipeline Status</span>
-        <div class="bento-icon-pod">
-          <i data-lucide="activity"></i>
-        </div>
+    <!-- Pipeline Status Card -->
+    <div class="dash-metric-card">
+      <div class="dash-metric-header">
+        <span class="dash-metric-label">PIPELINE STATUS</span>
+        <i data-lucide="activity" class="dash-metric-icon"></i>
       </div>
-      <div class="bento-metric-body">
-        <div id="dev-pipeline-dot" class="live-beacon online" style="margin-right:2px;"></div>
-        <div>
-          <div id="dev-pipeline-status" class="bento-metric-val">Idle / Ready</div>
-          <div class="bento-metric-sub">Automated CI/CD runner</div>
-        </div>
+      <div class="dash-metric-value-row">
+        <div id="dev-pipeline-dot" class="dash-status-dot"></div>
+        <span id="dev-pipeline-status" class="dash-metric-val">Idle / Ready</span>
       </div>
     </div>
 
     <!-- Default Branch Card -->
-    <div class="bento-metric-card">
-      <div class="bento-metric-header">
-        <span class="bento-metric-label">Default Branch</span>
-        <div class="bento-icon-pod">
-          <i data-lucide="git-branch"></i>
-        </div>
+    <div class="dash-metric-card">
+      <div class="dash-metric-header">
+        <span class="dash-metric-label">DEFAULT BRANCH</span>
+        <i data-lucide="git-branch" class="dash-metric-icon"></i>
       </div>
-      <div class="bento-metric-body">
-        <div>
-          <div id="dev-branch-name" class="bento-metric-val" style="font-family:ui-monospace,monospace;">main</div>
-          <div class="bento-metric-sub">Tracking production HEAD</div>
-        </div>
+      <div class="dash-metric-value-row">
+        <span id="dev-branch-name" class="dash-metric-val font-mono">main</span>
       </div>
     </div>
   </div>
 
-  <!-- Developer Main Operations Split: Pipeline Tracker + Recent Commits -->
-  <div class="bento-grid-main">
-    <!-- Left: Project Pipeline Stream -->
-    <div class="bento-stream-card">
-      <div class="bento-stream-header">
-        <h2 class="bento-stream-title">
-          <i data-lucide="cpu"></i> Project Build &amp; Deployment Pipeline
+  <!-- Main Content Grid: Pipeline Tracker + Recent Commits -->
+  <div class="dash-main-grid">
+    <!-- Left: Active Pipeline -->
+    <div class="dash-panel-card">
+      <div class="dash-panel-header">
+        <h2 class="dash-panel-title">
+          <i data-lucide="activity"></i> Active Pipeline
         </h2>
-        <a href="/pipelines" class="bento-stream-link">
-          <span>View Pipelines</span>
-          <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+        <a href="/pipelines" class="dash-panel-link">
+          View Pipeline <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
         </a>
       </div>
-      <div id="dev-pipeline-content" class="bento-stream-body">
-        <div style="text-align:center;padding:48px 16px;color:var(--color-text-tertiary);font-size:13px;">Loading pipeline status…</div>
+      <div id="dev-pipeline-content" class="dash-panel-body">
+        <div class="dash-empty-state">Loading pipeline status…</div>
       </div>
     </div>
 
-    <!-- Right: Recent Commits Stream -->
-    <div class="bento-stream-card">
-      <div class="bento-stream-header">
-        <h2 class="bento-stream-title">
-          <i data-lucide="git-commit"></i> Recent Project Commits
+    <!-- Right: Recent Commits -->
+    <div class="dash-panel-card">
+      <div class="dash-panel-header">
+        <h2 class="dash-panel-title">
+          <i data-lucide="git-commit"></i> Recent Activity
         </h2>
-        <a href="/file-browser" class="bento-stream-link">
-          <span>File Browser</span>
-          <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+        <a href="/file-browser" class="dash-panel-link">
+          File Browser <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
         </a>
       </div>
-      <div id="dev-commits-list" class="bento-stream-body" style="gap:8px;">
-        <div style="text-align:center;padding:48px 16px;color:var(--color-text-tertiary);font-size:13px;">Loading recent commits…</div>
+      <div id="dev-commits-list" class="dash-panel-body" style="gap:8px;">
+        <div class="dash-empty-state">Loading recent commits…</div>
       </div>
     </div>
   </div>
@@ -131,143 +104,113 @@
 
 <% } else { %>
 
-<div class="bento-dashboard">
-  <!-- Admin / DevOps Bento Hero Tile -->
-  <div class="bento-hero">
-    <div class="bento-hero-info">
-      <div class="bento-role-badge">
-        <i data-lucide="shield-check"></i>
-        <span>Enterprise Control Plane</span>
-      </div>
-      <h1 class="bento-hero-title">
-        <span>Welcome back, <span id="dash-username"><%= user.username %></span></span>
-        <span class="bento-system-beacon">
-          <span class="live-beacon online"></span>
-          <span>System Healthy</span>
-        </span>
+<div class="dash-container">
+  <!-- Admin / DevOps Clean Header Card -->
+  <div class="dash-hero-card">
+    <div class="dash-hero-content">
+      <h1 class="dash-hero-title">
+        Welcome back, <span id="dash-username"><%= user.username %></span>
       </h1>
+      <p class="dash-hero-subtitle">
+        Overview of your active infrastructure, deployments, and source repositories.
+      </p>
     </div>
-    <div class="bento-hero-actions">
-      <a href="/new-project" class="bento-btn bento-btn-primary">
+    <div class="dash-hero-actions">
+      <a href="/new-project" class="dash-btn-primary">
         <i data-lucide="plus" style="width:16px;height:16px;"></i> New Project
-      </a>
-      <a href="/pipelines" class="bento-btn bento-btn-secondary">
-        <i data-lucide="play" style="width:16px;height:16px;"></i> Trigger Build
       </a>
     </div>
   </div>
 
-  <!-- System Health 4-Card Bento Strip -->
-  <div class="bento-grid-4">
-    <!-- Database Cluster -->
-    <div id="card-db" class="bento-metric-card">
-      <div class="bento-metric-header">
-        <span class="bento-metric-label">Database Cluster</span>
-        <div class="bento-icon-pod">
-          <i data-lucide="database"></i>
-        </div>
+  <!-- System Health 4-Card Grid: DATABASE | AWS REGION | UPTIME | TOTAL PROJECTS -->
+  <div class="dash-metrics-grid">
+    <!-- Database Status -->
+    <div id="card-db" class="dash-metric-card">
+      <div class="dash-metric-header">
+        <span class="dash-metric-label">DATABASE</span>
+        <i data-lucide="database" class="dash-metric-icon"></i>
       </div>
-      <div class="bento-metric-body">
-        <div id="db-dot" class="live-beacon"></div>
-        <div style="min-width:0;overflow:hidden;">
-          <div id="db-status" class="bento-metric-val">Checking…</div>
-          <div id="db-host" class="bento-metric-sub">Aurora MySQL Cluster</div>
+      <div class="dash-metric-value-row">
+        <div id="db-dot" class="dash-status-dot"></div>
+        <div class="dash-metric-text-group">
+          <span id="db-status" class="dash-metric-val">Checking...</span>
+          <span id="db-host" class="dash-metric-sub"></span>
         </div>
       </div>
     </div>
 
-    <!-- AWS Cloud Telemetry -->
-    <div class="bento-metric-card">
-      <div class="bento-metric-header">
-        <span class="bento-metric-label">AWS Region</span>
-        <div class="bento-icon-pod">
-          <i data-lucide="server"></i>
-        </div>
+    <!-- AWS Region -->
+    <div class="dash-metric-card">
+      <div class="dash-metric-header">
+        <span class="dash-metric-label">AWS REGION</span>
+        <i data-lucide="server" class="dash-metric-icon"></i>
       </div>
-      <div class="bento-metric-body">
-        <div id="aws-dot" class="live-beacon"></div>
-        <div>
-          <div id="aws-status" class="bento-metric-val">Checking…</div>
-          <div class="bento-metric-sub">us-east-1 (N. Virginia)</div>
-        </div>
+      <div class="dash-metric-value-row">
+        <div id="aws-dot" class="dash-status-dot"></div>
+        <span id="aws-status" class="dash-metric-val">Checking...</span>
       </div>
     </div>
 
-    <!-- SLA Operational Uptime -->
-    <div class="bento-metric-card">
-      <div class="bento-metric-header">
-        <span class="bento-metric-label">Operational Uptime</span>
-        <div class="bento-icon-pod">
-          <i data-lucide="clock"></i>
-        </div>
+    <!-- Uptime -->
+    <div class="dash-metric-card">
+      <div class="dash-metric-header">
+        <span class="dash-metric-label">UPTIME</span>
+        <i data-lucide="clock" class="dash-metric-icon"></i>
       </div>
-      <div class="bento-metric-body">
-        <div class="live-beacon online"></div>
-        <div>
-          <div id="uptime-value" class="bento-metric-val">0 min</div>
-          <div class="bento-metric-sub">99.98% High Availability</div>
-        </div>
+      <div class="dash-metric-value-row">
+        <span id="uptime-value" class="dash-metric-val">0 min</span>
       </div>
     </div>
 
     <!-- Total Projects -->
-    <div class="bento-metric-card">
-      <div class="bento-metric-header">
-        <span class="bento-metric-label">Total Projects</span>
-        <div class="bento-icon-pod">
-          <i data-lucide="cpu"></i>
-        </div>
+    <div class="dash-metric-card">
+      <div class="dash-metric-header">
+        <span class="dash-metric-label">TOTAL PROJECTS</span>
+        <i data-lucide="cpu" class="dash-metric-icon"></i>
       </div>
-      <div class="bento-metric-body">
-        <div class="live-beacon online"></div>
-        <div>
-          <div id="projects-count" class="bento-metric-val">0 Active</div>
-          <div class="bento-metric-sub">Active release pipelines</div>
-        </div>
+      <div class="dash-metric-value-row">
+        <span id="projects-count" class="dash-metric-val">0 Active</span>
       </div>
     </div>
   </div>
 
-  <!-- ECS Environment Live Status (Conditionally revealed by client JS) -->
-  <div id="deploy-endpoint" class="bento-env-section" style="display:none;">
-    <div class="bento-section-heading">
-      <i data-lucide="layers" style="width:14px;height:14px;color:var(--color-primary);"></i>
-      <span>ECS Deployment Environments</span>
+  <!-- ECS Environment Status Section -->
+  <div id="deploy-endpoint" class="dash-ecs-panel" style="display:none;">
+    <div class="dash-ecs-header">
+      <span class="dash-ecs-label">ECS ENVIRONMENT STATUS</span>
     </div>
-    <div id="deploy-endpoint-text" style="display:flex;flex-wrap:wrap;gap:12px;align-items:stretch;"></div>
+    <div id="deploy-endpoint-text" class="dash-ecs-cards-row"></div>
   </div>
 
-  <!-- Operations Split Bento: Active Pipeline + Audit Stream -->
-  <div class="bento-grid-main">
-    <!-- Active Pipeline Execution Stream -->
-    <div class="bento-stream-card">
-      <div class="bento-stream-header">
-        <h2 class="bento-stream-title">
-          <i data-lucide="activity"></i> Active Pipeline Execution
+  <!-- Main Content Grid: Pipeline + Activity -->
+  <div class="dash-main-grid">
+    <!-- Active Pipeline -->
+    <div class="dash-panel-card">
+      <div class="dash-panel-header">
+        <h2 class="dash-panel-title">
+          <i data-lucide="activity"></i> Active Pipeline
         </h2>
-        <a href="/pipelines" class="bento-stream-link">
-          <span>View Pipelines</span>
-          <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+        <a href="/pipelines" class="dash-panel-link">
+          View Pipeline <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
         </a>
       </div>
-      <div id="pipeline-content" class="bento-stream-body">
-        <div style="text-align:center;padding:48px 16px;color:var(--color-text-tertiary);font-size:13px;">Loading pipeline status…</div>
+      <div id="pipeline-content" class="dash-panel-body">
+        <div class="dash-empty-state">Loading pipeline status...</div>
       </div>
     </div>
 
-    <!-- Recent Audit Logs Stream -->
-    <div class="bento-stream-card">
-      <div class="bento-stream-header">
-        <h2 class="bento-stream-title">
-          <i data-lucide="shield"></i> Security &amp; Audit Trail
+    <!-- Recent Activity -->
+    <div class="dash-panel-card">
+      <div class="dash-panel-header">
+        <h2 class="dash-panel-title">
+          <i data-lucide="shield"></i> Recent Activity
         </h2>
-        <a href="/audit-logs" class="bento-stream-link">
-          <span>All Audit Logs</span>
-          <i data-lucide="arrow-right" style="width:14px;height:14px;"></i>
+        <a href="/audit-logs" class="dash-panel-link">
+          All Logs <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
         </a>
       </div>
-      <div id="recent-activity" class="bento-stream-body">
-        <div style="text-align:center;padding:48px 16px;color:var(--color-text-tertiary);font-size:13px;">Loading recent activity…</div>
+      <div id="recent-activity" class="dash-panel-body">
+        <div class="dash-empty-state">Loading recent activity...</div>
       </div>
     </div>
   </div>

@@ -1,271 +1,165 @@
 /* ============================================================
-   Benevolate Integr8 — Next-Gen Bento Grid Dashboard Stylesheet
-   Architecture: Aceternity / Magic UI Radiant Borders & Bento
-   Zero Emojis • Multi-Palette Dynamic Sync • Spring Micro-Interactions
+   Benevolate Integr8 — Clean Enterprise Dashboard Styles
+   Clean Structure • High Contrast • Zero Emojis • Palette Adaptive
    ============================================================ */
 
-/* ── Container Layout ── */
-.bento-dashboard {
+.dash-container {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
   width: 100%;
-  max-width: 1480px;
+  max-width: 1440px;
   margin: 0 auto;
-  padding-bottom: 32px;
+  padding-bottom: 30px;
 }
 
-/* ── Hero Telemetry Header (Bento Tile 1) ── */
-.bento-hero {
-  position: relative;
-  overflow: hidden;
+/* ── Hero Welcome Card ── */
+.dash-hero-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 22px 26px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
-  gap: 20px;
-  padding: 24px 28px;
-  background: var(--color-surface);
-  border: 1px solid var(--bento-border, var(--color-border));
-  border-radius: var(--radius-2xl);
-  box-shadow: var(--shadow-md);
-  transition: border-color var(--transition-base), box-shadow var(--transition-base);
-}
-
-.bento-hero::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent 0%, var(--color-primary) 30%, var(--color-accent) 70%, transparent 100%);
-  opacity: 0.85;
-}
-
-.bento-hero::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(800px circle at top left, var(--color-primary-ghost), transparent 60%);
-  pointer-events: none;
-}
-
-.bento-hero-info {
+  gap: 16px;
+  box-shadow: var(--shadow-sm);
   position: relative;
-  z-index: 1;
+  overflow: hidden;
+}
+
+.dash-hero-content {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 5px;
 }
 
-.bento-role-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  width: fit-content;
-  padding: 4px 12px;
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  border: 1px solid var(--bento-border, var(--color-border));
-  border-radius: var(--radius-full);
-  font-size: 11px;
+.dash-hero-title {
+  font-size: 20px;
   font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-}
-
-.bento-role-badge i {
-  width: 13px;
-  height: 13px;
-  stroke-width: 2.2px;
-}
-
-.bento-hero-title {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
   color: var(--color-text-primary);
   margin: 0;
+}
+
+.dash-hero-subtitle {
+  font-size: 13px;
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.dash-hero-actions {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
-.bento-system-beacon {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  padding: 3px 10px;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.25);
-  border-radius: var(--radius-full);
-  font-size: 11px;
-  font-weight: 700;
-  color: #10b981;
-  letter-spacing: 0.5px;
-}
-
-.bento-hero-actions {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-/* ── Interactive Action Buttons ── */
-.bento-btn {
+.dash-btn-primary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 18px;
-  border-radius: var(--radius-lg);
-  font-size: 13px;
-  font-weight: 600;
-  text-decoration: none;
-  cursor: pointer;
-  transition: transform 0.16s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease;
-  user-select: none;
-  border: 1px solid transparent;
-}
-
-.bento-btn:active {
-  transform: scale(0.97);
-}
-
-.bento-btn-primary {
+  padding: 9px 18px;
   background: var(--color-primary);
   color: var(--color-text-inverse, #ffffff);
-  box-shadow: 0 4px 14px -3px var(--color-primary-ghost);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background var(--transition-fast), transform var(--transition-fast), box-shadow var(--transition-fast);
+  box-shadow: 0 2px 8px -2px var(--color-primary-ghost);
 }
 
-.bento-btn-primary:hover {
+.dash-btn-primary:hover {
   background: var(--color-primary-hover);
-  box-shadow: 0 6px 20px -3px var(--color-primary-ghost), 0 0 16px -2px var(--color-primary);
   transform: translateY(-1px);
   color: var(--color-text-inverse, #ffffff);
 }
 
-.bento-btn-secondary {
+.dash-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
   background: var(--color-surface-hover);
   color: var(--color-text-primary);
-  border-color: var(--color-border);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all var(--transition-fast);
 }
 
-.bento-btn-secondary:hover {
+.dash-btn-secondary:hover {
   background: var(--color-bg);
   border-color: var(--color-primary);
   color: var(--color-primary);
   transform: translateY(-1px);
 }
 
-/* ── 4-Column Bento Metric Strip ── */
-.bento-grid-4 {
+/* ── 4-Column Metric Cards ── */
+.dash-metrics-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 14px;
 }
 
-.bento-metric-card {
-  position: relative;
-  overflow: hidden;
+.dash-metric-card {
   background: var(--color-surface);
-  border: 1px solid var(--bento-border, var(--color-border));
-  border-radius: var(--radius-xl);
-  padding: 20px 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 14px;
+  gap: 10px;
   box-shadow: var(--shadow-sm);
-  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
-.bento-metric-card:hover {
-  transform: translateY(-2px);
+.dash-metric-card:hover {
   border-color: var(--color-primary);
-  box-shadow: var(--shadow-md), var(--bento-glow);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-.bento-metric-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: radial-gradient(280px circle at 90% 10%, var(--color-primary-ghost), transparent 60%);
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-.bento-metric-header {
+.dash-metric-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
 }
 
-.bento-metric-label {
+.dash-metric-label {
   font-size: 11px;
   font-weight: 700;
+  color: var(--color-text-tertiary);
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  color: var(--color-text-tertiary);
 }
 
-.bento-icon-pod {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: var(--radius-md);
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  flex-shrink: 0;
-  border: 1px solid var(--bento-border, var(--color-border));
-}
-
-.bento-icon-pod i {
+.dash-metric-icon {
   width: 16px;
   height: 16px;
+  color: var(--color-primary);
   stroke-width: 2px;
+  flex-shrink: 0;
+  opacity: 0.9;
 }
 
-.bento-metric-body {
+.dash-metric-value-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
 }
 
-.bento-metric-val {
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--color-text-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.bento-metric-sub {
-  font-size: 11px;
-  color: var(--color-text-tertiary);
-  margin-top: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-family: var(--font-family);
-}
-
-/* ── Live Beacon Animation ── */
-.live-beacon {
-  position: relative;
+.dash-status-dot {
   width: 9px;
   height: 9px;
   border-radius: 50%;
@@ -273,193 +167,135 @@
   background: var(--color-text-tertiary);
 }
 
-.live-beacon.online {
-  background: #10b981;
-  box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+.dash-metric-text-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.live-beacon.online::after {
-  content: "";
-  position: absolute;
-  inset: -3px;
-  border-radius: 50%;
-  background: #10b981;
-  animation: live-beacon-ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
-  opacity: 0.7;
+.dash-metric-val {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.live-beacon.danger {
-  background: #ef4444;
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+.dash-metric-sub {
+  font-size: 11px;
+  color: var(--color-text-tertiary);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.live-beacon.warning {
-  background: #f59e0b;
-}
-
-@keyframes live-beacon-ping {
-  0% { transform: scale(0.9); opacity: 0.8; }
-  70% { transform: scale(2.3); opacity: 0; }
-  100% { transform: scale(2.4); opacity: 0; }
-}
-
-/* ── Environment Pods Row ── */
-.bento-env-section {
+/* ── ECS Environment Status Panel ── */
+.dash-ecs-panel {
   background: var(--color-surface);
-  border: 1px solid var(--bento-border, var(--color-border));
-  border-radius: var(--radius-xl);
-  padding: 18px 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
   box-shadow: var(--shadow-sm);
 }
 
-.bento-section-heading {
+.dash-ecs-header {
+  margin-bottom: 12px;
+}
+
+.dash-ecs-label {
   font-size: 11px;
   font-weight: 700;
+  color: var(--color-text-tertiary);
   letter-spacing: 0.6px;
   text-transform: uppercase;
-  color: var(--color-text-tertiary);
-  margin-bottom: 12px;
+}
+
+.dash-ecs-cards-row {
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: stretch;
 }
 
-/* ── Main Operations Split Bento (2-Column Grid) ── */
-.bento-grid-main {
+/* ── Main Content Grid (Pipeline & Activity) ── */
+.dash-main-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
 }
 
-.bento-stream-card {
-  position: relative;
-  overflow: hidden;
+.dash-panel-card {
   background: var(--color-surface);
-  border: 1px solid var(--bento-border, var(--color-border));
-  border-radius: var(--radius-2xl);
-  padding: 22px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xl);
+  padding: 20px 22px;
   display: flex;
   flex-direction: column;
   box-shadow: var(--shadow-sm);
-  transition: border-color var(--transition-base), box-shadow var(--transition-base);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
-.bento-stream-card:hover {
-  border-color: var(--color-primary);
-  box-shadow: var(--shadow-md), var(--bento-glow);
+.dash-panel-card:hover {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow-md);
 }
 
-.bento-stream-header {
+.dash-panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
-  padding-bottom: 14px;
-  border-bottom: 1px solid var(--color-border-subtle);
+  margin-bottom: 14px;
 }
 
-.bento-stream-title {
-  font-size: 15px;
+.dash-panel-title {
+  font-size: 14px;
   font-weight: 700;
   color: var(--color-text-primary);
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 8px;
   margin: 0;
 }
 
-.bento-stream-title i {
-  width: 17px;
-  height: 17px;
+.dash-panel-title i {
+  width: 16px;
+  height: 16px;
   color: var(--color-primary);
-  stroke-width: 2px;
 }
 
-.bento-stream-link {
+.dash-panel-link {
   font-size: 12px;
   color: var(--color-primary);
   text-decoration: none;
   font-weight: 600;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  transition: transform var(--transition-fast), color var(--transition-fast);
+  gap: 4px;
+  transition: color var(--transition-fast);
 }
 
-.bento-stream-link:hover {
+.dash-panel-link:hover {
   color: var(--color-primary-hover);
-  transform: translateX(2px);
+  text-decoration: underline;
 }
 
-.bento-stream-body {
+.dash-panel-body {
   flex: 1;
   display: flex;
   flex-direction: column;
 }
 
-/* ── Developer Workspace Stage & Commits List ── */
-.bento-commit-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 11px 14px;
-  background: var(--color-surface-hover);
-  border: 1px solid var(--color-border-subtle);
-  border-radius: var(--radius-lg);
-  transition: background var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+.dash-empty-state {
+  text-align: center;
+  padding: 36px 12px;
+  color: var(--color-text-tertiary);
+  font-size: 12px;
 }
 
-.bento-commit-row:hover {
-  background: var(--color-bg);
-  border-color: var(--color-primary);
-  transform: translateX(2px);
-}
-
-.bento-commit-sha {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  background: var(--color-primary-light);
-  color: var(--color-primary);
-  border-radius: var(--radius-sm);
-  border: 1px solid var(--bento-border, var(--color-border));
-  flex-shrink: 0;
-}
-
-.bento-audit-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 11px 12px;
-  border-bottom: 1px solid var(--color-border-subtle);
-  transition: background var(--transition-fast);
-}
-
-.bento-audit-item:last-child {
-  border-bottom: none;
-}
-
-.bento-audit-item:hover {
-  background: var(--color-surface-hover);
-  border-radius: var(--radius-md);
-}
-
-/* ── Responsive Refinements ── */
-@media (max-width: 900px) {
-  .bento-grid-main {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media (max-width: 640px) {
-  .bento-hero {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 18px 20px;
-  }
-  .bento-grid-4 {
-    grid-template-columns: 1fr;
-  }
+/* ── Utility ── */
+.font-mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
