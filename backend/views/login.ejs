@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Benevolate Integr8 — Ship faster. Stay in control.</title>
+  <title>Benevolate Integr8 — Next-Gen Continuous Delivery</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,74 +11,82 @@
   <link rel="stylesheet" href="/css/variables.css">
 
   <style>
-    /* ── PALETTE DEFINITIONS & THEME ENGINE TOKENS ── */
+    /* ── PALETTE DEFINITIONS & LIVING AMBIENCE TOKENS ── */
     :root, [data-palette="sandstone"] {
       --palette-name: "Sandstone";
-      --login-bg: #12100e;
-      --login-surface: rgba(28, 24, 21, 0.82);
+      --login-bg: #110f0d;
+      --login-surface: rgba(28, 24, 20, 0.82);
+      --login-surface-card: rgba(34, 29, 24, 0.88);
       --login-border: rgba(217, 119, 6, 0.18);
       --login-border-focus: rgba(245, 158, 11, 0.85);
       --login-primary: #d97706;
       --login-primary-hover: #b45309;
       --login-accent: #ea580c;
-      --login-glow: rgba(217, 119, 6, 0.32);
+      --login-glow: rgba(217, 119, 6, 0.35);
       --login-cta-gradient: linear-gradient(135deg, #d97706 0%, #c2410c 100%);
       --login-cta-hover: linear-gradient(135deg, #b45309 0%, #9a3412 100%);
-      --login-blob-1: rgba(217, 119, 6, 0.18);
-      --login-blob-2: rgba(234, 88, 12, 0.14);
-      --theme-pip-color: #f59e0b;
-      --ripple-wave-color: #d97706;
+      --login-beam-1: rgba(217, 119, 6, 0.22);
+      --login-beam-2: rgba(234, 88, 12, 0.15);
+      --gemini-gradient: linear-gradient(135deg, #f59e0b 0%, #ea580c 50%, #fde68a 100%);
+      --droplet-color: #d97706;
+      --droplet-tint: rgba(217, 119, 6, 0.45);
     }
     [data-palette="indigo"] {
       --palette-name: "Electric Indigo";
-      --login-bg: #07090e;
+      --login-bg: #07090f;
       --login-surface: rgba(15, 23, 42, 0.82);
+      --login-surface-card: rgba(20, 30, 55, 0.88);
       --login-border: rgba(99, 102, 241, 0.2);
       --login-border-focus: rgba(129, 140, 248, 0.85);
       --login-primary: #6366f1;
       --login-primary-hover: #4f46e5;
       --login-accent: #8b5cf6;
-      --login-glow: rgba(99, 102, 241, 0.34);
+      --login-glow: rgba(99, 102, 241, 0.36);
       --login-cta-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
       --login-cta-hover: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-      --login-blob-1: rgba(99, 102, 241, 0.2);
-      --login-blob-2: rgba(139, 92, 246, 0.15);
-      --theme-pip-color: #818cf8;
-      --ripple-wave-color: #6366f1;
+      --login-beam-1: rgba(99, 102, 241, 0.24);
+      --login-beam-2: rgba(139, 92, 246, 0.16);
+      --gemini-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #e0e7ff 100%);
+      --droplet-color: #6366f1;
+      --droplet-tint: rgba(99, 102, 241, 0.45);
     }
     [data-palette="emerald"] {
       --palette-name: "Cyber Emerald";
-      --login-bg: #060e0a;
+      --login-bg: #050e0a;
       --login-surface: rgba(10, 26, 18, 0.82);
+      --login-surface-card: rgba(14, 36, 25, 0.88);
       --login-border: rgba(16, 185, 129, 0.2);
       --login-border-focus: rgba(52, 211, 153, 0.85);
       --login-primary: #10b981;
       --login-primary-hover: #059669;
       --login-accent: #34d399;
-      --login-glow: rgba(16, 185, 129, 0.34);
+      --login-glow: rgba(16, 185, 129, 0.36);
       --login-cta-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
       --login-cta-hover: linear-gradient(135deg, #059669 0%, #047857 100%);
-      --login-blob-1: rgba(16, 185, 129, 0.2);
-      --login-blob-2: rgba(6, 182, 212, 0.14);
-      --theme-pip-color: #34d399;
-      --ripple-wave-color: #10b981;
+      --login-beam-1: rgba(16, 185, 129, 0.24);
+      --login-beam-2: rgba(6, 182, 212, 0.15);
+      --gemini-gradient: linear-gradient(135deg, #34d399 0%, #06b6d4 50%, #a7f3d0 100%);
+      --droplet-color: #10b981;
+      --droplet-tint: rgba(16, 185, 129, 0.45);
     }
     [data-palette="aurora"] {
       --palette-name: "Midnight Aurora";
       --login-bg: #050d14;
       --login-surface: rgba(8, 26, 38, 0.82);
+      --login-surface-card: rgba(12, 36, 52, 0.88);
       --login-border: rgba(6, 182, 212, 0.2);
       --login-border-focus: rgba(34, 211, 238, 0.85);
       --login-primary: #06b6d4;
       --login-primary-hover: #0891b2;
       --login-accent: #38bdf8;
-      --login-glow: rgba(6, 182, 212, 0.34);
+      --login-glow: rgba(6, 182, 212, 0.36);
       --login-cta-gradient: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%);
       --login-cta-hover: linear-gradient(135deg, #0891b2 0%, #0284c7 100%);
-      --login-blob-1: rgba(6, 182, 212, 0.2);
-      --login-blob-2: rgba(56, 189, 248, 0.14);
-      --theme-pip-color: #22d3ee;
-      --ripple-wave-color: #06b6d4;
+      --login-beam-1: rgba(6, 182, 212, 0.24);
+      --login-beam-2: rgba(56, 189, 248, 0.15);
+      --gemini-gradient: linear-gradient(135deg, #22d3ee 0%, #38bdf8 50%, #cffafe 100%);
+      --droplet-color: #06b6d4;
+      --droplet-tint: rgba(6, 182, 212, 0.45);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -87,172 +95,274 @@
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background-color: var(--login-bg);
       color: #f8fafc;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
       position: relative;
       -webkit-font-smoothing: antialiased;
-      transition: background-color 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: background-color 0.8s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    /* ── AMBIENT ATMOSPHERIC CANVAS ── */
-    .login-ambient-canvas {
+    /* ── GENERATIVE AMBIENT CANVAS & LIGHT BEAMS ── */
+    #ambient-canvas-wrapper {
       position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
     }
-    .ambient-noise {
-      position: absolute; inset: 0; opacity: 0.025;
-      background-image: radial-gradient(rgba(255,255,255,0.8) 1px, transparent 0);
-      background-size: 24px 24px;
+    #ambient-canvas {
+      position: absolute; inset: 0; width: 100%; height: 100%;
     }
-    .ambient-grid {
+    .ambient-aurora-glow {
+      position: absolute; top: -20%; left: 50%; transform: translateX(-50%);
+      width: 85vw; height: 500px;
+      background: radial-gradient(ellipse 60% 50% at 50% 0%, var(--login-beam-1) 0%, transparent 80%);
+      filter: blur(80px); opacity: 0.85; pointer-events: none;
+      transition: background 0.8s ease;
+    }
+    .ambient-grid-overlay {
       position: absolute; inset: 0;
       background-image:
-        linear-gradient(rgba(255, 255, 255, 0.032) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.032) 1px, transparent 1px);
-      background-size: 64px 64px;
-      mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 30%, transparent 80%);
-      -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 30%, transparent 80%);
-    }
-    .ambient-blob-1 {
-      position: absolute; top: -18%; left: 18%; width: 62vw; height: 62vw; max-width: 820px; max-height: 820px;
-      border-radius: 50%; background: radial-gradient(circle, var(--login-blob-1) 0%, transparent 68%);
-      filter: blur(100px); animation: blobFloat 22s ease-in-out infinite alternate;
-      transition: background 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .ambient-blob-2 {
-      position: absolute; bottom: -22%; right: 14%; width: 58vw; height: 58vw; max-width: 780px; max-height: 780px;
-      border-radius: 50%; background: radial-gradient(circle, var(--login-blob-2) 0%, transparent 70%);
-      filter: blur(110px); animation: blobFloatRev 26s ease-in-out infinite alternate;
-      transition: background 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @keyframes blobFloat {
-      0% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(45px, 35px) scale(1.08); }
-      100% { transform: translate(-35px, 50px) scale(0.95); }
-    }
-    @keyframes blobFloatRev {
-      0% { transform: translate(0, 0) scale(1); }
-      50% { transform: translate(-50px, -40px) scale(1.1); }
-      100% { transform: translate(30px, -30px) scale(0.94); }
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 60% at 50% 45%, #000 30%, transparent 85%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 45%, #000 30%, transparent 85%);
     }
 
-    /* ── SLEEK FLOATING ROUND THEME BUTTON (ZERO TEXT) ── */
-    .theme-trigger-btn {
+    /* ── GEMINI STARBURST ROUND THEME BUTTON (ZERO TEXT) ── */
+    .gemini-theme-btn {
       position: fixed; top: 24px; right: 28px; z-index: 100;
-      width: 44px; height: 44px; border-radius: 50%;
+      width: 46px; height: 46px; border-radius: 50%;
       background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 16px var(--login-glow);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 4px 22px rgba(0, 0, 0, 0.5), 0 0 16px var(--login-glow);
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; outline: none; padding: 0;
-      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.2s ease, box-shadow 0.3s ease;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, box-shadow 0.3s ease;
     }
-    .theme-trigger-btn:hover {
-      transform: scale(1.08);
+    .gemini-theme-btn:hover {
+      transform: scale(1.1);
       border-color: var(--login-border-focus);
-      box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5), 0 0 24px var(--login-glow);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 26px var(--login-glow);
     }
-    .theme-trigger-btn:active {
+    .gemini-theme-btn:active {
       transform: scale(0.92);
     }
-    .theme-pip-core {
-      width: 14px; height: 14px; border-radius: 50%;
-      background: var(--theme-pip-color);
-      box-shadow: 0 0 12px var(--theme-pip-color);
-      position: relative;
-      transition: background 0.4s ease, box-shadow 0.4s ease;
+    .gemini-star-svg {
+      width: 22px; height: 22px;
+      filter: drop-shadow(0 0 8px var(--login-primary));
+      transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.4s ease;
     }
-    .theme-pip-core::after {
-      content: ''; position: absolute; inset: -4px; border-radius: 50%;
-      border: 1.5px dashed rgba(255, 255, 255, 0.3);
-      animation: spinPip 12s linear infinite;
+    .gemini-theme-btn:hover .gemini-star-svg {
+      transform: rotate(45deg);
     }
-    @keyframes spinPip { to { transform: rotate(360deg); } }
 
-    /* ── WATER DROP SPREADING RIPPLE EFFECT ── */
-    .water-ripple-container {
-      position: fixed; inset: 0; pointer-events: none; z-index: 80; overflow: hidden;
+    /* ── ORGANIC WATER DROPLET SPREAD OVER DRESS (CAPILLARY ABSORPTION) ── */
+    #fabric-droplet-canvas {
+      position: fixed; inset: 0; pointer-events: none; z-index: 85; overflow: hidden;
     }
-    .water-ripple-wave {
+    .fabric-droplet-bleed {
       position: absolute; border-radius: 50%;
       transform: translate(-50%, -50%);
       pointer-events: none;
-      box-shadow: 0 0 80px var(--ripple-wave-color), inset 0 0 60px var(--ripple-wave-color);
-      border: 2px solid rgba(255, 255, 255, 0.5);
-      background: radial-gradient(circle, var(--login-glow) 0%, transparent 60%);
-      opacity: 0.9;
-      animation: waterRippleExpand 0.75s cubic-bezier(0.2, 0.8, 0.25, 1) forwards;
+      /* Soft feathered capillary diffusion edges mimicking liquid spreading into fabric fibers */
+      background: radial-gradient(
+        circle,
+        var(--droplet-color) 0%,
+        var(--droplet-tint) 35%,
+        rgba(255, 255, 255, 0.08) 65%,
+        transparent 85%
+      );
+      filter: blur(28px);
+      opacity: 0.85;
+      animation: fabricBleedExpand 1.5s cubic-bezier(0.12, 0.7, 0.29, 1) forwards;
     }
-    @keyframes waterRippleExpand {
+    .fabric-droplet-ring {
+      position: absolute; border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      border: 1.5px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 0 45px var(--droplet-color);
+      filter: blur(6px);
+      opacity: 0.9;
+      animation: fabricBleedRing 1.5s cubic-bezier(0.12, 0.7, 0.29, 1) forwards;
+    }
+    @keyframes fabricBleedExpand {
       0% {
-        width: 10px; height: 10px; opacity: 1; transform: translate(-50%, -50%) scale(0.1);
+        width: 12px; height: 12px; opacity: 1; transform: translate(-50%, -50%) scale(0.1);
+      }
+      50% {
+        opacity: 0.7;
+      }
+      100% {
+        width: 340vmax; height: 340vmax; opacity: 0; transform: translate(-50%, -50%) scale(1);
+      }
+    }
+    @keyframes fabricBleedRing {
+      0% {
+        width: 12px; height: 12px; opacity: 0.95; transform: translate(-50%, -50%) scale(0.1);
       }
       80% {
-        opacity: 0.65;
+        opacity: 0.4;
       }
       100% {
         width: 320vmax; height: 320vmax; opacity: 0; transform: translate(-50%, -50%) scale(1);
       }
     }
 
-    /* ── STAGE 1: BRAND HERO SPLASH ── */
+    /* ── STAGE 1: TRANSITIONS.DEV DECK GALLERY LANDING PAGE ── */
     #splash-stage {
-      position: fixed; inset: 0; z-index: 10;
+      position: relative; z-index: 10;
+      min-height: 100vh; width: 100%;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; padding: 24px;
+      padding: 60px 24px; text-align: center;
     }
-    .splash-content {
-      display: flex; flex-direction: column; align-items: center; max-width: 680px;
-    }
-    .splash-logo-box {
-      position: relative; margin-bottom: 24px;
-    }
-    .splash-logo-halo {
-      position: absolute; inset: -24px; border-radius: 50%;
-      background: radial-gradient(circle, var(--login-glow) 0%, transparent 72%);
-      filter: blur(28px); animation: logoPulse 4s ease-in-out infinite alternate;
-      transition: background 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    @keyframes logoPulse {
-      0% { transform: scale(0.88); opacity: 0.55; }
-      100% { transform: scale(1.2); opacity: 0.95; }
-    }
-    .splash-logo-img {
-      position: relative; z-index: 1; width: 88px; height: 88px; object-fit: contain;
-      filter: drop-shadow(0 0 35px var(--login-glow));
-      transition: filter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .splash-wordmark {
-      font-size: 13.5px; font-weight: 800; letter-spacing: 0.28em; text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.65); margin-bottom: 22px;
-    }
-    .splash-tagline {
-      font-size: clamp(40px, 6.2vw, 70px); font-weight: 900; line-height: 1.06; letter-spacing: -0.04em;
-      background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.92) 45%, #d1d5db 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-      margin-bottom: 40px;
-    }
-    .splash-cta-btn {
-      display: inline-flex; align-items: center; gap: 10px; padding: 16px 44px;
-      font-size: 16px; font-weight: 700; letter-spacing: 0.01em; color: #ffffff;
-      background: var(--login-cta-gradient); border: 1px solid rgba(255, 255, 255, 0.2);
-      border-radius: 9999px; cursor: pointer;
-      box-shadow: 0 8px 34px var(--login-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .splash-cta-btn:hover {
-      transform: translateY(-2.5px); box-shadow: 0 14px 44px var(--login-glow);
-      background: var(--login-cta-hover);
-    }
-    .splash-cta-btn:active {
-      transform: translateY(0.5px) scale(0.98);
-    }
-    .splash-footnote {
-      margin-top: 48px; font-size: 12px; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.03em;
+    .landing-hero-shell {
+      width: 100%; max-width: 1080px;
+      display: flex; flex-direction: column; align-items: center;
     }
 
-    /* ── STAGE 2: CENTERED RADIANT AUTH CARD (HARD TOGGLED) ── */
+    /* Brand Header Badge */
+    .hero-badge-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--login-border);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      font-size: 11.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.75); margin-bottom: 24px;
+    }
+    .hero-badge-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--login-primary); box-shadow: 0 0 10px var(--login-primary);
+    }
+
+    /* Hero Typography */
+    .hero-headline {
+      font-size: clamp(38px, 6vw, 68px); font-weight: 900; line-height: 1.05; letter-spacing: -0.04em;
+      background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.95) 40%, #cbd5e1 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 18px; max-width: 820px;
+    }
+    .hero-subheadline {
+      font-size: clamp(15px, 2vw, 18px); color: #94a3b8; font-weight: 450; line-height: 1.55;
+      max-width: 620px; margin-bottom: 34px;
+    }
+
+    /* Primary Launch Button */
+    .hero-action-group {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 54px;
+    }
+    .hero-primary-cta {
+      display: inline-flex; align-items: center; gap: 10px; padding: 16px 42px;
+      font-size: 15.5px; font-weight: 700; letter-spacing: 0.01em; color: #ffffff;
+      background: var(--login-cta-gradient); border: 1px solid rgba(255, 255, 255, 0.22);
+      border-radius: 9999px; cursor: pointer;
+      box-shadow: 0 8px 36px var(--login-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .hero-primary-cta:hover {
+      transform: translateY(-2.5px); box-shadow: 0 14px 46px var(--login-glow);
+      background: var(--login-cta-hover);
+    }
+    .hero-primary-cta:active {
+      transform: translateY(0.5px) scale(0.98);
+    }
+
+    /* ── 3D PERSPECTIVE DECK GALLERY (TRANSITIONS.DEV CAROUSEL / FAN STACK) ── */
+    .deck-gallery-container {
+      position: relative; width: 100%; max-width: 920px; height: 260px;
+      perspective: 1200px; margin-bottom: 42px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .deck-stack-wrapper {
+      position: relative; width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .deck-card {
+      position: absolute; width: 300px; height: 210px;
+      background: var(--login-surface-card);
+      border: 1px solid var(--login-border);
+      border-radius: 20px; padding: 26px 24px;
+      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.7), 0 0 25px -5px var(--login-glow);
+      text-align: left; cursor: pointer;
+      display: flex; flex-direction: column; justify-content: space-between;
+      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      will-change: transform, box-shadow, border-color;
+    }
+    .deck-card:hover {
+      border-color: var(--login-border-focus);
+      box-shadow: 0 25px 60px -8px rgba(0, 0, 0, 0.85), 0 0 35px var(--login-glow);
+      z-index: 40 !important;
+    }
+
+    /* Fanned Deck Geometry */
+    .deck-card-left {
+      transform: translateX(-190px) rotate(-7deg) scale(0.92);
+      z-index: 10; opacity: 0.85;
+    }
+    .deck-card-center {
+      transform: translateX(0) rotate(0deg) scale(1);
+      z-index: 20; opacity: 1;
+      border-color: var(--login-border-focus);
+    }
+    .deck-card-right {
+      transform: translateX(190px) rotate(7deg) scale(0.92);
+      z-index: 10; opacity: 0.85;
+    }
+
+    .deck-gallery-container:hover .deck-card-left {
+      transform: translateX(-240px) rotate(-10deg) scale(0.94);
+      opacity: 0.95;
+    }
+    .deck-gallery-container:hover .deck-card-center {
+      transform: translateY(-8px) scale(1.04);
+    }
+    .deck-gallery-container:hover .deck-card-right {
+      transform: translateX(240px) rotate(10deg) scale(0.94);
+      opacity: 0.95;
+    }
+
+    .deck-card-header {
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .deck-card-icon-halo {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: rgba(255, 255, 255, 0.06); border: 1px solid var(--login-border);
+      display: flex; align-items: center; justify-content: center;
+      color: var(--login-primary);
+    }
+    .deck-card-tag {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.45);
+    }
+    .deck-card-body h3 {
+      font-size: 17px; font-weight: 750; color: #ffffff; margin-bottom: 6px; letter-spacing: -0.01em;
+    }
+    .deck-card-body p {
+      font-size: 12.5px; color: #94a3b8; line-height: 1.45;
+    }
+
+    /* Deck Indicator dots */
+    .deck-indicator-pills {
+      display: flex; align-items: center; gap: 8px; justify-content: center;
+    }
+    .deck-pill {
+      width: 24px; height: 3px; border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.18);
+      transition: all 0.3s ease;
+    }
+    .deck-pill.active {
+      width: 40px; background: var(--login-primary);
+      box-shadow: 0 0 10px var(--login-primary);
+    }
+
+    /* Footer Trust Mark */
+    .landing-footnote {
+      font-size: 12px; color: rgba(255, 255, 255, 0.38); letter-spacing: 0.03em;
+    }
+
+    /* ── STAGE 2: CENTERED RADIANT AUTH PORTAL (HARD ISOLATED) ── */
     #auth-stage {
-      position: fixed; inset: 0; z-index: 20;
+      position: fixed; inset: 0; z-index: 30;
       display: none; /* STRICT ISOLATION */
       align-items: center; justify-content: center; padding: 24px;
     }
@@ -391,7 +501,7 @@
     }
     .auth-primary-btn:disabled { opacity: 0.65; cursor: not-allowed; }
 
-    /* 2FA */
+    /* 2FA Form */
     #twofa-section { display: none; }
     .twofa-header { text-align: center; margin-bottom: 22px; }
     .twofa-badge-icon {
@@ -425,6 +535,12 @@
     .spinner-inner-img { position: absolute; width: 24px; height: 24px; object-fit: contain; }
     @keyframes spinSlow { to { transform: rotate(360deg); } }
     #auth-loading-text { font-size: 13.5px; font-weight: 700; color: #e2e8f0; }
+
+    @media (max-width: 768px) {
+      .deck-card-left { transform: translateX(-60px) rotate(-4deg) scale(0.85); }
+      .deck-card-right { transform: translateX(60px) rotate(4deg) scale(0.85); }
+      .deck-gallery-container { height: 220px; }
+    }
   </style>
 
   <script src="https://accounts.google.com/gsi/client" onload="initGoogleSSO()" async defer></script>
@@ -432,42 +548,114 @@
   <script src="/js/vendor/motion.js"></script>
 </head>
 <body>
-  <!-- Floating Clean Round Theme Trigger (No Text) -->
-  <button type="button" class="theme-trigger-btn" id="theme-toggle-btn" onclick="triggerThemeRipple(event)" aria-label="Switch Theme Palette" title="Switch Theme Palette">
-    <div class="theme-pip-core" id="theme-pip-core"></div>
+  <!-- ── FLOATING GEMINI STARBURST TRIGGER (ZERO TEXT) ── -->
+  <button type="button" class="gemini-theme-btn" id="theme-toggle-btn" onclick="triggerDropletBleed(event)" aria-label="Switch Theme Palette" title="Switch Theme Palette (Gemini Living Ambiance)">
+    <svg class="gemini-star-svg" viewBox="0 0 24 24" fill="none">
+      <defs>
+        <linearGradient id="geminiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#ffffff"/>
+          <stop offset="50%" stop-color="var(--login-primary)"/>
+          <stop offset="100%" stop-color="var(--login-accent)"/>
+        </linearGradient>
+      </defs>
+      <!-- Four-pointed Gemini sparkle starburst -->
+      <path d="M12 0C12 6.62742 6.62742 12 0 12C6.62742 12 12 17.3726 12 24C12 17.3726 17.3726 12 24 12C17.3726 12 12 6.62742 12 0Z" fill="url(#geminiGrad)"/>
+    </svg>
   </button>
 
-  <!-- Water Ripple Dynamic Layer -->
-  <div class="water-ripple-container" id="water-ripple-container"></div>
+  <!-- ── WATER DROPLET ABSORPTION SPREAD CANVAS ── -->
+  <div id="fabric-droplet-canvas"></div>
 
-  <!-- Ambient Canvas Background -->
-  <div class="login-ambient-canvas">
-    <div class="ambient-noise"></div>
-    <div class="ambient-grid"></div>
-    <div class="ambient-blob-1"></div>
-    <div class="ambient-blob-2"></div>
+  <!-- ── GENERATIVE AMBIENT CANVAS & LIGHT BEAMS ── -->
+  <div id="ambient-canvas-wrapper">
+    <canvas id="ambient-canvas"></canvas>
+    <div class="ambient-aurora-glow"></div>
+    <div class="ambient-grid-overlay"></div>
   </div>
 
-  <!-- ── STAGE 1: Brand Hero Splash (Default Visible) ── -->
+  <!-- ── STAGE 1: TRANSITIONS.DEV DECK GALLERY LANDING PAGE ── -->
   <section id="splash-stage">
-    <div class="splash-content">
-      <div class="splash-logo-box">
-        <div class="splash-logo-halo"></div>
-        <img src="/logo.png" alt="Benevolate" class="splash-logo-img">
+    <div class="landing-hero-shell">
+      <!-- Wordmark Pill -->
+      <div class="hero-badge-pill">
+        <span class="hero-badge-dot"></span>
+        <span>Benevolate Integr8 · Platform v4</span>
       </div>
-      <div class="splash-wordmark">Benevolate Integr8</div>
-      <h1 class="splash-tagline">Ship faster.<br>Stay in control.</h1>
-      <button type="button" class="splash-cta-btn" id="splash-continue-btn" onclick="showAuthStage()">
-        <span>Continue</span>
-        <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
-      </button>
-      <div class="splash-footnote">
-        Enterprise Platform &nbsp;·&nbsp; Secure SSO Access &nbsp;·&nbsp; &copy; 2026 Benevolate
+
+      <!-- Headline & Value Prop -->
+      <h1 class="hero-headline">Ship faster.<br>Stay in complete control.</h1>
+      <p class="hero-subheadline">
+        Enterprise release intelligence, automated canary safety, and synchronized microservice deployments engineered for high-velocity teams.
+      </p>
+
+      <!-- Launch Action -->
+      <div class="hero-action-group">
+        <button type="button" class="hero-primary-cta" id="splash-continue-btn" onclick="showAuthStage()">
+          <span>Launch Workspace</span>
+          <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+        </button>
+      </div>
+
+      <!-- ── 3D PERSPECTIVE DECK GALLERY (TRANSITIONS.DEV CAROUSEL / FAN STACK) ── -->
+      <div class="deck-gallery-container" id="deck-gallery" onmousemove="handleDeckPerspective(event)" onmouseleave="resetDeckPerspective()">
+        <div class="deck-stack-wrapper">
+          <!-- Card 1: Autonomous Pipelines -->
+          <div class="deck-card deck-card-left" id="deck-card-1" onclick="focusDeckCard(1)">
+            <div class="deck-card-header">
+              <div class="deck-card-icon-halo">
+                <i data-lucide="git-branch" style="width:20px;height:20px;"></i>
+              </div>
+              <span class="deck-card-tag">Orchestration</span>
+            </div>
+            <div class="deck-card-body">
+              <h3>Autonomous Pipelines</h3>
+              <p>Zero-friction multi-cluster continuous delivery with declarative build drift detection.</p>
+            </div>
+          </div>
+
+          <!-- Card 2: Zero Downtime Releases (Center Focal) -->
+          <div class="deck-card deck-card-center" id="deck-card-2" onclick="focusDeckCard(2)">
+            <div class="deck-card-header">
+              <div class="deck-card-icon-halo">
+                <i data-lucide="shield-check" style="width:20px;height:20px;"></i>
+              </div>
+              <span class="deck-card-tag">Reliability</span>
+            </div>
+            <div class="deck-card-body">
+              <h3>Automated Rollbacks</h3>
+              <p>Real-time canary anomaly detection instantly halts and reverts degraded releases.</p>
+            </div>
+          </div>
+
+          <!-- Card 3: Distributed Observability -->
+          <div class="deck-card deck-card-right" id="deck-card-3" onclick="focusDeckCard(3)">
+            <div class="deck-card-header">
+              <div class="deck-card-icon-halo">
+                <i data-lucide="activity" style="width:20px;height:20px;"></i>
+              </div>
+              <span class="deck-card-tag">Telemetry</span>
+            </div>
+            <div class="deck-card-body">
+              <h3>Unified Telemetry</h3>
+              <p>Sub-millisecond event streaming across global ingress pipelines and container clusters.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="deck-indicator-pills" style="margin-bottom: 34px;">
+        <span class="deck-pill" id="pill-1"></span>
+        <span class="deck-pill active" id="pill-2"></span>
+        <span class="deck-pill" id="pill-3"></span>
+      </div>
+
+      <div class="landing-footnote">
+        Enterprise Security &nbsp;·&nbsp; Single Sign-On Access &nbsp;·&nbsp; &copy; 2026 Benevolate
       </div>
     </div>
   </section>
 
-  <!-- ── STAGE 2: Centered Radiant Auth Card (Strictly Hidden by Default) ── -->
+  <!-- ── STAGE 2: RADIANT AUTH PORTAL (MORPHS IN PLACE) ── -->
   <section id="auth-stage" style="display:none;" aria-hidden="true">
     <div class="auth-panel-card" id="auth-panel-card">
       <button type="button" class="auth-back-nav" id="auth-back-btn" onclick="handleAuthBack()" title="Back to Overview">
@@ -586,7 +774,7 @@
     var pending2FA = null;
     var GOOGLE_CLIENT_ID = '1018746602979-blog5afpgc9iv4ke0gllpam30v5fs8b7.apps.googleusercontent.com';
 
-    // ── 4 Curated Bespoke Palettes (Including Claude Sandstone) ──
+    // ── 4 CURATED THEME PALETTES ──
     var PALETTES = [
       { id: 'sandstone', name: 'Sandstone' },
       { id: 'indigo',    name: 'Electric Indigo' },
@@ -618,88 +806,125 @@
       }
     }
 
-    // ── Water Drop Ripple Spread Animation ──
-    function triggerThemeRipple(event) {
+    // ── SLOW WATER DROPLET SPREAD OVER DRESS (CAPILLARY ABSORPTION) ──
+    function triggerDropletBleed(event) {
       var btn = document.getElementById('theme-toggle-btn');
       var rect = btn.getBoundingClientRect();
       var originX = rect.left + rect.width / 2;
       var originY = rect.top + rect.height / 2;
 
-      // Determine next palette
+      // Select next palette
       var currentId = document.documentElement.getAttribute('data-palette') || 'sandstone';
       var currentIndex = PALETTES.findIndex(function(p) { return p.id === currentId; });
       var nextIndex = (currentIndex + 1) % PALETTES.length;
       var nextPalette = PALETTES[nextIndex];
 
-      // Spawn expanding ripple wave
-      var container = document.getElementById('water-ripple-container');
-      if (container) {
-        var wave = document.createElement('div');
-        wave.className = 'water-ripple-wave';
-        wave.style.left = originX + 'px';
-        wave.style.top = originY + 'px';
-        container.appendChild(wave);
+      // Spawn droplet capillary absorption layers
+      var canvasContainer = document.getElementById('fabric-droplet-canvas');
+      if (canvasContainer) {
+        // 1. Soft bleeding diffusion layer
+        var bleed = document.createElement('div');
+        bleed.className = 'fabric-droplet-bleed';
+        bleed.style.left = originX + 'px';
+        bleed.style.top = originY + 'px';
+        canvasContainer.appendChild(bleed);
+
+        // 2. Capillary absorption boundary ring
+        var ring = document.createElement('div');
+        ring.className = 'fabric-droplet-ring';
+        ring.style.left = originX + 'px';
+        ring.style.top = originY + 'px';
+        canvasContainer.appendChild(ring);
 
         setTimeout(function() {
-          if (wave && wave.parentNode) {
-            wave.parentNode.removeChild(wave);
-          }
-        }, 850);
+          if (bleed && bleed.parentNode) bleed.parentNode.removeChild(bleed);
+          if (ring && ring.parentNode) ring.parentNode.removeChild(ring);
+        }, 1600);
       }
 
-      // Droplet squish-and-spring on button
+      // Gemini starburst rotation & droplet bounce
       if (window.Motion) {
-        Motion.animate(btn, { scale: [1, 0.85, 1.12, 1] }, { duration: 0.45, ease: 'easeOut' });
+        Motion.animate('.gemini-star-svg', { rotate: [0, 90, 180] }, { duration: 0.8, ease: 'easeOut' });
+        Motion.animate(btn, { scale: [1, 0.88, 1.14, 1] }, { duration: 0.55, ease: 'easeOut' });
       }
 
-      // Switch palette
-      setPalette(nextPalette.id, true);
+      // Smoothly apply new palette so it absorbs under the capillary spread
+      setTimeout(function() {
+        setPalette(nextPalette.id, true);
+      }, 150);
     }
 
-    // Auto-update theme on 30m boundary check
-    setInterval(applyAutoTheme, 60000);
+    // ── 3D PERSPECTIVE DECK GALLERY INTERACTIONS ──
+    function handleDeckPerspective(e) {
+      var container = document.getElementById('deck-gallery');
+      if (!container) return;
+      var rect = container.getBoundingClientRect();
+      var x = e.clientX - rect.left - rect.width / 2;
+      var y = e.clientY - rect.top - rect.height / 2;
 
-    document.addEventListener('DOMContentLoaded', function() {
-      applyAutoTheme();
+      var rotY = (x / (rect.width / 2)) * 8;
+      var rotX = -(y / (rect.height / 2)) * 6;
 
-      if (window.lucide) {
-        lucide.createIcons();
+      var centerCard = document.getElementById('deck-card-2');
+      if (centerCard) {
+        centerCard.style.transform = 'translateY(-8px) rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) scale(1.04)';
       }
+    }
 
-      initGoogleSSO();
-
-      var totpInput = document.getElementById('totp-code');
-      if (totpInput) {
-        totpInput.addEventListener('input', function() {
-          var btn = document.getElementById('twofa-submit-btn');
-          if (this.value.length === 6) {
-            btn.disabled = false;
-            if (window.Motion) {
-              Motion.animate(btn, { scale: [0.97, 1] }, { duration: 0.2, type: 'spring' });
-            }
-          } else {
-            btn.disabled = true;
-          }
-        });
+    function resetDeckPerspective() {
+      var centerCard = document.getElementById('deck-card-2');
+      if (centerCard) {
+        centerCard.style.transform = 'translateX(0) rotate(0deg) scale(1)';
       }
+    }
 
-      if (window.Motion) {
-        Motion.animate('.splash-content', { opacity: [0, 1], y: [20, 0] }, { duration: 0.5, ease: 'easeOut' });
+    var currentActiveDeck = 2;
+    function focusDeckCard(cardNum) {
+      currentActiveDeck = cardNum;
+      var c1 = document.getElementById('deck-card-1');
+      var c2 = document.getElementById('deck-card-2');
+      var c3 = document.getElementById('deck-card-3');
+      var p1 = document.getElementById('pill-1');
+      var p2 = document.getElementById('pill-2');
+      var p3 = document.getElementById('pill-3');
+
+      [c1, c2, c3].forEach(function(el) {
+        el.className = 'deck-card';
+      });
+      [p1, p2, p3].forEach(function(el) {
+        el.classList.remove('active');
+      });
+
+      if (cardNum === 1) {
+        c1.className = 'deck-card deck-card-center';
+        c2.className = 'deck-card deck-card-right';
+        c3.className = 'deck-card deck-card-left';
+        p1.classList.add('active');
+      } else if (cardNum === 2) {
+        c1.className = 'deck-card deck-card-left';
+        c2.className = 'deck-card deck-card-center';
+        c3.className = 'deck-card deck-card-right';
+        p2.classList.add('active');
+      } else {
+        c1.className = 'deck-card deck-card-right';
+        c2.className = 'deck-card deck-card-left';
+        c3.className = 'deck-card deck-card-center';
+        p3.classList.add('active');
       }
-    });
+    }
 
-    // ── Hard Toggle + Spring Morphing Between Stages ──
+    // ── STAGE 1 -> STAGE 2 SPRING MOTION MORPHING ──
     function showAuthStage() {
       var splash = document.getElementById('splash-stage');
       var authStage = document.getElementById('auth-stage');
       var card = document.getElementById('auth-panel-card');
 
       if (window.Motion) {
-        Motion.animate(splash, { opacity: [1, 0], scale: [1, 0.96] }, { duration: 0.3 }).finished.then(function() {
+        Motion.animate(splash, { opacity: [1, 0], scale: [1, 0.95] }, { duration: 0.35 }).finished.then(function() {
           splash.style.display = 'none';
           authStage.style.display = 'flex';
           authStage.setAttribute('aria-hidden', 'false');
-          Motion.animate(card, { opacity: [0, 1], y: [24, 0], scale: [0.98, 1] }, { duration: 0.4, type: 'spring', stiffness: 300, damping: 25 });
+          Motion.animate(card, { opacity: [0, 1], y: [30, 0], scale: [0.96, 1] }, { duration: 0.45, type: 'spring', stiffness: 300, damping: 25 });
           initGoogleSSO();
           document.getElementById('login-username').focus();
         });
@@ -730,11 +955,11 @@
         var card = document.getElementById('auth-panel-card');
 
         if (window.Motion) {
-          Motion.animate(card, { opacity: [1, 0], y: [0, 20], scale: [1, 0.98] }, { duration: 0.25 }).finished.then(function() {
+          Motion.animate(card, { opacity: [1, 0], y: [0, 24], scale: [1, 0.96] }, { duration: 0.25 }).finished.then(function() {
             authStage.style.display = 'none';
             authStage.setAttribute('aria-hidden', 'true');
             splash.style.display = 'flex';
-            Motion.animate(splash, { opacity: [0, 1], scale: [0.96, 1] }, { duration: 0.35 });
+            Motion.animate(splash, { opacity: [0, 1], scale: [0.95, 1] }, { duration: 0.35 });
           });
         } else {
           authStage.style.display = 'none';
@@ -743,6 +968,99 @@
         }
       }
     }
+
+    // ── LIVING GENERATIVE CANVAS PARTICLES & LIGHT BEAMS ──
+    function initAmbientCanvas() {
+      var canvas = document.getElementById('ambient-canvas');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var width, height;
+      var particles = [];
+
+      function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+      }
+      resize();
+      window.addEventListener('resize', resize);
+
+      for (var i = 0; i < 28; i++) {
+        particles.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          radius: Math.random() * 2 + 0.8,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          alpha: Math.random() * 0.5 + 0.15
+        });
+      }
+
+      function draw() {
+        ctx.clearRect(0, 0, width, height);
+
+        for (var i = 0; i < particles.length; i++) {
+          var p = particles[i];
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if (p.x < 0) p.x = width;
+          if (p.x > width) p.x = 0;
+          if (p.y < 0) p.y = height;
+          if (p.y > height) p.y = 0;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 255, 255, ' + p.alpha + ')';
+          ctx.fill();
+
+          // Connecting light strands
+          for (var j = i + 1; j < particles.length; j++) {
+            var p2 = particles[j];
+            var dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+            if (dist < 130) {
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.05 * (1 - dist / 130)) + ')';
+              ctx.stroke();
+            }
+          }
+        }
+        requestAnimationFrame(draw);
+      }
+      draw();
+    }
+
+    // ── FORM & AUTH PROTOCOLS ──
+    document.addEventListener('DOMContentLoaded', function() {
+      applyAutoTheme();
+      initAmbientCanvas();
+
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+
+      initGoogleSSO();
+
+      var totpInput = document.getElementById('totp-code');
+      if (totpInput) {
+        totpInput.addEventListener('input', function() {
+          var btn = document.getElementById('twofa-submit-btn');
+          if (this.value.length === 6) {
+            btn.disabled = false;
+            if (window.Motion) {
+              Motion.animate(btn, { scale: [0.97, 1] }, { duration: 0.2, type: 'spring' });
+            }
+          } else {
+            btn.disabled = true;
+          }
+        });
+      }
+
+      if (window.Motion) {
+        Motion.animate('.landing-hero-shell', { opacity: [0, 1], y: [24, 0] }, { duration: 0.6, ease: 'easeOut' });
+      }
+    });
 
     function togglePasswordVisibility() {
       var pwdInput = document.getElementById('login-password');
@@ -788,7 +1106,7 @@
       if (banner) banner.style.display = 'none';
     }
 
-    // Google SSO Handler
+    // Google SSO
     var googleInitAttempts = 0;
     function initGoogleSSO() {
       if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
@@ -861,7 +1179,7 @@
       }
     }
 
-    // Standard Credentials Submit
+    // Credentials Submit
     async function handleCredentialsSubmit(event) {
       event.preventDefault();
       var username = document.getElementById('login-username').value.trim();
