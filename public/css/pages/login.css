@@ -1,99 +1,88 @@
 /* ==========================================================================
-   Benevolate Integr8 — Next-Gen Enterprise Login & Deck Gallery
-   Styling Architecture: Dark OLED / Glassmorphism / Multi-Palette Themes
-   Zero Emoji Enforcement — 100% Vector Lucide Iconography
+   Benevolate Integr8 — Next-Gen Clean Enterprise Landing & Auth
+   Architecture: Minimalist Hero Splash -> Radiant Auth Card Transition
+   Clock-Synchronized 30-Minute Dynamic Theme Rotation
+   Zero Detailing Leaks — 100% Focused Iconography & Spring Motion
    ========================================================================== */
 
 :root, [data-palette="indigo"] {
+  --theme-name: "Electric Indigo";
   --login-bg: #07090e;
-  --login-surface: rgba(15, 23, 42, 0.72);
-  --login-surface-elevated: rgba(30, 41, 59, 0.7);
-  --login-border: rgba(255, 255, 255, 0.09);
-  --login-border-focus: rgba(99, 102, 241, 0.65);
-  --login-glow-primary: rgba(99, 102, 241, 0.28);
-  --login-glow-secondary: rgba(6, 182, 212, 0.22);
-  --login-text-heading: #f8fafc;
-  --login-text-body: #94a3b8;
-  --login-text-muted: #64748b;
+  --login-surface: rgba(15, 23, 42, 0.76);
+  --login-border: rgba(255, 255, 255, 0.1);
+  --login-border-focus: rgba(99, 102, 241, 0.7);
   --login-primary: #6366f1;
   --login-primary-hover: #4f46e5;
   --login-accent: #8b5cf6;
-  --login-btn-gradient: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-  --login-btn-gradient-hover: linear-gradient(135deg, #4338ca 0%, #6d28d9 100%);
-  --login-blob-1: rgba(99, 102, 241, 0.18);
-  --login-blob-2: rgba(6, 182, 212, 0.14);
+  --login-glow: rgba(99, 102, 241, 0.35);
+  --login-cta-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  --login-cta-hover: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  --login-blob-1: rgba(99, 102, 241, 0.22);
+  --login-blob-2: rgba(139, 92, 246, 0.16);
 }
 
-/* ── Palette 2: Aurora Borealis (Cyan / Teal / Emerald) ─────────────────── */
 [data-palette="aurora"] {
+  --theme-name: "Aurora Cyan";
   --login-bg: #050d12;
-  --login-surface: rgba(8, 28, 36, 0.75);
-  --login-surface-elevated: rgba(12, 42, 54, 0.7);
-  --login-border: rgba(6, 182, 212, 0.16);
-  --login-border-focus: rgba(6, 182, 212, 0.75);
-  --login-glow-primary: rgba(6, 182, 212, 0.32);
-  --login-glow-secondary: rgba(16, 185, 129, 0.25);
+  --login-surface: rgba(8, 28, 38, 0.78);
+  --login-border: rgba(6, 182, 212, 0.18);
+  --login-border-focus: rgba(6, 182, 212, 0.8);
   --login-primary: #06b6d4;
   --login-primary-hover: #0891b2;
   --login-accent: #10b981;
-  --login-btn-gradient: linear-gradient(135deg, #0891b2 0%, #059669 100%);
-  --login-btn-gradient-hover: linear-gradient(135deg, #0e7490 0%, #047857 100%);
-  --login-blob-1: rgba(6, 182, 212, 0.2);
-  --login-blob-2: rgba(16, 185, 129, 0.16);
+  --login-glow: rgba(6, 182, 212, 0.35);
+  --login-cta-gradient: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+  --login-cta-hover: linear-gradient(135deg, #0891b2 0%, #059669 100%);
+  --login-blob-1: rgba(6, 182, 212, 0.22);
+  --login-blob-2: rgba(16, 185, 129, 0.18);
 }
 
-/* ── Palette 3: Cyber Emerald (Matrix Neon Jade) ───────────────────────── */
 [data-palette="emerald"] {
+  --theme-name: "Cyber Emerald";
   --login-bg: #050e09;
-  --login-surface: rgba(6, 26, 16, 0.75);
-  --login-surface-elevated: rgba(10, 38, 24, 0.7);
+  --login-surface: rgba(6, 28, 18, 0.78);
   --login-border: rgba(16, 185, 129, 0.18);
-  --login-border-focus: rgba(16, 185, 129, 0.8);
-  --login-glow-primary: rgba(16, 185, 129, 0.32);
-  --login-glow-secondary: rgba(52, 211, 153, 0.22);
+  --login-border-focus: rgba(16, 185, 129, 0.85);
   --login-primary: #10b981;
   --login-primary-hover: #059669;
   --login-accent: #34d399;
-  --login-btn-gradient: linear-gradient(135deg, #059669 0%, #047857 100%);
-  --login-btn-gradient-hover: linear-gradient(135deg, #047857 0%, #065f46 100%);
+  --login-glow: rgba(16, 185, 129, 0.35);
+  --login-cta-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --login-cta-hover: linear-gradient(135deg, #059669 0%, #047857 100%);
   --login-blob-1: rgba(16, 185, 129, 0.22);
-  --login-blob-2: rgba(6, 182, 212, 0.12);
+  --login-blob-2: rgba(6, 182, 212, 0.14);
 }
 
-/* ── Palette 4: Solar Forge (Warm Amber / Gold / Obsidian) ─────────────── */
 [data-palette="solar"] {
-  --login-bg: #0d0a06;
-  --login-surface: rgba(30, 20, 10, 0.75);
-  --login-surface-elevated: rgba(45, 30, 15, 0.7);
+  --theme-name: "Solar Forge";
+  --login-bg: #0e0905;
+  --login-surface: rgba(32, 20, 10, 0.78);
   --login-border: rgba(245, 158, 11, 0.18);
-  --login-border-focus: rgba(245, 158, 11, 0.8);
-  --login-glow-primary: rgba(245, 158, 11, 0.32);
-  --login-glow-secondary: rgba(251, 191, 36, 0.2);
+  --login-border-focus: rgba(245, 158, 11, 0.85);
   --login-primary: #f59e0b;
   --login-primary-hover: #d97706;
   --login-accent: #fbbf24;
-  --login-btn-gradient: linear-gradient(135deg, #d97706 0%, #b45309 100%);
-  --login-btn-gradient-hover: linear-gradient(135deg, #b45309 0%, #92400e 100%);
-  --login-blob-1: rgba(245, 158, 11, 0.22);
-  --login-blob-2: rgba(239, 68, 68, 0.14);
+  --login-glow: rgba(245, 158, 11, 0.35);
+  --login-cta-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --login-cta-hover: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+  --login-blob-1: rgba(245, 158, 11, 0.24);
+  --login-blob-2: rgba(239, 68, 68, 0.16);
 }
 
-/* ── Palette 5: Crimson Stealth (Deep Rose / Ruby / Slate) ─────────────── */
 [data-palette="crimson"] {
+  --theme-name: "Crimson Stealth";
   --login-bg: #0e0608;
-  --login-surface: rgba(28, 12, 16, 0.75);
-  --login-surface-elevated: rgba(42, 18, 24, 0.7);
+  --login-surface: rgba(28, 12, 18, 0.78);
   --login-border: rgba(244, 63, 94, 0.18);
-  --login-border-focus: rgba(244, 63, 94, 0.8);
-  --login-glow-primary: rgba(244, 63, 94, 0.32);
-  --login-glow-secondary: rgba(225, 29, 72, 0.22);
+  --login-border-focus: rgba(244, 63, 94, 0.85);
   --login-primary: #f43f5e;
   --login-primary-hover: #e11d48;
   --login-accent: #fb7185;
-  --login-btn-gradient: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
-  --login-btn-gradient-hover: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
-  --login-blob-1: rgba(244, 63, 94, 0.22);
-  --login-blob-2: rgba(139, 92, 246, 0.15);
+  --login-glow: rgba(244, 63, 94, 0.35);
+  --login-cta-gradient: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  --login-cta-hover: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  --login-blob-1: rgba(244, 63, 94, 0.24);
+  --login-blob-2: rgba(139, 92, 246, 0.16);
 }
 
 * {
@@ -105,98 +94,15 @@
 body.login-body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--login-bg);
-  color: var(--login-text-heading);
+  color: #f8fafc;
   min-height: 100vh;
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  overflow-x: hidden;
+  overflow: hidden;
   position: relative;
   -webkit-font-smoothing: antialiased;
-  transition: background-color 0.4s ease, color 0.4s ease;
-}
-
-/* ── Top Header Bar with Theme Switcher Pill ──────────────────────────── */
-.login-topbar {
-  position: fixed;
-  top: 18px;
-  right: 24px;
-  z-index: 100;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.theme-pill-dropdown {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(15, 23, 42, 0.82);
-  border: 1px solid var(--login-border);
-  padding: 6px 14px;
-  border-radius: 9999px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  font-size: 12px;
-  font-weight: 600;
-  color: #cbd5e1;
-}
-
-.palette-swatches {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.palette-dot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1.5px solid transparent;
-  cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease;
-}
-
-.palette-dot:hover {
-  transform: scale(1.2);
-}
-
-.palette-dot.active {
-  border-color: #ffffff;
-  transform: scale(1.15);
-  box-shadow: 0 0 8px currentColor;
-}
-
-.palette-dot-indigo  { background-color: #6366f1; color: #6366f1; }
-.palette-dot-aurora  { background-color: #06b6d4; color: #06b6d4; }
-.palette-dot-emerald { background-color: #10b981; color: #10b981; }
-.palette-dot-solar   { background-color: #f59e0b; color: #f59e0b; }
-.palette-dot-crimson { background-color: #f43f5e; color: #f43f5e; }
-
-.auto-cycle-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--login-text-muted);
-  font-size: 11.5px;
-  font-weight: 600;
-  margin-left: 6px;
-  padding-left: 8px;
-  border-left: 1px solid rgba(255, 255, 255, 0.12);
-  transition: color 0.15s ease;
-}
-
-.auto-cycle-toggle:hover {
-  color: #e2e8f0;
-}
-
-.auto-cycle-toggle.active {
-  color: var(--login-primary);
+  transition: background-color 0.8s ease;
 }
 
 /* ── Ambient Background Canvas ─────────────────────────────────────────── */
@@ -214,495 +120,307 @@ body.login-body {
   background-image:
     linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
-  background-size: 52px 52px;
-  mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 30%, transparent 80%);
-  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 50%, #000 30%, transparent 80%);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 35%, transparent 85%);
+  -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 35%, transparent 85%);
 }
 
 .ambient-blob-1 {
   position: absolute;
   top: -15%;
-  left: -10%;
-  width: 65vw;
-  height: 65vw;
-  max-width: 850px;
-  max-height: 850px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--login-blob-1) 0%, transparent 70%);
-  filter: blur(80px);
-  animation: blobFloat 22s ease-in-out infinite alternate;
-  transition: background 0.5s ease;
-}
-
-.ambient-blob-2 {
-  position: absolute;
-  bottom: -20%;
-  right: -10%;
+  left: 20%;
   width: 60vw;
   height: 60vw;
   max-width: 800px;
   max-height: 800px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--login-blob-2) 0%, transparent 70%);
+  background: radial-gradient(circle, var(--login-blob-1) 0%, transparent 70%);
   filter: blur(90px);
-  animation: blobFloatRev 26s ease-in-out infinite alternate;
-  transition: background 0.5s ease;
+  animation: blobFloat 20s ease-in-out infinite alternate;
+  transition: background 0.8s ease;
 }
 
-.ambient-spotlight {
+.ambient-blob-2 {
   position: absolute;
-  width: 500px;
-  height: 500px;
+  bottom: -20%;
+  right: 15%;
+  width: 55vw;
+  height: 55vw;
+  max-width: 750px;
+  max-height: 750px;
   border-radius: 50%;
-  background: radial-gradient(circle, var(--login-glow-primary) 0%, transparent 70%);
-  filter: blur(40px);
-  pointer-events: none;
-  transform: translate(-50%, -50%);
-  transition: opacity 0.3s ease, background 0.4s ease;
-  opacity: 0;
+  background: radial-gradient(circle, var(--login-blob-2) 0%, transparent 70%);
+  filter: blur(100px);
+  animation: blobFloatRev 24s ease-in-out infinite alternate;
+  transition: background 0.8s ease;
 }
 
 @keyframes blobFloat {
   0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(40px, 30px) scale(1.08); }
-  100% { transform: translate(-30px, 50px) scale(0.96); }
+  50% { transform: translate(40px, 30px) scale(1.06); }
+  100% { transform: translate(-30px, 45px) scale(0.96); }
 }
 
 @keyframes blobFloatRev {
   0% { transform: translate(0, 0) scale(1); }
-  50% { transform: translate(-50px, -40px) scale(1.1); }
-  100% { transform: translate(30px, -30px) scale(0.95); }
+  50% { transform: translate(-45px, -35px) scale(1.08); }
+  100% { transform: translate(25px, -25px) scale(0.95); }
 }
 
-/* ── Container Layout: Split-Screen Experience ─────────────────────────── */
-.login-shell {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  max-width: 1360px;
-  min-height: 740px;
-  margin: 32px auto;
-  padding: 0 24px;
-  display: grid;
-  grid-template-columns: 1.15fr 0.85fr;
-  gap: 36px;
-  align-items: center;
-}
-
-@media (max-width: 1024px) {
-  .login-shell {
-    grid-template-columns: 1fr;
-    max-width: 560px;
-    gap: 28px;
-    margin: 50px auto;
-  }
-}
-
-/* ── LEFT PANE: Enterprise Security & Architecture Showcase Deck ──────── */
-.showcase-deck {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  background: var(--login-surface);
-  border: 1px solid var(--login-border);
-  border-radius: 24px;
-  padding: 36px 40px;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.6);
-  position: relative;
-  overflow: hidden;
-  transition: border-color 0.4s ease, background 0.4s ease;
-}
-
-@media (max-width: 1024px) {
-  .showcase-deck {
-    display: none; /* Clean focus on auth card on mobile */
-  }
-}
-
-.showcase-deck::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, transparent, var(--login-primary), var(--login-accent), transparent);
-}
-
-.deck-header {
+/* ── Topbar: Clock-Synchronized Theme Badge ────────────────────────────── */
+.login-topbar {
+  position: fixed;
+  top: 20px;
+  right: 24px;
+  z-index: 100;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-}
-
-.deck-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 12px;
-  border-radius: 9999px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--login-border);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--login-text-heading);
-}
-
-.deck-badge-dot {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 10px #10b981;
-  animation: pulseBeacon 2s infinite ease-in-out;
-}
-
-@keyframes pulseBeacon {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
-}
-
-.deck-live-metrics {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  font-size: 12px;
-  color: var(--login-text-muted);
-}
-
-.metric-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.metric-value {
-  color: #e2e8f0;
-  font-weight: 600;
-}
-
-/* ── Interactive Slides Card Canvas ───────────────────────────────────── */
-.deck-viewport {
-  position: relative;
-  min-height: 420px;
-  display: flex;
-  flex-direction: column;
-}
-
-.deck-slide {
-  display: none;
-  flex-direction: column;
-  gap: 20px;
-  opacity: 0;
-  transform: translateY(12px);
-  transition: opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1), transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.deck-slide.active {
-  display: flex;
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.slide-tag {
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--login-primary);
-}
-
-.slide-title {
-  font-size: 26px;
-  font-weight: 800;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
-  color: #ffffff;
-}
-
-.slide-desc {
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--login-text-body);
-}
-
-/* Abstract Enterprise Value Visualizer (Zero Inner Pipeline Details) */
-.deck-visual-card {
-  background: rgba(10, 15, 26, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.visual-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  padding-bottom: 12px;
-}
-
-.visual-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  color: #cbd5e1;
-}
-
-.visual-status-pill {
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 9999px;
-  background: rgba(16, 185, 129, 0.15);
-  color: #34d399;
-  border: 1px solid rgba(16, 185, 129, 0.3);
-}
-
-/* Global Multi-Region Latency Probes Visualizer */
-.region-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  padding: 8px 0;
-}
-
-.region-node {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 12px 10px;
-  text-align: center;
-  transition: all 0.25s ease;
-}
-
-.region-node:hover {
-  border-color: var(--login-primary);
-  transform: translateY(-2px);
-}
-
-.region-name {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: #e2e8f0;
-  margin-bottom: 4px;
-}
-
-.region-latency {
-  font-size: 13px;
-  font-weight: 800;
-  color: var(--login-primary);
-}
-
-.region-status {
-  font-size: 10px;
-  color: #34d399;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-
-.status-dot-mini {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #10b981;
-}
-
-/* Zero-Trust Security Handshake Visualizer */
-.security-metrics-list {
-  display: flex;
-  flex-direction: column;
   gap: 10px;
 }
 
-.sec-metric-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 14px;
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  font-size: 12.5px;
-}
-
-.sec-metric-left {
-  display: flex;
+.theme-sync-badge {
+  display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: #cbd5e1;
-}
-
-.sec-metric-val {
-  font-weight: 700;
-  color: var(--login-primary);
-  font-size: 12px;
-}
-
-/* Deck Gallery Navigation & Timeline Bars */
-.deck-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: auto;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.deck-tab-btn {
-  flex: 1;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  text-align: left;
-  padding: 6px 2px;
-  transition: opacity 0.2s ease;
-}
-
-.deck-tab-progress {
-  width: 100%;
-  height: 3px;
-  border-radius: 2px;
-  background: rgba(255, 255, 255, 0.1);
-  overflow: hidden;
-  position: relative;
-}
-
-.deck-tab-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 0%;
-  background: var(--login-primary);
-  border-radius: 2px;
-  transition: background 0.3s ease;
-}
-
-.deck-tab-title {
-  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid var(--login-border);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 11.5px;
   font-weight: 600;
-  color: var(--login-text-muted);
-  transition: color 0.2s ease;
+  color: #cbd5e1;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.15s ease;
 }
 
-.deck-tab-btn.active .deck-tab-title {
-  color: #f1f5f9;
-}
-
-/* ── RIGHT PANE: Radiant Glassmorphism Auth Portal ─────────────────────── */
-.auth-portal-card {
-  position: relative;
-  width: 100%;
-  max-width: 480px;
-  margin: 0 auto;
-  background: rgba(13, 18, 30, 0.78);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 24px;
-  padding: 40px 36px;
-  backdrop-filter: blur(28px);
-  -webkit-backdrop-filter: blur(28px);
-  box-shadow: 
-    0 24px 64px -12px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
-  overflow: hidden;
-  transition: box-shadow 0.3s ease, border-color 0.3s ease;
-}
-
-.auth-portal-card:hover {
+.theme-sync-badge:hover {
   border-color: var(--login-border-focus);
-  box-shadow: 
-    0 32px 80px -16px rgba(0, 0, 0, 0.8),
-    0 0 35px -5px var(--login-glow-primary);
+  transform: translateY(-1px);
 }
 
-/* Radiant Animated Border Highlight */
-.radiant-border-beam {
+.theme-indicator-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--login-primary);
+  box-shadow: 0 0 10px var(--login-primary);
+  transition: background 0.5s ease;
+}
+
+/* ── STAGE 1: Minimalist Hero Brand Splash ─────────────────────────────── */
+.splash-stage {
   position: absolute;
-  inset: -1px;
-  border-radius: 24px;
-  pointer-events: none;
-  background: radial-gradient(400px circle at var(--mouse-x, 50%) var(--mouse-y, 0%), var(--login-glow-primary), transparent 70%);
-  opacity: 0.7;
-  transition: opacity 0.3s ease;
-}
-
-/* Brand Header */
-.auth-brand-block {
+  inset: 0;
+  z-index: 10;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   text-align: center;
+  padding: 24px;
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.splash-stage.hidden {
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.96) translateY(-16px);
+}
+
+.splash-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 640px;
+}
+
+.splash-logo-box {
+  position: relative;
   margin-bottom: 24px;
 }
 
-.brand-icon-wrapper {
+.splash-logo-halo {
+  position: absolute;
+  inset: -20px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--login-glow) 0%, transparent 70%);
+  filter: blur(24px);
+  animation: logoPulse 4s ease-in-out infinite alternate;
+  transition: background 0.8s ease;
+}
+
+@keyframes logoPulse {
+  0% { transform: scale(0.9); opacity: 0.6; }
+  100% { transform: scale(1.18); opacity: 0.95; }
+}
+
+.splash-logo-img {
+  position: relative;
+  z-index: 1;
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 35px var(--login-glow));
+  transition: filter 0.8s ease;
+}
+
+.splash-wordmark {
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 20px;
+}
+
+.splash-tagline {
+  font-size: clamp(38px, 6vw, 68px);
+  font-weight: 900;
+  line-height: 1.08;
+  letter-spacing: -0.035em;
+  background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 45%, #cbd5e1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 38px;
+}
+
+.splash-cta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 42px;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #ffffff;
+  background: var(--login-cta-gradient);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 9999px;
+  cursor: pointer;
+  box-shadow: 
+    0 8px 32px var(--login-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.splash-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 40px var(--login-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  background: var(--login-cta-hover);
+}
+
+.splash-cta-btn:active {
+  transform: translateY(0.5px) scale(0.98);
+}
+
+.splash-footnote {
+  margin-top: 48px;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.02em;
+}
+
+/* ── STAGE 2: Centered Radiant Auth Card ───────────────────────────────── */
+.auth-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.97) translateY(18px);
+  transition: opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.auth-stage.visible {
+  opacity: 1;
+  pointer-events: all;
+  transform: scale(1) translateY(0);
+}
+
+.auth-panel-card {
+  position: relative;
+  width: 100%;
+  max-width: 440px;
+  background: var(--login-surface);
+  border: 1px solid var(--login-border);
+  border-radius: 24px;
+  padding: 42px 36px 34px;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  box-shadow: 
+    0 32px 80px -16px rgba(0, 0, 0, 0.8),
+    0 0 35px -5px var(--login-glow);
+  transition: border-color 0.4s ease, box-shadow 0.4s ease, background 0.4s ease;
+}
+
+.auth-back-nav {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.auth-back-nav:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  transform: translateX(-1px);
+}
+
+.auth-brand-block {
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.auth-logo-halo {
   position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
-.brand-icon-halo {
-  position: absolute;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--login-glow-primary) 0%, transparent 70%);
-  filter: blur(14px);
-  animation: haloBreath 4s ease-in-out infinite alternate;
-  transition: background 0.4s ease;
-}
-
-@keyframes haloBreath {
-  0% { transform: scale(0.9); opacity: 0.5; }
-  100% { transform: scale(1.15); opacity: 0.85; }
-}
-
-.brand-logo-img {
-  position: relative;
-  z-index: 1;
+.auth-logo-img {
   width: 52px;
   height: 52px;
   object-fit: contain;
-  filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.4));
+  filter: drop-shadow(0 0 20px var(--login-glow));
 }
 
-.brand-title {
-  font-size: 24px;
+.auth-title {
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.02em;
   color: #ffffff;
+  letter-spacing: -0.02em;
   margin-bottom: 4px;
 }
 
-.brand-subtitle {
+.auth-subtitle {
   font-size: 13px;
-  color: var(--login-text-body);
+  color: #94a3b8;
 }
 
-/* ── Google SSO Integration & Fallback Button ─────────────────────────── */
+/* ── Google SSO Integration ───────────────────────────────────────────── */
 .sso-section {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   width: 100%;
   margin-bottom: 20px;
 }
@@ -739,18 +457,17 @@ body.login-body {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
-/* Divider with Radiant Rule */
+/* Divider */
 .auth-divider {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 22px;
-  color: var(--login-text-muted);
+  margin-bottom: 20px;
+  color: #64748b;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  width: 100%;
 }
 
 .auth-divider-line {
@@ -761,21 +478,15 @@ body.login-body {
 
 /* Form Groups & Inputs */
 .form-group {
-  margin-bottom: 18px;
-}
-
-.form-label-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px;
+  margin-bottom: 16px;
 }
 
 .form-label {
+  display: block;
   font-size: 12px;
   font-weight: 600;
   color: #cbd5e1;
-  letter-spacing: 0.01em;
+  margin-bottom: 6px;
 }
 
 .input-container {
@@ -788,9 +499,9 @@ body.login-body {
 .input-icon-left {
   position: absolute;
   left: 14px;
-  width: 18px;
-  height: 18px;
-  color: var(--login-text-muted);
+  width: 17px;
+  height: 17px;
+  color: #64748b;
   pointer-events: none;
   transition: color 0.2s ease;
 }
@@ -801,12 +512,11 @@ body.login-body {
   font-size: 13.5px;
   font-family: inherit;
   color: #f8fafc;
-  background: rgba(15, 23, 42, 0.65);
+  background: rgba(15, 23, 42, 0.7);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 12px;
   outline: none;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .input-field::placeholder {
@@ -815,56 +525,44 @@ body.login-body {
 
 .input-field:focus {
   border-color: var(--login-border-focus);
-  background: rgba(15, 23, 42, 0.9);
-  box-shadow: 
-    0 0 0 3px var(--login-glow-primary),
-    inset 0 2px 4px rgba(0, 0, 0, 0.2);
+  background: rgba(15, 23, 42, 0.95);
+  box-shadow: 0 0 0 3px var(--login-glow);
 }
 
 .input-container:focus-within .input-icon-left {
   color: var(--login-primary);
 }
 
-/* Toggle Password Visibility Button */
 .input-btn-right {
   position: absolute;
   right: 12px;
   background: transparent;
   border: none;
   cursor: pointer;
-  color: var(--login-text-muted);
+  color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 4px;
   border-radius: 6px;
-  transition: color 0.15s ease, background 0.15s ease;
+  transition: color 0.15s ease;
 }
 
 .input-btn-right:hover {
   color: #cbd5e1;
-  background: rgba(255, 255, 255, 0.05);
 }
 
 /* Error Alert Box */
 .auth-error-alert {
   display: none;
-  padding: 12px 14px;
-  margin-bottom: 18px;
+  padding: 11px 14px;
+  margin-bottom: 16px;
   font-size: 13px;
-  line-height: 1.4;
   color: #fca5a5;
-  background: rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.14);
   border: 1px solid rgba(239, 68, 68, 0.3);
   border-radius: 10px;
   text-align: center;
-  animation: shakeSpring 0.4s ease;
-}
-
-@keyframes shakeSpring {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-4px); }
-  40%, 80% { transform: translateX(4px); }
 }
 
 /* Submit Action Button */
@@ -876,12 +574,12 @@ body.login-body {
   letter-spacing: 0.02em;
   font-family: inherit;
   color: #ffffff;
-  background: var(--login-btn-gradient);
+  background: var(--login-cta-gradient);
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 12px;
   cursor: pointer;
   box-shadow: 
-    0 4px 18px var(--login-glow-primary),
+    0 4px 18px var(--login-glow),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
@@ -892,15 +590,8 @@ body.login-body {
 
 .auth-primary-btn:hover:not(:disabled) {
   transform: translateY(-1.5px);
-  box-shadow: 
-    0 8px 24px var(--login-glow-primary),
-    inset 0 1px 0 rgba(255, 255, 255, 0.3);
-  background: var(--login-btn-gradient-hover);
-}
-
-.auth-primary-btn:active:not(:disabled) {
-  transform: translateY(0.5px) scale(0.99);
-  box-shadow: 0 2px 10px var(--login-glow-primary);
+  box-shadow: 0 8px 24px var(--login-glow);
+  background: var(--login-cta-hover);
 }
 
 .auth-primary-btn:disabled {
@@ -916,24 +607,24 @@ body.login-body {
 
 .twofa-header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 22px;
 }
 
 .twofa-badge-icon {
-  width: 56px;
-  height: 56px;
-  border-radius: 16px;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--login-border);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 0 auto 16px;
+  margin: 0 auto 14px;
   color: var(--login-primary);
 }
 
 .twofa-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 800;
   color: #ffffff;
   margin-bottom: 6px;
@@ -942,55 +633,26 @@ body.login-body {
 .twofa-subtitle {
   font-size: 13px;
   line-height: 1.5;
-  color: var(--login-text-body);
-}
-
-.totp-input-wrapper {
-  margin-bottom: 20px;
+  color: #94a3b8;
 }
 
 .totp-code-field {
   width: 100%;
-  padding: 14px 16px;
-  font-size: 24px;
+  padding: 13px 16px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: 0.35em;
   text-align: center;
   font-family: 'JetBrains Mono', monospace, inherit;
   color: #67e8f9;
-  background: rgba(15, 23, 42, 0.8);
+  background: rgba(15, 23, 42, 0.85);
   border: 1.5px solid var(--login-border-focus);
-  border-radius: 14px;
+  border-radius: 12px;
   outline: none;
-  transition: all 0.2s ease;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.4);
+  margin-bottom: 18px;
 }
 
-.totp-code-field:focus {
-  box-shadow: 
-    0 0 0 3px var(--login-glow-primary),
-    inset 0 2px 6px rgba(0, 0, 0, 0.4);
-}
-
-.auth-back-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--login-text-muted);
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  margin-top: 18px;
-  transition: color 0.15s ease;
-}
-
-.auth-back-link:hover {
-  color: #e2e8f0;
-}
-
-/* ── SSO & Verification Loading Overlay ───────────────────────────────── */
+/* Loading Overlay */
 #auth-loading-overlay {
   display: none;
   position: absolute;
@@ -1008,8 +670,8 @@ body.login-body {
 
 .dual-ring-spinner {
   position: relative;
-  width: 56px;
-  height: 56px;
+  width: 52px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1027,8 +689,8 @@ body.login-body {
 
 .spinner-inner-img {
   position: absolute;
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 
@@ -1041,40 +703,4 @@ body.login-body {
   font-weight: 700;
   letter-spacing: 0.02em;
   color: #e2e8f0;
-}
-
-/* Footer Legal Notes */
-.auth-footer {
-  margin-top: 24px;
-  text-align: center;
-  font-size: 11.5px;
-  color: var(--login-text-muted);
-}
-
-.auth-footer-links {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 6px;
-}
-
-.auth-footer-link {
-  color: var(--login-text-muted);
-  text-decoration: none;
-  transition: color 0.15s ease;
-}
-
-.auth-footer-link:hover {
-  color: #94a3b8;
-}
-
-/* Accessibility: Reduced Motion */
-@media (prefers-reduced-motion: reduce) {
-  *, ::before, ::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
 }

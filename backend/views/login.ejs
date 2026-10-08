@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Benevolate Integr8 — Enterprise Cloud Access</title>
+  <title>Benevolate Integr8 — Ship faster. Stay in control.</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,185 +15,52 @@
   <script src="/js/vendor/motion.js"></script>
 </head>
 <body class="login-body">
-  <!-- Topbar: Dynamic Theme & Palette Switcher -->
+  <!-- Topbar: 30-Minute Dynamic Theme Indicator & Manual Switcher -->
   <header class="login-topbar">
-    <div class="theme-pill-dropdown" id="theme-pill-dropdown">
-      <span style="font-size:11px;text-transform:uppercase;letter-spacing:0.04em;color:#94a3b8;">Theme:</span>
-      <div class="palette-swatches">
-        <button type="button" class="palette-dot palette-dot-indigo active" onclick="setPalette('indigo')" title="Electric Indigo" aria-label="Electric Indigo theme"></button>
-        <button type="button" class="palette-dot palette-dot-aurora" onclick="setPalette('aurora')" title="Aurora Cyan" aria-label="Aurora Cyan theme"></button>
-        <button type="button" class="palette-dot palette-dot-emerald" onclick="setPalette('emerald')" title="Cyber Emerald" aria-label="Cyber Emerald theme"></button>
-        <button type="button" class="palette-dot palette-dot-solar" onclick="setPalette('solar')" title="Solar Forge" aria-label="Solar Forge theme"></button>
-        <button type="button" class="palette-dot palette-dot-crimson" onclick="setPalette('crimson')" title="Crimson Stealth" aria-label="Crimson Stealth theme"></button>
-      </div>
-      <button type="button" class="auto-cycle-toggle active" id="auto-cycle-toggle" onclick="toggleAutoCycle()" title="Toggle Periodic Auto-Cycle">
-        <i data-lucide="refresh-cw" style="width:12px;height:12px;"></i>
-        <span>Auto</span>
-      </button>
-    </div>
+    <button type="button" class="theme-sync-badge" id="theme-sync-btn" onclick="cycleNextPalette()" title="Click to cycle theme palette (Auto-rotates every 30 mins)">
+      <span class="theme-indicator-dot" id="theme-indicator-dot"></span>
+      <span id="theme-name-label">Theme: Electric Indigo</span>
+      <i data-lucide="sparkles" style="width:12px;height:12px;color:#94a3b8;"></i>
+    </button>
   </header>
 
-  <!-- Ambient Spotlight & Grid Backdrop -->
+  <!-- Ambient Backdrop -->
   <div class="login-ambient-canvas" aria-hidden="true">
     <div class="ambient-grid"></div>
     <div class="ambient-blob-1"></div>
     <div class="ambient-blob-2"></div>
-    <div class="ambient-spotlight" id="ambient-spotlight"></div>
   </div>
 
-  <main class="login-shell">
-    <!-- ── LEFT PANE: Abstract Enterprise Value & Resilience Showcase ── -->
-    <aside class="showcase-deck" id="showcase-deck" aria-label="Platform Architecture">
-      <div class="deck-header">
-        <div class="deck-badge">
-          <span class="deck-badge-dot"></span>
-          <span>Benevolate Integr8 v2.4</span>
-        </div>
-        <div class="deck-live-metrics">
-          <div class="metric-item">
-            <i data-lucide="activity" style="width:14px;height:14px;color:#10b981;"></i>
-            <span>Fleet Status:</span>
-            <span class="metric-value">Operational</span>
-          </div>
-          <div class="metric-item">
-            <i data-lucide="shield" style="width:14px;height:14px;color:var(--login-primary);"></i>
-            <span>SOC2 Type II</span>
-          </div>
-        </div>
+  <!-- ── STAGE 1: Brand Hero Splash ── -->
+  <section class="splash-stage" id="splash-stage">
+    <div class="splash-content">
+      <div class="splash-logo-box">
+        <div class="splash-logo-halo"></div>
+        <img src="/favicon.png" class="splash-logo-img" alt="Benevolate Integr8">
       </div>
 
-      <!-- Slides Container -->
-      <div class="deck-viewport">
-        <!-- Slide 0: Global Cloud Resilience -->
-        <article class="deck-slide active" data-slide-index="0" id="slide-0">
-          <div class="slide-tag">Global Cloud Infrastructure</div>
-          <h2 class="slide-title">Unified Multi-Cloud Delivery with High-Availability SLA</h2>
-          <p class="slide-desc">
-            Distributed enterprise infrastructure engineered for resilient global operations, automated health monitoring, and sub-second failover redundancy across isolated availability zones.
-          </p>
+      <div class="splash-wordmark">BENEVOLATE INTEGR8</div>
+      <h1 class="splash-tagline">Ship faster.<br>Stay in control.</h1>
 
-          <div class="deck-visual-card">
-            <div class="visual-topbar">
-              <div class="visual-title">
-                <i data-lucide="globe" style="width:16px;height:16px;color:var(--login-primary);"></i>
-                <span>Global Multi-Region Edge Telemetry</span>
-              </div>
-              <span class="visual-status-pill">99.99% Uptime</span>
-            </div>
-
-            <div class="region-grid">
-              <div class="region-node">
-                <div class="region-name">US-East</div>
-                <div class="region-latency">14ms</div>
-                <div class="region-status"><span class="status-dot-mini"></span> Healthy</div>
-              </div>
-              <div class="region-node">
-                <div class="region-name">US-West</div>
-                <div class="region-latency">18ms</div>
-                <div class="region-status"><span class="status-dot-mini"></span> Healthy</div>
-              </div>
-              <div class="region-node">
-                <div class="region-name">EU-Central</div>
-                <div class="region-latency">22ms</div>
-                <div class="region-status"><span class="status-dot-mini"></span> Healthy</div>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <!-- Slide 1: Zero-Trust Security & Identity -->
-        <article class="deck-slide" data-slide-index="1" id="slide-1">
-          <div class="slide-tag">Zero-Trust Access Governance</div>
-          <h2 class="slide-title">Hardware-Backed Security & Cryptographic Identity</h2>
-          <p class="slide-desc">
-            Continuous token validation, ephemeral session credentials, and encrypted key management designed to protect organizational workspaces without friction.
-          </p>
-
-          <div class="deck-visual-card">
-            <div class="visual-topbar">
-              <div class="visual-title">
-                <i data-lucide="shield-check" style="width:16px;height:16px;color:var(--login-primary);"></i>
-                <span>Zero-Trust Verification Pipeline</span>
-              </div>
-              <span class="visual-status-pill">KMS Encrypted</span>
-            </div>
-
-            <div class="security-metrics-list">
-              <div class="sec-metric-row">
-                <div class="sec-metric-left">
-                  <i data-lucide="key" style="width:15px;height:15px;color:#f59e0b;"></i>
-                  <span>Cryptographic Session Tokens</span>
-                </div>
-                <span class="sec-metric-val">Ephemeral TTL</span>
-              </div>
-              <div class="sec-metric-row">
-                <div class="sec-metric-left">
-                  <i data-lucide="lock" style="width:15px;height:15px;color:var(--login-primary);"></i>
-                  <span>Envelope Encryption</span>
-                </div>
-                <span class="sec-metric-val">AES-256 GCM</span>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <!-- Slide 2: Immutable Governance & Compliance -->
-        <article class="deck-slide" data-slide-index="2" id="slide-2">
-          <div class="slide-tag">Enterprise Compliance</div>
-          <h2 class="slide-title">Continuous Observability & Tamper-Proof Audit Streams</h2>
-          <p class="slide-desc">
-            Centralized telemetry, automated policy enforcement, and immutable audit logs tailored for high-velocity teams operating in regulated environments.
-          </p>
-
-          <div class="deck-visual-card">
-            <div class="visual-topbar">
-              <div class="visual-title">
-                <i data-lucide="file-check" style="width:16px;height:16px;color:var(--login-primary);"></i>
-                <span>Automated Compliance Ledger</span>
-              </div>
-              <span class="visual-status-pill">Certified SOC2</span>
-            </div>
-
-            <div class="security-metrics-list">
-              <div class="sec-metric-row">
-                <div class="sec-metric-left">
-                  <i data-lucide="check-circle-2" style="width:15px;height:15px;color:#10b981;"></i>
-                  <span>Role-Based Access Control</span>
-                </div>
-                <span class="sec-metric-val">Enforced</span>
-              </div>
-              <div class="sec-metric-row">
-                <div class="sec-metric-left">
-                  <i data-lucide="clock" style="width:15px;height:15px;color:#06b6d4;"></i>
-                  <span>Immutable Audit Retention</span>
-                </div>
-                <span class="sec-metric-val">Real-Time Sync</span>
-              </div>
-            </div>
-          </div>
-        </article>
+      <div>
+        <button type="button" class="splash-cta-btn" id="splash-continue-btn" onclick="showAuthStage()">
+          <span>Continue</span>
+          <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+        </button>
       </div>
 
-      <!-- Deck Tab Controls & Auto-advancing Timeline -->
-      <nav class="deck-controls" aria-label="Deck Slides">
-        <button type="button" class="deck-tab-btn active" data-target-slide="0" onclick="switchDeckSlide(0)">
-          <div class="deck-tab-progress"><div class="deck-tab-fill" id="tab-fill-0"></div></div>
-          <span class="deck-tab-title">Resilience</span>
-        </button>
-        <button type="button" class="deck-tab-btn" data-target-slide="1" onclick="switchDeckSlide(1)">
-          <div class="deck-tab-progress"><div class="deck-tab-fill" id="tab-fill-1"></div></div>
-          <span class="deck-tab-title">Zero-Trust</span>
-        </button>
-        <button type="button" class="deck-tab-btn" data-target-slide="2" onclick="switchDeckSlide(2)">
-          <div class="deck-tab-progress"><div class="deck-tab-fill" id="tab-fill-2"></div></div>
-          <span class="deck-tab-title">Governance</span>
-        </button>
-      </nav>
-    </aside>
+      <footer class="splash-footnote">
+        Enterprise Platform &nbsp;&middot;&nbsp; Secure SSO Access &nbsp;&middot;&nbsp; &copy; 2026 Benevolate
+      </footer>
+    </div>
+  </section>
 
-    <!-- ── RIGHT PANE: Radiant Glassmorphism Auth Portal ── -->
-    <section class="auth-portal-card" id="auth-portal-card">
-      <div class="radiant-border-beam" aria-hidden="true"></div>
+  <!-- ── STAGE 2: Centered Radiant Auth Portal ── -->
+  <section class="auth-stage" id="auth-stage" aria-hidden="true">
+    <div class="auth-panel-card" id="auth-panel-card">
+      <button type="button" class="auth-back-nav" id="auth-back-btn" onclick="handleAuthBack()" title="Back to Overview">
+        <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
+      </button>
 
       <!-- Loading Overlay -->
       <div id="auth-loading-overlay" aria-live="assertive">
@@ -204,18 +71,17 @@
         <div id="auth-loading-text">Authenticating SSO Workspace...</div>
       </div>
 
-      <!-- STAGE: Login Form Section -->
+      <!-- Credentials Form View -->
       <div id="login-form-section">
         <div class="auth-brand-block">
-          <div class="brand-icon-wrapper">
-            <div class="brand-icon-halo"></div>
-            <img src="/favicon.png" class="brand-logo-img" alt="Benevolate Integr8 Logo">
+          <div class="auth-logo-halo">
+            <img src="/favicon.png" class="auth-logo-img" alt="Benevolate Integr8">
           </div>
-          <h1 class="brand-title">Benevolate Integr8</h1>
-          <p class="brand-subtitle">Sign in to access your organization workspace</p>
+          <h2 class="auth-title">Benevolate Integr8</h2>
+          <p class="auth-subtitle">Sign in to access your organization workspace</p>
         </div>
 
-        <!-- Google Workspace SSO Container (with Instant Native Fallback) -->
+        <!-- Google Workspace SSO Container -->
         <div class="sso-section">
           <div id="g_id_signin_btn">
             <button type="button" id="google-sso-fallback-btn" class="google-sso-btn" onclick="triggerGoogleSSO()">
@@ -239,9 +105,7 @@
         <!-- Credentials Form -->
         <form id="login-form" onsubmit="handleLoginSubmit(event)" novalidate>
           <div class="form-group">
-            <div class="form-label-row">
-              <label for="login-username" class="form-label">Username</label>
-            </div>
+            <label for="login-username" class="form-label">Username</label>
             <div class="input-container">
               <input 
                 type="text" 
@@ -250,16 +114,13 @@
                 class="input-field" 
                 placeholder="Enter username..." 
                 autocomplete="username" 
-                required
-                autofocus>
+                required>
               <i data-lucide="user" class="input-icon-left"></i>
             </div>
           </div>
 
           <div class="form-group">
-            <div class="form-label-row">
-              <label for="login-password" class="form-label">Password</label>
-            </div>
+            <label for="login-password" class="form-label">Password</label>
             <div class="input-container">
               <input 
                 type="password" 
@@ -292,31 +153,29 @@
         </form>
       </div>
 
-      <!-- STAGE: Two-Factor Authentication Challenge -->
+      <!-- 2FA Challenge View -->
       <div id="twofa-section">
         <div class="twofa-header">
           <div class="twofa-badge-icon">
-            <i data-lucide="shield-check" style="width:30px;height:30px;"></i>
+            <i data-lucide="shield-check" style="width:28px;height:28px;"></i>
           </div>
-          <h2 class="twofa-title">Two-Factor Verification</h2>
+          <h3 class="twofa-title">Two-Factor Verification</h3>
           <p class="twofa-subtitle">
             Enter the 6-digit security code generated by your Authenticator app.
           </p>
         </div>
 
         <form id="twofa-form" onsubmit="handle2FASubmit(event)" novalidate>
-          <div class="totp-input-wrapper">
-            <input 
-              type="text" 
-              id="totp-code" 
-              name="totp"
-              class="totp-code-field" 
-              maxlength="6" 
-              placeholder="000 000" 
-              inputmode="numeric" 
-              autocomplete="one-time-code"
-              oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-          </div>
+          <input 
+            type="text" 
+            id="totp-code" 
+            name="totp"
+            class="totp-code-field" 
+            maxlength="6" 
+            placeholder="000 000" 
+            inputmode="numeric" 
+            autocomplete="one-time-code"
+            oninput="this.value=this.value.replace(/[^0-9]/g,'')">
 
           <div id="twofa-error" class="auth-error-alert" role="alert" aria-live="polite"></div>
 
@@ -324,121 +183,73 @@
             <span>Verify Security Code</span>
             <i data-lucide="check" style="width:16px;height:16px;"></i>
           </button>
-
-          <div style="text-align:center;">
-            <button type="button" class="auth-back-link" onclick="handleAuthBack()">
-              <i data-lucide="arrow-left" style="width:14px;height:14px;"></i>
-              <span>Back to Credentials</span>
-            </button>
-          </div>
         </form>
       </div>
-
-      <!-- Footer Notes -->
-      <footer class="auth-footer">
-        <div>Enterprise Cloud Orchestration Platform</div>
-        <div class="auth-footer-links">
-          <span class="auth-footer-link">AWS Verified</span>
-          <span>&middot;</span>
-          <span class="auth-footer-link">KMS Encrypted</span>
-          <span>&middot;</span>
-          <span class="auth-footer-link">&copy; 2026 Benevolate</span>
-        </div>
-      </footer>
-    </section>
-  </main>
+    </div>
+  </section>
 
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
   <script>
     var pending2FA = null;
     var GOOGLE_CLIENT_ID = '1018746602979-blog5afpgc9iv4ke0gllpam30v5fs8b7.apps.googleusercontent.com';
-    var activeSlideIndex = 0;
-    var slideDuration = 6000;
-    var slideStartTime = Date.now();
-    var animFrameId = null;
 
-    // ── Palette Themes Engine ──
-    var PALETTES = ['indigo', 'aurora', 'emerald', 'solar', 'crimson'];
-    var currentPaletteIndex = 0;
-    var autoCycleInterval = null;
-    var isAutoCycleActive = true;
+    // ── 30-Minute Dynamic Theme Engine ──
+    var PALETTES = [
+      { id: 'indigo',  name: 'Electric Indigo' },
+      { id: 'aurora',  name: 'Aurora Cyan' },
+      { id: 'emerald', name: 'Cyber Emerald' },
+      { id: 'solar',   name: 'Solar Forge' },
+      { id: 'crimson', name: 'Crimson Stealth' }
+    ];
 
-    function setPalette(name, userInitiated) {
-      if (!PALETTES.includes(name)) name = 'indigo';
-      document.documentElement.setAttribute('data-palette', name);
-      localStorage.setItem('benevolate-color-palette', name);
-      currentPaletteIndex = PALETTES.indexOf(name);
+    function get30MinuteThemeIndex() {
+      // Computes deterministic 30-minute block from UTC clock
+      var current30MinBlock = Math.floor(Date.now() / (30 * 60 * 1000));
+      return current30MinBlock % PALETTES.length;
+    }
 
-      document.querySelectorAll('.palette-dot').forEach(function(dot) {
-        dot.classList.toggle('active', dot.classList.contains('palette-dot-' + name));
-      });
+    function applyAutoTheme() {
+      var manualOverride = localStorage.getItem('benevolate-manual-palette');
+      var palette = manualOverride ? PALETTES.find(p => p.id === manualOverride) : null;
+      if (!palette) {
+        var idx = get30MinuteThemeIndex();
+        palette = PALETTES[idx];
+      }
+      setPalette(palette.id, false);
+    }
 
-      if (userInitiated) {
-        // Pause auto-cycle briefly if user clicks manually
-        stopAutoCycleTimer();
-        setTimeout(function() {
-          if (isAutoCycleActive) startAutoCycleTimer();
-        }, 12000);
+    function setPalette(id, isManual) {
+      var palette = PALETTES.find(p => p.id === id) || PALETTES[0];
+      document.documentElement.setAttribute('data-palette', palette.id);
+      var label = document.getElementById('theme-name-label');
+      if (label) label.textContent = 'Theme: ' + palette.name;
+
+      if (isManual) {
+        localStorage.setItem('benevolate-manual-palette', palette.id);
       }
     }
 
     function cycleNextPalette() {
-      var next = (currentPaletteIndex + 1) % PALETTES.length;
-      setPalette(PALETTES[next], false);
+      var currentId = document.documentElement.getAttribute('data-palette') || 'indigo';
+      var currentIndex = PALETTES.findIndex(p => p.id === currentId);
+      var nextIndex = (currentIndex + 1) % PALETTES.length;
+      setPalette(PALETTES[nextIndex].id, true);
     }
 
-    function startAutoCycleTimer() {
-      stopAutoCycleTimer();
-      // Smoothly rotate theme every 30 seconds
-      autoCycleInterval = setInterval(cycleNextPalette, 30000);
-    }
-
-    function stopAutoCycleTimer() {
-      if (autoCycleInterval) {
-        clearInterval(autoCycleInterval);
-        autoCycleInterval = null;
-      }
-    }
-
-    function toggleAutoCycle() {
-      isAutoCycleActive = !isAutoCycleActive;
-      var toggleBtn = document.getElementById('auto-cycle-toggle');
-      if (toggleBtn) toggleBtn.classList.toggle('active', isAutoCycleActive);
-
-      if (isAutoCycleActive) {
-        startAutoCycleTimer();
-        cycleNextPalette();
-      } else {
-        stopAutoCycleTimer();
-      }
-    }
+    // Auto-update theme on exact 30-minute intervals
+    setInterval(applyAutoTheme, 60000); // Checks every minute for 30m boundary
 
     document.addEventListener('DOMContentLoaded', function() {
-      // Restore saved palette or initialize default
-      var saved = localStorage.getItem('benevolate-color-palette');
-      if (saved && PALETTES.includes(saved)) {
-        setPalette(saved, false);
-      } else {
-        setPalette('indigo', false);
-      }
-      if (isAutoCycleActive) startAutoCycleTimer();
+      applyAutoTheme();
 
-      // Initialize Lucide vector icons
       if (window.lucide) {
         lucide.createIcons();
       }
 
-      // Initialize Google SSO immediately and poll if async
       initGoogleSSO();
 
-      // Launch Deck Gallery auto-advancing choreography
-      startDeckGallery();
-
-      // Setup Mouse Spotlight Effect
-      setupSpotlightTracking();
-
-      // Setup 2FA Code Input Listener
+      // TOTP Code auto-unlock
       var totpInput = document.getElementById('totp-code');
       if (totpInput) {
         totpInput.addEventListener('input', function() {
@@ -456,90 +267,77 @@
 
       // Entrance motion
       if (window.Motion) {
-        Motion.animate('.auth-portal-card', { opacity: [0, 1], y: [16, 0] }, { duration: 0.45, ease: 'easeOut' });
-        Motion.animate('.showcase-deck', { opacity: [0, 1], x: [-16, 0] }, { duration: 0.5, ease: 'easeOut' });
+        Motion.animate('.splash-content', { opacity: [0, 1], y: [20, 0] }, { duration: 0.5, ease: 'easeOut' });
       }
     });
 
-    // ── Spotlight Tracking Choreography ──
-    function setupSpotlightTracking() {
-      var spotlight = document.getElementById('ambient-spotlight');
-      var card = document.getElementById('auth-portal-card');
+    // ── Stage 1 -> Stage 2 Transitions (Spring Motion) ──
+    function showAuthStage() {
+      var splash = document.getElementById('splash-stage');
+      var authStage = document.getElementById('auth-stage');
+      var card = document.getElementById('auth-panel-card');
 
-      window.addEventListener('mousemove', function(e) {
-        if (spotlight) {
-          spotlight.style.opacity = '1';
-          spotlight.style.left = e.clientX + 'px';
-          spotlight.style.top = e.clientY + 'px';
-        }
-
-        if (card) {
-          var rect = card.getBoundingClientRect();
-          var x = e.clientX - rect.left;
-          var y = e.clientY - rect.top;
-          card.style.setProperty('--mouse-x', x + 'px');
-          card.style.setProperty('--mouse-y', y + 'px');
-        }
-      });
+      if (window.Motion) {
+        Motion.animate(splash, { opacity: [1, 0], scale: [1, 0.96] }, { duration: 0.35 }).finished.then(function() {
+          splash.classList.add('hidden');
+          authStage.classList.add('visible');
+          authStage.setAttribute('aria-hidden', 'false');
+          Motion.animate(card, { opacity: [0, 1], y: [24, 0], scale: [0.98, 1] }, { duration: 0.4, type: 'spring', stiffness: 300, damping: 25 });
+          initGoogleSSO();
+          document.getElementById('login-username').focus();
+        });
+      } else {
+        splash.classList.add('hidden');
+        authStage.classList.add('visible');
+        authStage.setAttribute('aria-hidden', 'false');
+        initGoogleSSO();
+        document.getElementById('login-username').focus();
+      }
     }
 
-    // ── Deck Gallery Slide Switching & Spring Motion ──
-    function switchDeckSlide(index) {
-      if (index === activeSlideIndex) return;
+    function handleAuthBack() {
+      if (pending2FA) {
+        pending2FA = null;
+        var totp = document.getElementById('totp-code');
+        if (totp) totp.value = '';
+        var err = document.getElementById('twofa-error');
+        if (err) err.style.display = 'none';
 
-      var slides = document.querySelectorAll('.deck-slide');
-      var tabBtns = document.querySelectorAll('.deck-tab-btn');
-      
-      slides.forEach(function(s, idx) {
-        if (idx === index) {
-          s.classList.add('active');
-          if (window.Motion) {
-            Motion.animate(s, { opacity: [0, 1], y: [10, 0] }, { duration: 0.35, ease: 'easeOut' });
-          }
+        var twofaSection = document.getElementById('twofa-section');
+        var loginSection = document.getElementById('login-form-section');
+
+        if (window.Motion) {
+          Motion.animate(twofaSection, { opacity: [1, 0], x: [0, 20] }, { duration: 0.25 }).finished.then(function() {
+            twofaSection.style.display = 'none';
+            loginSection.style.display = 'block';
+            Motion.animate(loginSection, { opacity: [0, 1], x: [-20, 0] }, { duration: 0.3, type: 'spring' });
+            initGoogleSSO();
+          });
         } else {
-          s.classList.remove('active');
+          twofaSection.style.display = 'none';
+          loginSection.style.display = 'block';
+          initGoogleSSO();
         }
-      });
+      } else {
+        var splash = document.getElementById('splash-stage');
+        var authStage = document.getElementById('auth-stage');
+        var card = document.getElementById('auth-panel-card');
 
-      tabBtns.forEach(function(btn, idx) {
-        btn.classList.toggle('active', idx === index);
-      });
-
-      for (var i = 0; i < 3; i++) {
-        var fill = document.getElementById('tab-fill-' + i);
-        if (fill) {
-          fill.style.width = i < index ? '100%' : '0%';
+        if (window.Motion) {
+          Motion.animate(card, { opacity: [1, 0], y: [0, 20], scale: [1, 0.98] }, { duration: 0.3 }).finished.then(function() {
+            authStage.classList.remove('visible');
+            authStage.setAttribute('aria-hidden', 'true');
+            splash.classList.remove('hidden');
+            Motion.animate(splash, { opacity: [0, 1], scale: [0.96, 1] }, { duration: 0.35 });
+          });
+        } else {
+          authStage.classList.remove('visible');
+          authStage.setAttribute('aria-hidden', 'true');
+          splash.classList.remove('hidden');
         }
       }
-
-      activeSlideIndex = index;
-      slideStartTime = Date.now();
     }
 
-    function startDeckGallery() {
-      slideStartTime = Date.now();
-
-      function updateProgress() {
-        var elapsed = Date.now() - slideStartTime;
-        var progress = Math.min((elapsed / slideDuration) * 100, 100);
-
-        var fill = document.getElementById('tab-fill-' + activeSlideIndex);
-        if (fill) {
-          fill.style.width = progress + '%';
-        }
-
-        if (elapsed >= slideDuration) {
-          var nextIndex = (activeSlideIndex + 1) % 3;
-          switchDeckSlide(nextIndex);
-        }
-
-        animFrameId = requestAnimationFrame(updateProgress);
-      }
-
-      animFrameId = requestAnimationFrame(updateProgress);
-    }
-
-    // ── Form Visibility & 2FA State Transitions ──
     function togglePasswordVisibility() {
       var pwdInput = document.getElementById('login-password');
       var icon = document.getElementById('toggle-pwd-icon');
@@ -555,31 +353,6 @@
       if (window.lucide) lucide.createIcons();
     }
 
-    function handleAuthBack() {
-      pending2FA = null;
-      var totp = document.getElementById('totp-code');
-      if (totp) totp.value = '';
-      
-      var err = document.getElementById('twofa-error');
-      if (err) err.style.display = 'none';
-
-      var twofaSection = document.getElementById('twofa-section');
-      var loginSection = document.getElementById('login-form-section');
-
-      if (window.Motion) {
-        Motion.animate(twofaSection, { opacity: [1, 0], x: [0, 20] }, { duration: 0.25 }).finished.then(function() {
-          twofaSection.style.display = 'none';
-          loginSection.style.display = 'block';
-          Motion.animate(loginSection, { opacity: [0, 1], x: [-20, 0] }, { duration: 0.3, type: 'spring' });
-          initGoogleSSO();
-        });
-      } else {
-        twofaSection.style.display = 'none';
-        loginSection.style.display = 'block';
-        initGoogleSSO();
-      }
-    }
-
     function showError(elId, msg) {
       var el = document.getElementById(elId);
       if (!el) return;
@@ -591,7 +364,6 @@
       }
     }
 
-    // ── Authentication Submission Handlers ──
     async function handleLoginSubmit(e) {
       e.preventDefault();
       var username = document.getElementById('login-username').value.trim();
@@ -672,7 +444,6 @@
       }
     }
 
-    // ── Google Workspace SSO Robust Handling & Retry Loop ──
     var _gsoAttempts = 0;
     function triggerGoogleSSO() {
       if (window.google && window.google.accounts && window.google.accounts.id) {
@@ -728,8 +499,8 @@
         
         var btnContainer = document.getElementById('g_id_signin_btn');
         if (btnContainer) {
-          var card = document.getElementById('auth-portal-card');
-          var targetWidth = card ? Math.min(card.clientWidth - 72, 380) : 380;
+          var card = document.getElementById('auth-panel-card');
+          var targetWidth = card ? Math.min(card.clientWidth - 72, 368) : 368;
           btnContainer.innerHTML = '';
           window.google.accounts.id.renderButton(btnContainer, {
             type: 'standard',
