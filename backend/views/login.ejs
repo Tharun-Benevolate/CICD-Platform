@@ -9,15 +9,372 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/variables.css">
-  <link rel="stylesheet" href="/css/pages/login.css">
+
+  <!-- Critical Inlined CSS: Complete Cache-Proof Immunity Against CDN / Nginx Max-Age -->
+  <style>
+    :root, [data-palette="indigo"] {
+      --theme-name: "Electric Indigo";
+      --login-bg: #07090e;
+      --login-surface: rgba(15, 23, 42, 0.85);
+      --login-border: rgba(255, 255, 255, 0.12);
+      --login-border-focus: rgba(99, 102, 241, 0.75);
+      --login-primary: #6366f1;
+      --login-primary-hover: #4f46e5;
+      --login-accent: #8b5cf6;
+      --login-glow: rgba(99, 102, 241, 0.38);
+      --login-cta-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+      --login-cta-hover: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      --login-blob-1: rgba(99, 102, 241, 0.22);
+      --login-blob-2: rgba(139, 92, 246, 0.16);
+    }
+    [data-palette="aurora"] {
+      --theme-name: "Aurora Cyan";
+      --login-bg: #050d12;
+      --login-surface: rgba(8, 28, 38, 0.85);
+      --login-border: rgba(6, 182, 212, 0.2);
+      --login-border-focus: rgba(6, 182, 212, 0.85);
+      --login-primary: #06b6d4;
+      --login-primary-hover: #0891b2;
+      --login-accent: #10b981;
+      --login-glow: rgba(6, 182, 212, 0.38);
+      --login-cta-gradient: linear-gradient(135deg, #06b6d4 0%, #10b981 100%);
+      --login-cta-hover: linear-gradient(135deg, #0891b2 0%, #059669 100%);
+      --login-blob-1: rgba(6, 182, 212, 0.24);
+      --login-blob-2: rgba(16, 185, 129, 0.18);
+    }
+    [data-palette="emerald"] {
+      --theme-name: "Cyber Emerald";
+      --login-bg: #050e09;
+      --login-surface: rgba(6, 28, 18, 0.85);
+      --login-border: rgba(16, 185, 129, 0.2);
+      --login-border-focus: rgba(16, 185, 129, 0.85);
+      --login-primary: #10b981;
+      --login-primary-hover: #059669;
+      --login-accent: #34d399;
+      --login-glow: rgba(16, 185, 129, 0.38);
+      --login-cta-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --login-cta-hover: linear-gradient(135deg, #059669 0%, #047857 100%);
+      --login-blob-1: rgba(16, 185, 129, 0.24);
+      --login-blob-2: rgba(6, 182, 212, 0.15);
+    }
+    [data-palette="solar"] {
+      --theme-name: "Solar Forge";
+      --login-bg: #0e0905;
+      --login-surface: rgba(32, 20, 10, 0.85);
+      --login-border: rgba(245, 158, 11, 0.2);
+      --login-border-focus: rgba(245, 158, 11, 0.85);
+      --login-primary: #f59e0b;
+      --login-primary-hover: #d97706;
+      --login-accent: #fbbf24;
+      --login-glow: rgba(245, 158, 11, 0.38);
+      --login-cta-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+      --login-cta-hover: linear-gradient(135deg, #d97706 0%, #b45309 100%);
+      --login-blob-1: rgba(245, 158, 11, 0.24);
+      --login-blob-2: rgba(239, 68, 68, 0.16);
+    }
+    [data-palette="crimson"] {
+      --theme-name: "Crimson Stealth";
+      --login-bg: #0e0608;
+      --login-surface: rgba(28, 12, 18, 0.85);
+      --login-border: rgba(244, 63, 94, 0.2);
+      --login-border-focus: rgba(244, 63, 94, 0.85);
+      --login-primary: #f43f5e;
+      --login-primary-hover: #e11d48;
+      --login-accent: #fb7185;
+      --login-glow: rgba(244, 63, 94, 0.38);
+      --login-cta-gradient: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      --login-cta-hover: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+      --login-blob-1: rgba(244, 63, 94, 0.24);
+      --login-blob-2: rgba(139, 92, 246, 0.16);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%; height: 100%;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--login-bg);
+      color: #f8fafc;
+      overflow: hidden;
+      position: relative;
+      -webkit-font-smoothing: antialiased;
+      transition: background-color 0.6s ease;
+    }
+
+    /* Ambient Canvas */
+    .login-ambient-canvas {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
+    }
+    .ambient-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 35%, transparent 85%);
+      -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 35%, transparent 85%);
+    }
+    .ambient-blob-1 {
+      position: absolute; top: -15%; left: 20%; width: 60vw; height: 60vw; max-width: 800px; max-height: 800px;
+      border-radius: 50%; background: radial-gradient(circle, var(--login-blob-1) 0%, transparent 70%);
+      filter: blur(90px); animation: blobFloat 20s ease-in-out infinite alternate; transition: background 0.6s ease;
+    }
+    .ambient-blob-2 {
+      position: absolute; bottom: -20%; right: 15%; width: 55vw; height: 55vw; max-width: 750px; max-height: 750px;
+      border-radius: 50%; background: radial-gradient(circle, var(--login-blob-2) 0%, transparent 70%);
+      filter: blur(100px); animation: blobFloatRev 24s ease-in-out infinite alternate; transition: background 0.6s ease;
+    }
+    @keyframes blobFloat {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(40px, 30px) scale(1.06); }
+      100% { transform: translate(-30px, 45px) scale(0.96); }
+    }
+    @keyframes blobFloatRev {
+      0% { transform: translate(0, 0) scale(1); }
+      50% { transform: translate(-45px, -35px) scale(1.08); }
+      100% { transform: translate(25px, -25px) scale(0.95); }
+    }
+
+    /* Topbar Theme Badge */
+    .login-topbar {
+      position: fixed; top: 20px; right: 24px; z-index: 100;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .theme-sync-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 9999px;
+      background: rgba(15, 23, 42, 0.75); border: 1px solid var(--login-border);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      font-size: 11.5px; font-weight: 600; color: #cbd5e1;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35); cursor: pointer;
+      transition: border-color 0.2s ease, transform 0.15s ease;
+    }
+    .theme-sync-badge:hover {
+      border-color: var(--login-border-focus); transform: translateY(-1px);
+    }
+    .theme-indicator-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--login-primary); box-shadow: 0 0 10px var(--login-primary);
+      transition: background 0.4s ease;
+    }
+
+    /* ── STAGE 1: Brand Hero Splash ── */
+    #splash-stage {
+      position: fixed; inset: 0; z-index: 10;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 24px;
+    }
+    .splash-content {
+      display: flex; flex-direction: column; align-items: center; max-width: 640px;
+    }
+    .splash-logo-box {
+      position: relative; margin-bottom: 24px;
+    }
+    .splash-logo-halo {
+      position: absolute; inset: -20px; border-radius: 50%;
+      background: radial-gradient(circle, var(--login-glow) 0%, transparent 70%);
+      filter: blur(24px); animation: logoPulse 4s ease-in-out infinite alternate;
+      transition: background 0.6s ease;
+    }
+    @keyframes logoPulse {
+      0% { transform: scale(0.9); opacity: 0.6; }
+      100% { transform: scale(1.18); opacity: 0.95; }
+    }
+    .splash-logo-img {
+      position: relative; z-index: 1; width: 84px; height: 84px; object-fit: contain;
+      filter: drop-shadow(0 0 35px var(--login-glow)); transition: filter 0.6s ease;
+    }
+    .splash-wordmark {
+      font-size: 13.5px; font-weight: 800; letter-spacing: 0.28em; text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.6); margin-bottom: 20px;
+    }
+    .splash-tagline {
+      font-size: clamp(38px, 6vw, 68px); font-weight: 900; line-height: 1.08; letter-spacing: -0.035em;
+      background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.9) 45%, #cbd5e1 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 38px;
+    }
+    .splash-cta-btn {
+      display: inline-flex; align-items: center; gap: 10px; padding: 16px 42px;
+      font-size: 16px; font-weight: 700; letter-spacing: 0.01em; color: #ffffff;
+      background: var(--login-cta-gradient); border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 9999px; cursor: pointer;
+      box-shadow: 0 8px 32px var(--login-glow), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .splash-cta-btn:hover {
+      transform: translateY(-2px); box-shadow: 0 12px 40px var(--login-glow);
+      background: var(--login-cta-hover);
+    }
+    .splash-cta-btn:active {
+      transform: translateY(0.5px) scale(0.98);
+    }
+    .splash-footnote {
+      margin-top: 48px; font-size: 12px; color: rgba(255, 255, 255, 0.35); letter-spacing: 0.02em;
+    }
+
+    /* ── STAGE 2: Centered Radiant Auth Card ── */
+    #auth-stage {
+      position: fixed; inset: 0; z-index: 20;
+      display: none; /* HARD TOGGLED — absolutely impossible to overlap with splash */
+      align-items: center; justify-content: center; padding: 24px;
+    }
+    .auth-panel-card {
+      position: relative; width: 100%; max-width: 440px;
+      background: var(--login-surface); border: 1px solid var(--login-border);
+      border-radius: 24px; padding: 42px 36px 34px;
+      backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
+      box-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.8), 0 0 35px -5px var(--login-glow);
+      transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    .auth-back-nav {
+      position: absolute; top: 18px; left: 18px; width: 36px; height: 36px; border-radius: 10px;
+      background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12);
+      color: #cbd5e1; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: all 0.15s ease;
+    }
+    .auth-back-nav:hover {
+      background: rgba(255, 255, 255, 0.14); color: #ffffff; transform: translateX(-1px);
+    }
+    .auth-brand-block {
+      text-align: center; margin-bottom: 22px;
+    }
+    .auth-logo-halo {
+      position: relative; display: flex; align-items: center; justify-content: center; margin-bottom: 12px;
+    }
+    .auth-logo-img {
+      width: 52px; height: 52px; object-fit: contain; filter: drop-shadow(0 0 20px var(--login-glow));
+    }
+    .auth-title {
+      font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.02em; margin-bottom: 4px;
+    }
+    .auth-subtitle {
+      font-size: 13px; color: #94a3b8;
+    }
+
+    /* Google SSO */
+    .sso-section {
+      width: 100%; margin-bottom: 20px;
+    }
+    #g_id_signin_btn {
+      width: 100%; min-height: 44px; display: flex; justify-content: center;
+    }
+    .google-sso-btn {
+      width: 100%; display: flex; align-items: center; justify-content: center; gap: 12px;
+      padding: 11px 16px; background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.16); border-radius: 9999px;
+      color: #f8fafc; font-size: 13.5px; font-weight: 600; cursor: pointer;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+    .google-sso-btn:hover {
+      background: rgba(255, 255, 255, 0.14); border-color: rgba(255, 255, 255, 0.28);
+      transform: translateY(-1px); box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Divider */
+    .auth-divider {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 20px;
+      color: #64748b; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    }
+    .auth-divider-line {
+      flex: 1; height: 1px; background: rgba(255, 255, 255, 0.08);
+    }
+
+    /* Form Fields */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      display: block; font-size: 12px; font-weight: 600; color: #cbd5e1; margin-bottom: 6px;
+    }
+    .input-container {
+      position: relative; display: flex; align-items: center; width: 100%;
+    }
+    .input-icon-left {
+      position: absolute; left: 14px; width: 17px; height: 17px; color: #64748b; pointer-events: none;
+    }
+    .input-field {
+      width: 100%; padding: 12px 14px 12px 42px; font-size: 13.5px; font-family: inherit;
+      color: #f8fafc; background: rgba(15, 23, 42, 0.7); border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 12px; outline: none; transition: all 0.2s ease;
+    }
+    .input-field::placeholder { color: #475569; }
+    .input-field:focus {
+      border-color: var(--login-border-focus); background: rgba(15, 23, 42, 0.95);
+      box-shadow: 0 0 0 3px var(--login-glow);
+    }
+    .input-container:focus-within .input-icon-left { color: var(--login-primary); }
+    .input-btn-right {
+      position: absolute; right: 12px; background: transparent; border: none; cursor: pointer;
+      color: #64748b; display: flex; align-items: center; justify-content: center;
+      padding: 4px; border-radius: 6px;
+    }
+    .input-btn-right:hover { color: #cbd5e1; }
+
+    /* Alert */
+    .auth-error-alert {
+      display: none; padding: 11px 14px; margin-bottom: 16px; font-size: 13px; color: #fca5a5;
+      background: rgba(239, 68, 68, 0.14); border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 10px; text-align: center;
+    }
+
+    /* Submit Button */
+    .auth-primary-btn {
+      width: 100%; padding: 13px 20px; font-size: 14px; font-weight: 700; letter-spacing: 0.02em;
+      font-family: inherit; color: #ffffff; background: var(--login-cta-gradient);
+      border: 1px solid rgba(255, 255, 255, 0.15); border-radius: 12px; cursor: pointer;
+      box-shadow: 0 4px 18px var(--login-glow), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .auth-primary-btn:hover:not(:disabled) {
+      transform: translateY(-1.5px); box-shadow: 0 8px 24px var(--login-glow);
+      background: var(--login-cta-hover);
+    }
+    .auth-primary-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+
+    /* 2FA */
+    #twofa-section { display: none; }
+    .twofa-header { text-align: center; margin-bottom: 22px; }
+    .twofa-badge-icon {
+      width: 52px; height: 52px; border-radius: 14px; background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--login-border); display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 14px; color: var(--login-primary);
+    }
+    .twofa-title { font-size: 20px; font-weight: 800; color: #ffffff; margin-bottom: 6px; }
+    .twofa-subtitle { font-size: 13px; color: #94a3b8; }
+    .totp-code-field {
+      width: 100%; padding: 13px 16px; font-size: 22px; font-weight: 800; letter-spacing: 0.35em;
+      text-align: center; font-family: 'JetBrains Mono', monospace; color: #67e8f9;
+      background: rgba(15, 23, 42, 0.85); border: 1.5px solid var(--login-border-focus);
+      border-radius: 12px; outline: none; margin-bottom: 18px;
+    }
+
+    /* Overlay */
+    #auth-loading-overlay {
+      display: none; position: absolute; inset: 0; background: rgba(10, 14, 26, 0.94);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 24px;
+      z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+    }
+    .dual-ring-spinner {
+      position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;
+    }
+    .spinner-outer {
+      width: 100%; height: 100%; border: 3px solid rgba(255, 255, 255, 0.15);
+      border-top-color: var(--login-primary); border-right-color: var(--login-accent);
+      border-radius: 50%; animation: spinSlow 1s linear infinite;
+    }
+    .spinner-inner-img { position: absolute; width: 24px; height: 24px; object-fit: contain; }
+    @keyframes spinSlow { to { transform: rotate(360deg); } }
+    #auth-loading-text { font-size: 13.5px; font-weight: 700; color: #e2e8f0; }
+  </style>
+
   <script src="https://accounts.google.com/gsi/client" onload="initGoogleSSO()" async defer></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <script src="/js/vendor/motion.js"></script>
 </head>
-<body class="login-body">
-  <!-- Topbar: 30-Minute Dynamic Theme Indicator & Manual Switcher -->
+<body>
+  <!-- Topbar: 30-Minute Dynamic Theme Indicator & Switcher -->
   <header class="login-topbar">
-    <button type="button" class="theme-sync-badge" id="theme-sync-btn" onclick="cycleNextPalette()" title="Click to cycle theme palette (Auto-rotates every 30 mins)">
+    <button type="button" class="theme-sync-badge" id="theme-sync-btn" onclick="cycleNextPalette()" title="Click to cycle palette (Auto-updates every 30 mins)">
       <span class="theme-indicator-dot" id="theme-indicator-dot"></span>
       <span id="theme-name-label">Theme: Electric Indigo</span>
       <i data-lucide="sparkles" style="width:12px;height:12px;color:#94a3b8;"></i>
@@ -31,8 +388,8 @@
     <div class="ambient-blob-2"></div>
   </div>
 
-  <!-- ── STAGE 1: Brand Hero Splash ── -->
-  <section class="splash-stage" id="splash-stage">
+  <!-- ── STAGE 1: Brand Hero Splash (Default Visible) ── -->
+  <section id="splash-stage">
     <div class="splash-content">
       <div class="splash-logo-box">
         <div class="splash-logo-halo"></div>
@@ -55,8 +412,8 @@
     </div>
   </section>
 
-  <!-- ── STAGE 2: Centered Radiant Auth Portal ── -->
-  <section class="auth-stage" id="auth-stage" aria-hidden="true">
+  <!-- ── STAGE 2: Centered Radiant Auth Card (Strictly Hidden by Default) ── -->
+  <section id="auth-stage" style="display:none;" aria-hidden="true">
     <div class="auth-panel-card" id="auth-panel-card">
       <button type="button" class="auth-back-nav" id="auth-back-btn" onclick="handleAuthBack()" title="Back to Overview">
         <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
@@ -194,7 +551,7 @@
     var pending2FA = null;
     var GOOGLE_CLIENT_ID = '1018746602979-blog5afpgc9iv4ke0gllpam30v5fs8b7.apps.googleusercontent.com';
 
-    // ── 30-Minute Dynamic Theme Engine ──
+    // ── 30-Minute Dynamic Theme Engine (Synchronized to Real Clock) ──
     var PALETTES = [
       { id: 'indigo',  name: 'Electric Indigo' },
       { id: 'aurora',  name: 'Aurora Cyan' },
@@ -204,7 +561,6 @@
     ];
 
     function get30MinuteThemeIndex() {
-      // Computes deterministic 30-minute block from UTC clock
       var current30MinBlock = Math.floor(Date.now() / (30 * 60 * 1000));
       return current30MinBlock % PALETTES.length;
     }
@@ -237,8 +593,7 @@
       setPalette(PALETTES[nextIndex].id, true);
     }
 
-    // Auto-update theme on exact 30-minute intervals
-    setInterval(applyAutoTheme, 60000); // Checks every minute for 30m boundary
+    setInterval(applyAutoTheme, 60000);
 
     document.addEventListener('DOMContentLoaded', function() {
       applyAutoTheme();
@@ -249,7 +604,6 @@
 
       initGoogleSSO();
 
-      // TOTP Code auto-unlock
       var totpInput = document.getElementById('totp-code');
       if (totpInput) {
         totpInput.addEventListener('input', function() {
@@ -265,30 +619,29 @@
         });
       }
 
-      // Entrance motion
       if (window.Motion) {
         Motion.animate('.splash-content', { opacity: [0, 1], y: [20, 0] }, { duration: 0.5, ease: 'easeOut' });
       }
     });
 
-    // ── Stage 1 -> Stage 2 Transitions (Spring Motion) ──
+    // ── Hard Toggle + Spring Morphing Between Stages ──
     function showAuthStage() {
       var splash = document.getElementById('splash-stage');
       var authStage = document.getElementById('auth-stage');
       var card = document.getElementById('auth-panel-card');
 
       if (window.Motion) {
-        Motion.animate(splash, { opacity: [1, 0], scale: [1, 0.96] }, { duration: 0.35 }).finished.then(function() {
-          splash.classList.add('hidden');
-          authStage.classList.add('visible');
+        Motion.animate(splash, { opacity: [1, 0], scale: [1, 0.96] }, { duration: 0.3 }).finished.then(function() {
+          splash.style.display = 'none';
+          authStage.style.display = 'flex';
           authStage.setAttribute('aria-hidden', 'false');
           Motion.animate(card, { opacity: [0, 1], y: [24, 0], scale: [0.98, 1] }, { duration: 0.4, type: 'spring', stiffness: 300, damping: 25 });
           initGoogleSSO();
           document.getElementById('login-username').focus();
         });
       } else {
-        splash.classList.add('hidden');
-        authStage.classList.add('visible');
+        splash.style.display = 'none';
+        authStage.style.display = 'flex';
         authStage.setAttribute('aria-hidden', 'false');
         initGoogleSSO();
         document.getElementById('login-username').focus();
@@ -324,16 +677,16 @@
         var card = document.getElementById('auth-panel-card');
 
         if (window.Motion) {
-          Motion.animate(card, { opacity: [1, 0], y: [0, 20], scale: [1, 0.98] }, { duration: 0.3 }).finished.then(function() {
-            authStage.classList.remove('visible');
+          Motion.animate(card, { opacity: [1, 0], y: [0, 20], scale: [1, 0.98] }, { duration: 0.25 }).finished.then(function() {
+            authStage.style.display = 'none';
             authStage.setAttribute('aria-hidden', 'true');
-            splash.classList.remove('hidden');
+            splash.style.display = 'flex';
             Motion.animate(splash, { opacity: [0, 1], scale: [0.96, 1] }, { duration: 0.35 });
           });
         } else {
-          authStage.classList.remove('visible');
+          authStage.style.display = 'none';
           authStage.setAttribute('aria-hidden', 'true');
-          splash.classList.remove('hidden');
+          splash.style.display = 'flex';
         }
       }
     }
