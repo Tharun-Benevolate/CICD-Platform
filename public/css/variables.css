@@ -59,7 +59,8 @@
   --topbar-border:        #e2e8f0;
   
   /* ── Typography ── */
-  --font-family:          'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-family:          'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  --font-mono:            'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   --font-size-xs:         11px;
   --font-size-sm:         12px;
   --font-size-base:       13px;
@@ -248,49 +249,97 @@
   --bento-radial:radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(37, 99, 235, 0.06), transparent 40%);
 }
 
-/* ── Monolith Titanium Palette (Swiss Precision Minimalist) ── */
-[data-palette="monolith"] {
-  --color-bg:           #09090b;
-  --color-bg-elevated:  #121215;
-  --color-surface:      #18181b;
-  --color-surface-hover:#27272a;
-  --color-border:       rgba(255, 255, 255, 0.16);
-  --color-border-subtle:rgba(255, 255, 255, 0.08);
+/* ── Cyber Emerald Palette (Terminal Matrix Mint Aesthetic) ── */
+[data-palette="emerald"] {
+  --color-bg:           #030d09;
+  --color-bg-elevated:  #081711;
+  --color-surface:      #0b2118;
+  --color-surface-hover:#102c21;
+  --color-border:       rgba(16, 185, 129, 0.22);
+  --color-border-subtle:rgba(16, 185, 129, 0.1);
   
-  --color-text-primary:   #ffffff;
-  --color-text-secondary: #a1a1aa;
-  --color-text-tertiary:  #71717a;
-  --color-text-inverse:   #09090b;
+  --color-text-primary:   #ecfdf5;
+  --color-text-secondary: #a7f3d0;
+  --color-text-tertiary:  #6ee7b7;
+  --color-text-inverse:   #030d09;
   
-  --color-primary:        #ffffff;
-  --color-primary-hover:  #e4e4e7;
-  --color-primary-light:  rgba(255, 255, 255, 0.12);
-  --color-primary-ghost:  rgba(255, 255, 255, 0.06);
+  --color-primary:        #10b981;
+  --color-primary-hover:  #34d399;
+  --color-primary-light:  rgba(16, 185, 129, 0.15);
+  --color-primary-ghost:  rgba(16, 185, 129, 0.08);
   
-  --color-accent:         #a1a1aa;
-  --color-accent-hover:   #d4d4d8;
+  --color-accent:         #059669;
+  --color-accent-hover:   #10b981;
   
-  --color-success-light:  rgba(5, 150, 105, 0.15);
+  --color-success-light:  rgba(16, 185, 129, 0.15);
   --color-warning-light:  rgba(217, 119, 6, 0.15);
   --color-danger-light:   rgba(220, 38, 38, 0.15);
   --color-info-light:     rgba(2, 132, 199, 0.15);
   
-  --sidebar-bg:           #0c0c0e;
-  --sidebar-border:       rgba(255, 255, 255, 0.14);
-  --sidebar-item-hover:   #27272a;
-  --sidebar-item-active:  rgba(255, 255, 255, 0.14);
-  --sidebar-text:         #f4f4f5;
-  --sidebar-text-muted:   #71717a;
-  --sidebar-section-label:#a1a1aa;
+  --sidebar-bg:           #05120c;
+  --sidebar-border:       rgba(16, 185, 129, 0.18);
+  --sidebar-item-hover:   #0b2118;
+  --sidebar-item-active:  rgba(16, 185, 129, 0.18);
+  --sidebar-text:         #d1fae5;
+  --sidebar-text-muted:   #6ee7b7;
+  --sidebar-section-label:#a7f3d0;
   
-  --topbar-bg:            #0c0c0e;
-  --topbar-border:        rgba(255, 255, 255, 0.14);
+  --topbar-bg:            #05120c;
+  --topbar-border:        rgba(16, 185, 129, 0.18);
   
   --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md:   0 2px 4px rgba(0, 0, 0, 0.5);
   --shadow-lg:   0 6px 12px rgba(0, 0, 0, 0.6);
   --shadow-xl:   0 12px 24px rgba(0, 0, 0, 0.7);
-  --bento-glow:  0 0 35px -8px rgba(255, 255, 255, 0.2);
-  --bento-border:rgba(255, 255, 255, 0.2);
-  --bento-radial:radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(255, 255, 255, 0.1), transparent 40%);
+  --bento-glow:  0 0 35px -8px rgba(16, 185, 129, 0.35);
+  --bento-border:rgba(16, 185, 129, 0.28);
+  --bento-radial:radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(16, 185, 129, 0.15), transparent 40%);
 }
+
+/* ── Oceanic Cyan Palette (Deep Midnight Navy & Ice Cyan) ── */
+[data-palette="oceanic"] {
+  --color-bg:           #070d18;
+  --color-bg-elevated:  #0c1524;
+  --color-surface:      #0f1c30;
+  --color-surface-hover:#16263f;
+  --color-border:       rgba(56, 189, 248, 0.2);
+  --color-border-subtle:rgba(56, 189, 248, 0.08);
+  
+  --color-text-primary:   #f0f9ff;
+  --color-text-secondary: #7dd3fc;
+  --color-text-tertiary:  #38bdf8;
+  --color-text-inverse:   #070d18;
+  
+  --color-primary:        #0ea5e9;
+  --color-primary-hover:  #38bdf8;
+  --color-primary-light:  rgba(14, 165, 233, 0.15);
+  --color-primary-ghost:  rgba(14, 165, 233, 0.08);
+  
+  --color-accent:         #0284c7;
+  --color-accent-hover:   #0369a1;
+  
+  --color-success-light:  rgba(16, 185, 129, 0.15);
+  --color-warning-light:  rgba(217, 119, 6, 0.15);
+  --color-danger-light:   rgba(220, 38, 38, 0.15);
+  --color-info-light:     rgba(14, 165, 233, 0.15);
+  
+  --sidebar-bg:           #070f1e;
+  --sidebar-border:       rgba(56, 189, 248, 0.18);
+  --sidebar-item-hover:   #0f1c30;
+  --sidebar-item-active:  rgba(14, 165, 233, 0.18);
+  --sidebar-text:         #e0f2fe;
+  --sidebar-text-muted:   #7dd3fc;
+  --sidebar-section-label:#38bdf8;
+  
+  --topbar-bg:            #070f1e;
+  --topbar-border:        rgba(56, 189, 248, 0.18);
+  
+  --shadow-sm:   0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md:   0 2px 4px rgba(0, 0, 0, 0.5);
+  --shadow-lg:   0 6px 12px rgba(0, 0, 0, 0.6);
+  --shadow-xl:   0 12px 24px rgba(0, 0, 0, 0.7);
+  --bento-glow:  0 0 35px -8px rgba(14, 165, 233, 0.35);
+  --bento-border:rgba(14, 165, 233, 0.28);
+  --bento-radial:radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(14, 165, 233, 0.15), transparent 40%);
+}
+

@@ -3,6 +3,9 @@
   <!-- Developer Workspace Banner -->
   <div class="dash-hero-card">
     <div class="dash-hero-content">
+      <div class="dash-hero-badge">
+        <i data-lucide="code-2" style="width:13px;height:13px;"></i> Developer Workspace
+      </div>
       <h1 class="dash-hero-title">
         Welcome back, <%= user.username %>
       </h1>
@@ -26,7 +29,9 @@
     <div class="dash-metric-card">
       <div class="dash-metric-header">
         <span class="dash-metric-label">ASSIGNED PROJECTS</span>
-        <i data-lucide="boxes" class="dash-metric-icon"></i>
+        <div class="dash-metric-icon-wrap">
+          <i data-lucide="boxes" class="dash-metric-icon"></i>
+        </div>
       </div>
       <div class="dash-metric-value-row">
         <span id="dev-projects-count" class="dash-metric-val">Loading…</span>
@@ -37,10 +42,12 @@
     <div class="dash-metric-card">
       <div class="dash-metric-header">
         <span class="dash-metric-label">CONNECTED REPO</span>
-        <i data-lucide="git-fork" class="dash-metric-icon"></i>
+        <div class="dash-metric-icon-wrap">
+          <i data-lucide="git-fork" class="dash-metric-icon"></i>
+        </div>
       </div>
       <div class="dash-metric-value-row">
-        <span id="dev-repo-name" class="dash-metric-val">Loading…</span>
+        <span id="dev-repo-name" class="dash-metric-val font-mono">Loading…</span>
       </div>
     </div>
 
@@ -48,7 +55,9 @@
     <div class="dash-metric-card">
       <div class="dash-metric-header">
         <span class="dash-metric-label">PIPELINE STATUS</span>
-        <i data-lucide="activity" class="dash-metric-icon"></i>
+        <div class="dash-metric-icon-wrap">
+          <i data-lucide="activity" class="dash-metric-icon"></i>
+        </div>
       </div>
       <div class="dash-metric-value-row">
         <div id="dev-pipeline-dot" class="dash-status-dot"></div>
@@ -60,7 +69,9 @@
     <div class="dash-metric-card">
       <div class="dash-metric-header">
         <span class="dash-metric-label">DEFAULT BRANCH</span>
-        <i data-lucide="git-branch" class="dash-metric-icon"></i>
+        <div class="dash-metric-icon-wrap">
+          <i data-lucide="git-branch" class="dash-metric-icon"></i>
+        </div>
       </div>
       <div class="dash-metric-value-row">
         <span id="dev-branch-name" class="dash-metric-val font-mono">main</span>
@@ -74,7 +85,10 @@
     <div class="dash-panel-card">
       <div class="dash-panel-header">
         <h2 class="dash-panel-title">
-          <i data-lucide="activity"></i> Active Pipeline
+          <div class="dash-panel-icon-wrap">
+            <i data-lucide="activity"></i>
+          </div>
+          Active Pipeline
         </h2>
         <a href="/pipelines" class="dash-panel-link">
           View Pipeline <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
@@ -89,13 +103,16 @@
     <div class="dash-panel-card">
       <div class="dash-panel-header">
         <h2 class="dash-panel-title">
-          <i data-lucide="git-commit"></i> Recent Activity
+          <div class="dash-panel-icon-wrap">
+            <i data-lucide="git-commit"></i>
+          </div>
+          Recent Activity
         </h2>
         <a href="/file-browser" class="dash-panel-link">
           File Browser <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
         </a>
       </div>
-      <div id="dev-commits-list" class="dash-panel-body" style="gap:8px;">
+      <div id="dev-commits-list" class="dash-panel-body">
         <div class="dash-empty-state">Loading recent commits…</div>
       </div>
     </div>
@@ -108,16 +125,19 @@
   <!-- Admin / DevOps Clean Header Card -->
   <div class="dash-hero-card">
     <div class="dash-hero-content">
+      <div class="dash-hero-badge">
+        <i data-lucide="shield-check" style="width:13px;height:13px;"></i> DevOps Control Plane
+      </div>
       <h1 class="dash-hero-title">
         Welcome back, <span id="dash-username"><%= user.username %></span>
       </h1>
       <p class="dash-hero-subtitle">
-        Overview of your active infrastructure, deployments, and source repositories.
+        Continuous delivery pipelines, container orchestrations, and live infrastructure telemetry.
       </p>
     </div>
     <div class="dash-hero-actions">
       <a href="/new-project" class="dash-btn-primary">
-        <i data-lucide="plus" style="width:16px;height:16px;"></i> New Project
+        <i data-lucide="plus" style="width:15px;height:15px;"></i> New Project
       </a>
     </div>
   </div>
@@ -128,7 +148,9 @@
     <div id="card-db" class="dash-metric-card">
       <div class="dash-metric-header">
         <span class="dash-metric-label">DATABASE</span>
-        <i data-lucide="database" class="dash-metric-icon"></i>
+        <div class="dash-metric-icon-wrap">
+          <i data-lucide="database" class="dash-metric-icon"></i>
+        </div>
       </div>
       <div class="dash-metric-value-row">
         <div id="db-dot" class="dash-status-dot"></div>
@@ -143,7 +165,9 @@
     <div class="dash-metric-card">
       <div class="dash-metric-header">
         <span class="dash-metric-label">AWS REGION</span>
-        <i data-lucide="server" class="dash-metric-icon"></i>
+        <div class="dash-metric-icon-wrap">
+          <i data-lucide="server" class="dash-metric-icon"></i>
+        </div>
       </div>
       <div class="dash-metric-value-row">
         <div id="aws-dot" class="dash-status-dot"></div>
@@ -155,10 +179,12 @@
     <div class="dash-metric-card">
       <div class="dash-metric-header">
         <span class="dash-metric-label">UPTIME</span>
-        <i data-lucide="clock" class="dash-metric-icon"></i>
+        <div class="dash-metric-icon-wrap">
+          <i data-lucide="clock" class="dash-metric-icon"></i>
+        </div>
       </div>
       <div class="dash-metric-value-row">
-        <span id="uptime-value" class="dash-metric-val">0 min</span>
+        <span id="uptime-value" class="dash-metric-val font-mono">0 min</span>
       </div>
     </div>
 
@@ -166,7 +192,9 @@
     <div class="dash-metric-card">
       <div class="dash-metric-header">
         <span class="dash-metric-label">TOTAL PROJECTS</span>
-        <i data-lucide="cpu" class="dash-metric-icon"></i>
+        <div class="dash-metric-icon-wrap">
+          <i data-lucide="folder-git-2" class="dash-metric-icon"></i>
+        </div>
       </div>
       <div class="dash-metric-value-row">
         <span id="projects-count" class="dash-metric-val">0 Active</span>
@@ -177,7 +205,10 @@
   <!-- ECS Environment Status Section -->
   <div id="deploy-endpoint" class="dash-ecs-panel" style="display:none;">
     <div class="dash-ecs-header">
-      <span class="dash-ecs-label">ECS ENVIRONMENT STATUS</span>
+      <div class="dash-ecs-title-group">
+        <i data-lucide="layers" class="dash-ecs-header-icon"></i>
+        <span class="dash-ecs-label">CONTAINER ENVIRONMENTS (AWS ECS)</span>
+      </div>
     </div>
     <div id="deploy-endpoint-text" class="dash-ecs-cards-row"></div>
   </div>
@@ -188,7 +219,10 @@
     <div class="dash-panel-card">
       <div class="dash-panel-header">
         <h2 class="dash-panel-title">
-          <i data-lucide="activity"></i> Active Pipeline
+          <div class="dash-panel-icon-wrap">
+            <i data-lucide="activity"></i>
+          </div>
+          Active Pipeline
         </h2>
         <a href="/pipelines" class="dash-panel-link">
           View Pipeline <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>
@@ -203,7 +237,10 @@
     <div class="dash-panel-card">
       <div class="dash-panel-header">
         <h2 class="dash-panel-title">
-          <i data-lucide="shield"></i> Recent Activity
+          <div class="dash-panel-icon-wrap">
+            <i data-lucide="shield"></i>
+          </div>
+          Recent Activity
         </h2>
         <a href="/audit-logs" class="dash-panel-link">
           All Logs <i data-lucide="arrow-right" style="width:13px;height:13px;"></i>

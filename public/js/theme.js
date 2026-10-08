@@ -1,17 +1,18 @@
 // public/js/theme.js — 4-Palette Multi-Theme System
 (function() {
-  var PALETTES = ['classic', 'sandstone', 'indigo', 'monolith'];
+  var PALETTES = ['classic', 'sandstone', 'indigo', 'oceanic', 'emerald'];
   var PALETTE_ICONS = {
     classic: 'sun',
     sandstone: 'sun-medium',
     indigo: 'moon',
-    monolith: 'box'
+    oceanic: 'compass',
+    emerald: 'terminal'
   };
 
   function getPreferredPalette() {
     try {
       var savedPalette = localStorage.getItem('benevolate-palette');
-      if (savedPalette === 'crimson') savedPalette = 'classic';
+      if (savedPalette === 'crimson' || savedPalette === 'monolith') savedPalette = 'classic';
       if (savedPalette && PALETTES.indexOf(savedPalette) !== -1) return savedPalette;
       var savedTheme = localStorage.getItem('benevolate-theme');
       if (savedTheme === 'light') return 'classic';
@@ -27,7 +28,8 @@
       classic: 'Enterprise Blue (Light)',
       sandstone: 'Sandstone Ivory (Light)',
       indigo: 'Electric Indigo (Dark)',
-      monolith: 'Titanium Monolith (Dark)'
+      oceanic: 'Oceanic Cyan (Navy Dark)',
+      emerald: 'Cyber Emerald (Terminal Dark)'
     };
     btn.setAttribute('title', 'Theme: ' + (labelMap[palette] || palette) + ' (click to switch)');
     btn.innerHTML = '<i data-lucide="' + iconName + '" style="width:18px;height:18px;"></i>';

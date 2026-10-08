@@ -61,46 +61,48 @@ async function loadDeveloperPipeline(project) {
   var statusDot = document.getElementById('dev-pipeline-dot');
   if (!container) return;
 
-  var headerBox = '<div style="padding:12px 16px;background:var(--color-bg);border:1px solid var(--color-border);border-radius:10px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;">' +
-    '<div>' +
-      '<span style="font-size:11px;color:var(--color-text-tertiary);display:block;margin-bottom:2px;font-weight:600;letter-spacing:0.5px;">ACTIVE ASSIGNED PROJECT</span>' +
-      '<span style="font-size:14px;font-weight:700;color:var(--color-text-primary);">' + project.name + '</span>' +
+  var headerBox = '<div class="dash-pipeline-meta-bar">' +
+    '<div class="dash-pipeline-meta-left">' +
+      '<i data-lucide="folder-git-2" class="dash-pipeline-meta-icon"></i>' +
+      '<div>' +
+        '<span class="dash-pipeline-meta-label">Assigned Project</span>' +
+        '<span class="dash-pipeline-meta-name">' + project.name + '</span>' +
+      '</div>' +
     '</div>' +
-    '<a href="/file-browser" style="font-size:12px;color:#6366f1;text-decoration:none;font-weight:600;display:inline-flex;align-items:center;gap:4px;">' +
-      'Browse Files →' +
-    '</a>' +
+    '<a href="/file-browser" class="dash-panel-link">Browse Files <i data-lucide="arrow-right" style="width:12px;height:12px;"></i></a>' +
   '</div>';
 
   try {
     var res = await api.get('/api/pipeline/status?projectId=' + project.id);
     if (res && res.ok && res.stageStates && res.stageStates.length > 0) {
       var succeededCount = 0;
-      var stagesHtml = res.stageStates.slice(0, 4).map(function(stg) {
+      var stagesHtml = res.stageStates.slice(0, 4).map(function(stg, i) {
         var status = stg.latestExecution ? stg.latestExecution.status : 'Idle';
         if (status === 'Succeeded') succeededCount++;
         var isSucc = status === 'Succeeded';
-        return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border:1px solid var(--color-border);border-radius:8px;background:var(--color-surface);">' +
-          '<div style="display:flex;align-items:center;gap:10px;">' +
-            '<i data-lucide="' + (isSucc ? 'check-circle-2' : 'clock') + '" style="width:16px;height:16px;color:' + (isSucc ? '#10b981' : '#94a3b8') + ';"></i>' +
-            '<span style="font-size:13px;font-weight:600;color:var(--color-text-primary);">' + stg.stageName + '</span>' +
+        return '<div class="dash-pipeline-stage-item">' +
+          '<div class="dash-stage-left">' +
+            '<span class="dash-stage-step-index">' + (i + 1) + '</span>' +
+            '<span class="dash-stage-name">' + stg.stageName + '</span>' +
           '</div>' +
-          '<span style="font-size:11px;padding:3px 10px;border-radius:12px;font-weight:700;background:' + (isSucc ? 'rgba(16,185,129,0.12)' : 'var(--color-bg)') + ';color:' + (isSucc ? '#10b981' : 'var(--color-text-secondary)') + ';">' +
+          '<span class="dash-stage-badge ' + (isSucc ? 'is-success' : 'is-idle') + '">' +
+            '<i data-lucide="' + (isSucc ? 'check' : 'clock') + '" style="width:12px;height:12px;"></i>' +
             status +
           '</span>' +
         '</div>';
       }).join('');
 
-      container.innerHTML = headerBox + '<div style="display:flex;flex-direction:column;gap:8px;">' + stagesHtml + '</div>';
+      container.innerHTML = headerBox + '<div class="dash-pipeline-stages-list">' + stagesHtml + '</div>';
 
-      if (statusText) statusText.textContent = succeededCount === res.stageStates.length ? 'Pipeline Healthy' : 'Idle / Ready';
-      if (statusDot) statusDot.style.background = succeededCount === res.stageStates.length ? '#10b981' : '#6366f1';
+      if (statusText) statusText.textContent = succeededCount === res.stageStates.length ? 'Healthy' : 'Idle / Ready';
+      if (statusDot) statusDot.style.background = succeededCount === res.stageStates.length ? '#10b981' : 'var(--color-primary)';
     } else {
-      container.innerHTML = headerBox + '<div style="text-align:center;padding:24px 12px;color:var(--color-text-secondary);font-size:13px;line-height:1.5;">Pipeline is ready & configured on default branch (main).</div>';
+      container.innerHTML = headerBox + '<div class="dash-empty-state"><i data-lucide="info" class="dash-empty-icon"></i><span>Pipeline configured and idle on default branch.</span></div>';
       if (statusText) statusText.textContent = 'Idle / Ready';
       if (statusDot) statusDot.style.background = '#10b981';
     }
   } catch(e) {
-    container.innerHTML = headerBox + '<div style="text-align:center;padding:24px 12px;color:var(--color-text-tertiary);font-size:12px;">Pipeline status check ready.</div>';
+    container.innerHTML = headerBox + '<div class="dash-empty-state"><i data-lucide="alert-circle" class="dash-empty-icon"></i><span>Unable to load pipeline status.</span></div>';
   }
   if (window.lucide) lucide.createIcons();
 }
@@ -116,7 +118,7 @@ async function loadDeveloperCommits(repoId, projectId) {
 
     if (res && res.ok && res.commits && res.commits.length > 0) {
       var commits = res.commits.slice(0, 5);
-      container.innerHTML = commits.map(function(c) {
+      container.innerHTML = '<div style="display:flex;flex-direction:column;gap:8px;">' + commits.map(function(c) {
         var sha = (c.sha || c.commitId || '').substring(0, 7);
         var msg = c.message || (c.commit && c.commit.message) || 'No message';
         var firstLine = msg.split('\n')[0];
@@ -124,24 +126,23 @@ async function loadDeveloperCommits(repoId, projectId) {
         var author = c.authorName || c.authorLogin || (c.author && (c.author.login || c.author.name || (typeof c.author === 'string' ? c.author : null))) || (c.commit && c.commit.author && (c.commit.author.name || c.commit.author.login)) || c.committerName || 'Unknown';
         var dateStr = c.date ? new Date(c.date).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Recent';
 
-        return '<div style="padding:10px 14px;border:1px solid var(--color-border);border-radius:10px;background:var(--color-surface);display:flex;align-items:center;justify-content:space-between;gap:12px;">' +
-          '<div style="min-width:0;flex:1;">' +
-            '<div style="font-size:13px;font-weight:600;color:var(--color-text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + firstLine + '</div>' +
-            '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:3px;display:flex;align-items:center;gap:6px;">' +
+        return '<div class="dash-commit-item">' +
+          '<div class="dash-commit-info">' +
+            '<div class="dash-commit-msg">' + firstLine + '</div>' +
+            '<div class="dash-commit-meta">' +
               '<span>' + author + '</span> &bull; <span>' + dateStr + '</span>' +
             '</div>' +
           '</div>' +
-          '<span style="font-family:monospace;font-size:11px;font-weight:700;padding:3px 8px;background:rgba(99,102,241,0.1);color:#6366f1;border-radius:6px;flex-shrink:0;">' +
-            sha +
-          '</span>' +
+          '<span class="dash-commit-sha font-mono">' + sha + '</span>' +
         '</div>';
-      }).join('');
+      }).join('') + '</div>';
     } else {
-      container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--color-text-tertiary);font-size:12px;">No recent commits found in repository.</div>';
+      container.innerHTML = '<div class="dash-empty-state"><i data-lucide="git-commit" class="dash-empty-icon"></i><span>No recent commits recorded.</span></div>';
     }
   } catch(e) {
-    container.innerHTML = '<div style="text-align:center;padding:30px;color:var(--color-text-tertiary);font-size:12px;">Unable to load recent commits.</div>';
+    container.innerHTML = '<div class="dash-empty-state"><i data-lucide="alert-circle" class="dash-empty-icon"></i><span>Unable to load recent commits.</span></div>';
   }
+  if (window.lucide) lucide.createIcons();
 }
 
 
@@ -192,87 +193,85 @@ async function loadEnvStatus(project) {
   var container = document.getElementById('deploy-endpoint-text');
   if (!container) return;
 
-  // Show ECS icon SVG (AWS ECS colour: #FF9900)
-  var ecsIcon = '<svg width="18" height="18" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;margin-right:6px;">' +
-    '<rect width="40" height="40" rx="6" fill="#232F3E"/>' +
-    '<path d="M8 12h24M8 20h24M8 28h24" stroke="#FF9900" stroke-width="2.5" stroke-linecap="round"/>' +
-    '<circle cx="13" cy="12" r="2.5" fill="#FF9900"/>' +
-    '<circle cx="13" cy="20" r="2.5" fill="#FF9900"/>' +
-    '<circle cx="13" cy="28" r="2.5" fill="#FF9900"/>' +
+  var ecsSvg = '<svg class="dash-ecs-logo-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">' +
+    '<rect width="40" height="40" rx="8" fill="#1e293b"/>' +
+    '<path d="M8 12h24M8 20h24M8 28h24" stroke="#f59e0b" stroke-width="2.5" stroke-linecap="round"/>' +
+    '<circle cx="13" cy="12" r="2.5" fill="#f59e0b"/>' +
+    '<circle cx="13" cy="20" r="2.5" fill="#f59e0b"/>' +
+    '<circle cx="13" cy="28" r="2.5" fill="#f59e0b"/>' +
     '</svg>';
 
-  // Skeleton while loading
-  container.innerHTML = '<div style="display:flex;gap:10px;align-items:center;">' +
-    ['DEV','UAT','PROD'].map(function(e) {
-      return '<div style="width:108px;height:72px;background:rgba(255,255,255,0.04);border:1px solid var(--color-border);border-radius:10px;animation:pulse 1.5s ease-in-out infinite;"></div>';
-    }).join('') + '</div>';
+  // Skeleton placeholders
+  container.innerHTML = ['DEV', 'UAT', 'PROD'].map(function() {
+    return '<div class="dash-ecs-tile" style="min-height:104px;opacity:0.6;animation:pulse 1.5s ease-in-out infinite;"></div>';
+  }).join('');
 
   try {
     var res = await api.get('/api/ecs/all-envs?projectId=' + project.id);
-    if (!res || !res.ok || !res.envs) return;
+    if (!res || !res.ok || !res.envs) {
+      container.innerHTML = '<div class="dash-empty-state"><i data-lucide="info" class="dash-empty-icon"></i><span>No environment telemetry available</span></div>';
+      if (window.lucide) lucide.createIcons();
+      return;
+    }
 
-    var deployColors = { deployed: '#10b981', failed: '#ef4444', 'in-progress': '#6366f1', 'not-deployed': '#64748b', 'no-pipeline': '#374151' };
-    var deployLabels = { deployed: 'Deployed ✓', failed: 'Deploy Failed', 'in-progress': 'Deploying…', 'not-deployed': 'Not Deployed', 'no-pipeline': 'No Pipeline' };
-    var ecsColors    = { healthy: '#10b981', degraded: '#f59e0b', stopped: '#ef4444', idle: '#64748b', error: '#ef4444', unknown: '#64748b', 'not-configured': '#374151' };
+    var deployClassMap = {
+      deployed: 'status-deployed',
+      failed: 'status-failed',
+      'in-progress': 'status-deploying',
+      'not-deployed': 'status-not-deployed',
+      'no-pipeline': 'status-not-deployed'
+    };
+    var deployLabelMap = {
+      deployed: 'Deployed',
+      failed: 'Deploy Failed',
+      'in-progress': 'Deploying',
+      'not-deployed': 'Not Deployed',
+      'no-pipeline': 'No Pipeline'
+    };
 
     var cards = res.envs.map(function(env) {
-      var ds        = env.deployStatus || 'not-deployed';
-      var color     = deployColors[ds] || '#64748b';
-      var label     = deployLabels[ds] || ds;
-      var isActive  = ds === 'deployed';
-      var envLabel  = env.env.toUpperCase();
+      var ds = env.deployStatus || 'not-deployed';
+      var statusClass = deployClassMap[ds] || 'status-not-deployed';
+      var label = deployLabelMap[ds] || ds;
+      var isActive = ds === 'deployed';
+      var envLabel = env.env.toUpperCase();
 
-      // ECS task row — secondary info
-      var taskColor   = ecsColors[env.ecsStatus] || '#64748b';
-      var taskText    = env.configured ? (env.running + '/' + env.desired + ' Tasks') : 'Not Configured';
+      var taskText = env.configured ? (env.running + '/' + env.desired + ' Active Tasks') : 'Not Configured';
 
-      // Pulsing dot only if actually deployed
-      var dotHtml = isActive
-        ? '<div style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:' + color + ';box-shadow:0 0 0 2px rgba(16,185,129,0.25);">' +
-            '<div style="position:absolute;inset:0;border-radius:50%;background:' + color + ';animation:ecsping 1.4s ease-out infinite;opacity:0.7;"></div>' +
-          '</div>'
-        : (ds === 'in-progress'
-            ? '<div style="position:absolute;top:8px;right:8px;width:8px;height:8px;border-radius:50%;background:#6366f1;animation:ecsping 1s ease-out infinite;"></div>'
-            : '');
+      var displayUrl = env.url ? env.url.replace(/^https?:\/\//, '').replace(/\/$/, '') : null;
+      var shortUrl = displayUrl && displayUrl.length > 28 ? displayUrl.slice(0, 26) + '…' : (displayUrl || 'No Endpoint');
+      var hrefUrl = env.url ? (env.url.startsWith('http') ? env.url : 'https://' + env.url) : '#';
 
-      var displayUrl = env.url
-        ? (env.url.replace(/^https?:\/\//, '').replace(/\/$/, ''))
-        : null;
-      var shortUrl = displayUrl && displayUrl.length > 24 ? displayUrl.slice(0, 22) + '…' : (displayUrl || '—');
-      var globeSvg = '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block;vertical-align:-1px;margin-right:4px;"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>';
-      var urlHtml = '<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,0.06);font-size:9px;color:' +
-        (env.url ? 'var(--color-primary)' : 'var(--color-text-tertiary)') +
-        ';font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="' + (displayUrl || 'No endpoint') + '">' +
-        (env.url ? globeSvg : '') + shortUrl +
-      '</div>';
+      var targetAttr = (env.url && isActive) ? 'target="_blank" rel="noopener"' : '';
+      var tileTag = (env.url && isActive) ? 'a' : 'div';
 
-      var linkStart = (env.url && isActive) ? '<a href="' + (env.url.startsWith('http') ? env.url : 'https://' + env.url) + '" target="_blank" style="text-decoration:none;color:inherit;">' : '<span>';
-      var linkEnd   = (env.url && isActive) ? '</a>' : '</span>';
-
-      return linkStart +
-        '<div style="position:relative;width:130px;padding:10px 12px;background:var(--color-bg);border:1px solid ' + (isActive ? color + '55' : 'var(--color-border)') + ';border-radius:10px;transition:border-color 0.2s,box-shadow 0.2s;cursor:' + (isActive ? 'pointer' : 'default') + ';" ' +
-          'onmouseenter="if(' + isActive + ')this.style.boxShadow=\'0 0 0 2px ' + color + '44\'" ' +
-          'onmouseleave="this.style.boxShadow=\'none\'">' +
-          dotHtml +
-          '<div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;">' +
-            ecsIcon +
-            '<span style="font-size:10px;font-weight:800;letter-spacing:0.8px;color:' + (isActive ? 'var(--color-text-primary)' : 'var(--color-text-tertiary)') + ';">' + envLabel + '</span>' +
+      return '<' + tileTag + ' href="' + hrefUrl + '" ' + targetAttr + ' class="dash-ecs-tile ' + (isActive ? 'is-deployed' : '') + '">' +
+        '<div class="dash-ecs-tile-top">' +
+          '<div class="dash-ecs-badge-tag">' +
+            ecsSvg +
+            '<span class="dash-ecs-env-title">' + envLabel + '</span>' +
           '</div>' +
-          '<div style="font-size:12px;font-weight:700;color:' + color + ';margin-bottom:4px;">' + label + '</div>' +
-          '<div style="font-size:10px;color:' + taskColor + ';font-family:monospace;opacity:0.8;">' + taskText + '</div>' +
-          urlHtml +
+          '<span class="dash-ecs-beacon ' + (isActive ? 'is-active' : '') + '"></span>' +
         '</div>' +
-      linkEnd;
+        '<div class="dash-ecs-tile-mid">' +
+          '<div class="dash-ecs-status-pill ' + statusClass + '">' +
+            '<i data-lucide="' + (isActive ? 'check' : (ds === 'failed' ? 'alert-triangle' : 'circle-dashed')) + '" style="width:12px;height:12px;"></i>' +
+            '<span>' + label + '</span>' +
+          '</div>' +
+          '<div class="dash-ecs-tasks">' + taskText + '</div>' +
+        '</div>' +
+        '<div class="dash-ecs-tile-bottom" title="' + (displayUrl || '') + '">' +
+          '<i data-lucide="globe"></i>' +
+          '<span>' + shortUrl + '</span>' +
+        '</div>' +
+      '</' + tileTag + '>';
     }).join('');
 
-    container.innerHTML = '<style>' +
-      '@keyframes ecsping{0%{transform:scale(1);opacity:0.7}70%{transform:scale(2.2);opacity:0}100%{transform:scale(2.4);opacity:0}}' +
-      '@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}' +
-    '</style>' +
-    '<div style="display:flex;gap:10px;align-items:stretch;">' + cards + '</div>';
-
+    container.innerHTML = cards;
+    if (window.lucide) lucide.createIcons();
   } catch(e) {
-    container.innerHTML = '<span style="font-size:12px;color:var(--color-text-tertiary);">Unable to load environment status</span>';
+    container.innerHTML = '<div class="dash-empty-state"><i data-lucide="alert-circle" class="dash-empty-icon"></i><span>Unable to load container environments</span></div>';
+    if (window.lucide) lucide.createIcons();
   }
 }
 
@@ -283,36 +282,48 @@ async function loadPipeline() {
     var projRes = await api.get('/api/projects');
     var active = projRes.projects ? projRes.projects.find(function(p) { return p.isActive; }) : null;
     if (active) {
-      var projectBlock = '<div style="padding:10px 14px;background:var(--color-bg);border-radius:10px;margin-bottom:14px;">' +
-        '<span style="font-size:11px;color:var(--color-text-tertiary);display:block;margin-bottom:2px;">Project</span>' +
-        '<span style="font-size:13px;font-weight:700;color:var(--color-text-primary);">' + active.name + '</span>' +
+      var projectBlock = '<div class="dash-pipeline-meta-bar">' +
+        '<div class="dash-pipeline-meta-left">' +
+          '<i data-lucide="folder-git-2" class="dash-pipeline-meta-icon"></i>' +
+          '<div>' +
+            '<span class="dash-pipeline-meta-label">Active Project</span>' +
+            '<span class="dash-pipeline-meta-name">' + active.name + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<span class="dash-pipeline-meta-badge">Default Branch</span>' +
       '</div>';
 
       try {
         var res = await api.get('/api/pipeline/status?projectId=' + active.id);
         if (res.ok && res.stageStates && res.stageStates.length > 0) {
-          var stages = res.stageStates.slice(0, 3).map(function(stg) {
+          var stages = res.stageStates.slice(0, 3).map(function(stg, i) {
             var succeeded = stg.latestExecution && stg.latestExecution.status === 'Succeeded';
-            return '<div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--color-border);border-radius:8px;">' +
-              '<span style="font-size:12px;font-weight:600;">' + stg.stageName + '</span>' +
-              '<span style="font-size:11px;padding:2px 8px;border-radius:12px;font-weight:700;background:' + (succeeded ? 'rgba(16,185,129,0.12)' : 'var(--color-surface)') + ';color:' + (succeeded ? '#10b981' : 'var(--color-text-secondary)') + ';">' +
-                (stg.latestExecution ? stg.latestExecution.status : 'Idle') +
+            var statusLabel = stg.latestExecution ? stg.latestExecution.status : 'Idle';
+            return '<div class="dash-pipeline-stage-item">' +
+              '<div class="dash-stage-left">' +
+                '<span class="dash-stage-step-index">' + (i + 1) + '</span>' +
+                '<span class="dash-stage-name">' + stg.stageName + '</span>' +
+              '</div>' +
+              '<span class="dash-stage-badge ' + (succeeded ? 'is-success' : 'is-idle') + '">' +
+                '<i data-lucide="' + (succeeded ? 'check' : 'clock') + '" style="width:12px;height:12px;"></i>' +
+                statusLabel +
               '</span>' +
             '</div>';
           }).join('');
-          container.innerHTML = projectBlock + '<div style="display:flex;flex-direction:column;gap:8px;">' + stages + '</div>';
+          container.innerHTML = projectBlock + '<div class="dash-pipeline-stages-list">' + stages + '</div>';
         } else {
-          container.innerHTML = projectBlock + '<div style="text-align:center;padding:32px 12px;color:var(--color-text-tertiary);font-size:12px;">No active execution running for this project.</div>';
+          container.innerHTML = projectBlock + '<div class="dash-empty-state"><i data-lucide="info" class="dash-empty-icon"></i><span>No active execution running for this project.</span></div>';
         }
       } catch(e) {
-        container.innerHTML = projectBlock + '<div style="text-align:center;padding:32px 12px;color:var(--color-text-tertiary);font-size:12px;">No active execution running for this project.</div>';
+        container.innerHTML = projectBlock + '<div class="dash-empty-state"><i data-lucide="info" class="dash-empty-icon"></i><span>No active execution running for this project.</span></div>';
       }
     } else {
-      container.innerHTML = '<div style="padding:40px 12px;text-align:center;color:var(--color-text-tertiary);font-size:12px;">No active pipeline found for this project.</div>';
+      container.innerHTML = '<div class="dash-empty-state"><i data-lucide="folder-x" class="dash-empty-icon"></i><span>No active pipeline found for this project.</span></div>';
     }
     if (window.lucide) lucide.createIcons();
   } catch(e) {
-    container.innerHTML = '<div style="padding:40px 12px;text-align:center;color:var(--color-text-tertiary);font-size:12px;">No active pipeline found for this project.</div>';
+    container.innerHTML = '<div class="dash-empty-state"><i data-lucide="alert-circle" class="dash-empty-icon"></i><span>No active pipeline found for this project.</span></div>';
+    if (window.lucide) lucide.createIcons();
   }
 }
 
@@ -320,24 +331,34 @@ async function loadRecentActivity() {
   var container = document.getElementById('recent-activity');
   if (!container) return;
   try {
-    var res = await api.get('/api/audit-logs?limit=3');
+    var res = await api.get('/api/audit-logs?limit=4');
     if (res.ok && res.logs && res.logs.length > 0) {
-      var topLogs = res.logs.slice(0, 3);
-      container.innerHTML = topLogs.map(function(log, i) {
-        return '<div style="padding:8px 10px;' + (i < topLogs.length - 1 ? 'border-bottom:1px solid var(--color-border);' : '') + 'display:flex;align-items:flex-start;justify-content:space-between;">' +
-          '<div>' +
-            '<div style="font-size:12px;font-weight:600;color:var(--color-text-primary);">' + (log.action || '') + '</div>' +
-            '<div style="font-size:11px;color:var(--color-text-tertiary);margin-top:2px;">' + (log.username || '') + ' &bull; ' + (log.category || 'Login') + '</div>' +
+      var topLogs = res.logs.slice(0, 4);
+      var rows = topLogs.map(function(log) {
+        var action = log.action || 'User activity';
+        var isLogin = action.toLowerCase().includes('login') || action.toLowerCase().includes('logged');
+        var iconName = isLogin ? 'log-in' : 'shield';
+        var timeStr = log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+        return '<div class="dash-activity-item">' +
+          '<div class="dash-activity-left">' +
+            '<div class="dash-activity-icon-wrap">' +
+              '<i data-lucide="' + iconName + '"></i>' +
+            '</div>' +
+            '<div class="dash-activity-info">' +
+              '<span class="dash-activity-title">' + action + '</span>' +
+              '<span class="dash-activity-meta">' + (log.username || 'System') + ' &bull; ' + (log.category || 'Audit') + '</span>' +
+            '</div>' +
           '</div>' +
-          '<span style="font-size:10px;color:var(--color-text-tertiary);flex-shrink:0;margin-left:8px;">' +
-            (log.timestamp ? new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '') +
-          '</span>' +
+          '<span class="dash-activity-time">' + timeStr + '</span>' +
         '</div>';
       }).join('');
+      container.innerHTML = '<div class="dash-activity-list">' + rows + '</div>';
     } else {
-      container.innerHTML = '<div style="padding:40px 12px;text-align:center;color:var(--color-text-tertiary);font-size:12px;">No audit logs recorded yet.</div>';
+      container.innerHTML = '<div class="dash-empty-state"><i data-lucide="shield-check" class="dash-empty-icon"></i><span>No audit logs recorded yet.</span></div>';
     }
+    if (window.lucide) lucide.createIcons();
   } catch(e) {
-    container.innerHTML = '<div style="padding:40px 12px;text-align:center;color:var(--color-text-tertiary);font-size:12px;">No audit logs recorded yet.</div>';
+    container.innerHTML = '<div class="dash-empty-state"><i data-lucide="alert-circle" class="dash-empty-icon"></i><span>Unable to load recent activity.</span></div>';
+    if (window.lucide) lucide.createIcons();
   }
 }
