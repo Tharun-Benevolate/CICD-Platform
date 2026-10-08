@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Benevolate Integr8 — Next-Gen Continuous Delivery</title>
+  <title>Benevolate Integr8 — Ship faster. Stay in control.</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,31 +11,46 @@
   <link rel="stylesheet" href="/css/variables.css">
 
   <style>
-    /* ── PALETTE DEFINITIONS & LIVING AMBIENCE TOKENS ── */
+    /* ── PALETTE TOKENS (LIGHT SANDSTONE + DARK COSMIC INDIGO/EMERALD/AURORA) ── */
     :root, [data-palette="sandstone"] {
       --palette-name: "Sandstone";
-      --login-bg: #110f0d;
-      --login-surface: rgba(28, 24, 20, 0.82);
-      --login-surface-card: rgba(34, 29, 24, 0.88);
-      --login-border: rgba(217, 119, 6, 0.18);
-      --login-border-focus: rgba(245, 158, 11, 0.85);
+      --login-bg: #faf7f2;
+      --login-text-primary: #1c1917;
+      --login-text-secondary: #78716c;
+      --login-surface: rgba(255, 255, 255, 0.88);
+      --login-border: rgba(217, 119, 6, 0.22);
+      --login-border-focus: rgba(217, 119, 6, 0.9);
       --login-primary: #d97706;
       --login-primary-hover: #b45309;
       --login-accent: #ea580c;
-      --login-glow: rgba(217, 119, 6, 0.35);
-      --login-cta-gradient: linear-gradient(135deg, #d97706 0%, #c2410c 100%);
-      --login-cta-hover: linear-gradient(135deg, #b45309 0%, #9a3412 100%);
-      --login-beam-1: rgba(217, 119, 6, 0.22);
-      --login-beam-2: rgba(234, 88, 12, 0.15);
-      --gemini-gradient: linear-gradient(135deg, #f59e0b 0%, #ea580c 50%, #fde68a 100%);
-      --droplet-color: #d97706;
-      --droplet-tint: rgba(217, 119, 6, 0.45);
+      --login-glow: rgba(217, 119, 6, 0.28);
+      --login-cta-gradient: linear-gradient(135deg, #d97706 0%, #ea580c 100%);
+      --login-cta-hover: linear-gradient(135deg, #b45309 0%, #c2410c 100%);
+      --login-spotlight: rgba(217, 119, 6, 0.16);
+      --gemini-gradient: linear-gradient(135deg, #f59e0b 0%, #ea580c 50%, #d97706 100%);
+      --droplet-wash: #faf7f2;
+      --droplet-accent: rgba(217, 119, 6, 0.55);
+      --grid-line: rgba(120, 113, 108, 0.08);
+      --card-shadow: 0 32px 70px -16px rgba(120, 113, 108, 0.22), 0 0 35px -5px rgba(217, 119, 6, 0.2);
+      --input-bg: rgba(255, 255, 255, 0.95);
+      --input-color: #1c1917;
+      --input-border: rgba(120, 113, 108, 0.22);
+      --input-placeholder: #a8a29e;
+      --btn-text-color: #ffffff;
+      --google-btn-bg: rgba(0, 0, 0, 0.04);
+      --google-btn-border: rgba(0, 0, 0, 0.12);
+      --google-btn-text: #1c1917;
+      --back-btn-bg: rgba(0, 0, 0, 0.04);
+      --back-btn-border: rgba(0, 0, 0, 0.1);
+      --back-btn-color: #57534e;
     }
+
     [data-palette="indigo"] {
       --palette-name: "Electric Indigo";
-      --login-bg: #07090f;
-      --login-surface: rgba(15, 23, 42, 0.82);
-      --login-surface-card: rgba(20, 30, 55, 0.88);
+      --login-bg: #07090e;
+      --login-text-primary: #f8fafc;
+      --login-text-secondary: #94a3b8;
+      --login-surface: rgba(15, 23, 42, 0.84);
       --login-border: rgba(99, 102, 241, 0.2);
       --login-border-focus: rgba(129, 140, 248, 0.85);
       --login-primary: #6366f1;
@@ -44,17 +59,31 @@
       --login-glow: rgba(99, 102, 241, 0.36);
       --login-cta-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
       --login-cta-hover: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
-      --login-beam-1: rgba(99, 102, 241, 0.24);
-      --login-beam-2: rgba(139, 92, 246, 0.16);
+      --login-spotlight: rgba(99, 102, 241, 0.2);
       --gemini-gradient: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #e0e7ff 100%);
-      --droplet-color: #6366f1;
-      --droplet-tint: rgba(99, 102, 241, 0.45);
+      --droplet-wash: #07090e;
+      --droplet-accent: rgba(99, 102, 241, 0.55);
+      --grid-line: rgba(255, 255, 255, 0.035);
+      --card-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.85), 0 0 35px -5px rgba(99, 102, 241, 0.35);
+      --input-bg: rgba(15, 23, 42, 0.65);
+      --input-color: #f8fafc;
+      --input-border: rgba(255, 255, 255, 0.12);
+      --input-placeholder: #475569;
+      --btn-text-color: #ffffff;
+      --google-btn-bg: rgba(255, 255, 255, 0.07);
+      --google-btn-border: rgba(255, 255, 255, 0.14);
+      --google-btn-text: #f8fafc;
+      --back-btn-bg: rgba(255, 255, 255, 0.06);
+      --back-btn-border: rgba(255, 255, 255, 0.12);
+      --back-btn-color: #cbd5e1;
     }
+
     [data-palette="emerald"] {
       --palette-name: "Cyber Emerald";
-      --login-bg: #050e0a;
-      --login-surface: rgba(10, 26, 18, 0.82);
-      --login-surface-card: rgba(14, 36, 25, 0.88);
+      --login-bg: #050e09;
+      --login-text-primary: #f8fafc;
+      --login-text-secondary: #94a3b8;
+      --login-surface: rgba(10, 26, 18, 0.84);
       --login-border: rgba(16, 185, 129, 0.2);
       --login-border-focus: rgba(52, 211, 153, 0.85);
       --login-primary: #10b981;
@@ -63,17 +92,31 @@
       --login-glow: rgba(16, 185, 129, 0.36);
       --login-cta-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
       --login-cta-hover: linear-gradient(135deg, #059669 0%, #047857 100%);
-      --login-beam-1: rgba(16, 185, 129, 0.24);
-      --login-beam-2: rgba(6, 182, 212, 0.15);
+      --login-spotlight: rgba(16, 185, 129, 0.2);
       --gemini-gradient: linear-gradient(135deg, #34d399 0%, #06b6d4 50%, #a7f3d0 100%);
-      --droplet-color: #10b981;
-      --droplet-tint: rgba(16, 185, 129, 0.45);
+      --droplet-wash: #050e09;
+      --droplet-accent: rgba(16, 185, 129, 0.55);
+      --grid-line: rgba(255, 255, 255, 0.035);
+      --card-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.85), 0 0 35px -5px rgba(16, 185, 129, 0.35);
+      --input-bg: rgba(10, 26, 18, 0.65);
+      --input-color: #f8fafc;
+      --input-border: rgba(255, 255, 255, 0.12);
+      --input-placeholder: #475569;
+      --btn-text-color: #ffffff;
+      --google-btn-bg: rgba(255, 255, 255, 0.07);
+      --google-btn-border: rgba(255, 255, 255, 0.14);
+      --google-btn-text: #f8fafc;
+      --back-btn-bg: rgba(255, 255, 255, 0.06);
+      --back-btn-border: rgba(255, 255, 255, 0.12);
+      --back-btn-color: #cbd5e1;
     }
+
     [data-palette="aurora"] {
       --palette-name: "Midnight Aurora";
       --login-bg: #050d14;
-      --login-surface: rgba(8, 26, 38, 0.82);
-      --login-surface-card: rgba(12, 36, 52, 0.88);
+      --login-text-primary: #f8fafc;
+      --login-text-secondary: #94a3b8;
+      --login-surface: rgba(8, 26, 38, 0.84);
       --login-border: rgba(6, 182, 212, 0.2);
       --login-border-focus: rgba(34, 211, 238, 0.85);
       --login-primary: #06b6d4;
@@ -82,11 +125,23 @@
       --login-glow: rgba(6, 182, 212, 0.36);
       --login-cta-gradient: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%);
       --login-cta-hover: linear-gradient(135deg, #0891b2 0%, #0284c7 100%);
-      --login-beam-1: rgba(6, 182, 212, 0.24);
-      --login-beam-2: rgba(56, 189, 248, 0.15);
+      --login-spotlight: rgba(6, 182, 212, 0.2);
       --gemini-gradient: linear-gradient(135deg, #22d3ee 0%, #38bdf8 50%, #cffafe 100%);
-      --droplet-color: #06b6d4;
-      --droplet-tint: rgba(6, 182, 212, 0.45);
+      --droplet-wash: #050d14;
+      --droplet-accent: rgba(6, 182, 212, 0.55);
+      --grid-line: rgba(255, 255, 255, 0.035);
+      --card-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.85), 0 0 35px -5px rgba(6, 182, 212, 0.35);
+      --input-bg: rgba(8, 26, 38, 0.65);
+      --input-color: #f8fafc;
+      --input-border: rgba(255, 255, 255, 0.12);
+      --input-placeholder: #475569;
+      --btn-text-color: #ffffff;
+      --google-btn-bg: rgba(255, 255, 255, 0.07);
+      --google-btn-border: rgba(255, 255, 255, 0.14);
+      --google-btn-text: #f8fafc;
+      --back-btn-bg: rgba(255, 255, 255, 0.06);
+      --back-btn-border: rgba(255, 255, 255, 0.12);
+      --back-btn-color: #cbd5e1;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -94,46 +149,48 @@
       width: 100%; height: 100%;
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background-color: var(--login-bg);
-      color: #f8fafc;
-      overflow-x: hidden;
-      overflow-y: auto;
+      color: var(--login-text-primary);
+      overflow: hidden;
       position: relative;
       -webkit-font-smoothing: antialiased;
-      transition: background-color 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: background-color 0.8s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s ease;
     }
 
-    /* ── GENERATIVE AMBIENT CANVAS & LIGHT BEAMS ── */
-    #ambient-canvas-wrapper {
+    /* ── MOTION-SENSING INTERACTIVE AMBIENT CANVAS & MAGNETIC SPOTLIGHT ── */
+    #ambient-sensing-wrapper {
       position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
     }
-    #ambient-canvas {
+    #sensing-canvas {
       position: absolute; inset: 0; width: 100%; height: 100%;
     }
-    .ambient-aurora-glow {
-      position: absolute; top: -20%; left: 50%; transform: translateX(-50%);
-      width: 85vw; height: 500px;
-      background: radial-gradient(ellipse 60% 50% at 50% 0%, var(--login-beam-1) 0%, transparent 80%);
-      filter: blur(80px); opacity: 0.85; pointer-events: none;
-      transition: background 0.8s ease;
+    /* Cursor-following radiant spotlight */
+    #interactive-spotlight {
+      position: absolute; width: 700px; height: 700px; border-radius: 50%;
+      transform: translate(-50%, -50%);
+      background: radial-gradient(circle, var(--login-spotlight) 0%, transparent 68%);
+      filter: blur(60px); opacity: 0.85; pointer-events: none;
+      transition: background 0.8s ease, opacity 0.4s ease;
+      will-change: left, top;
     }
-    .ambient-grid-overlay {
+    .ambient-grid-mesh {
       position: absolute; inset: 0;
       background-image:
-        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-      background-size: 60px 60px;
-      mask-image: radial-gradient(ellipse 80% 60% at 50% 45%, #000 30%, transparent 85%);
-      -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 45%, #000 30%, transparent 85%);
+        linear-gradient(var(--grid-line) 1px, transparent 1px),
+        linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+      background-size: 58px 58px;
+      mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 35%, transparent 85%);
+      -webkit-mask-image: radial-gradient(ellipse 75% 65% at 50% 50%, #000 35%, transparent 85%);
+      transition: background-image 0.8s ease;
     }
 
-    /* ── GEMINI STARBURST ROUND THEME BUTTON (ZERO TEXT) ── */
+    /* ── FLOATING GEMINI STARBURST TRIGGER (ZERO TEXT) ── */
     .gemini-theme-btn {
       position: fixed; top: 24px; right: 28px; z-index: 100;
       width: 46px; height: 46px; border-radius: 50%;
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: var(--login-surface);
+      border: 1px solid var(--login-border);
       backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
-      box-shadow: 0 4px 22px rgba(0, 0, 0, 0.5), 0 0 16px var(--login-glow);
+      box-shadow: 0 4px 22px rgba(0, 0, 0, 0.15), 0 0 16px var(--login-glow);
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; outline: none; padding: 0;
       transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, box-shadow 0.3s ease;
@@ -141,21 +198,21 @@
     .gemini-theme-btn:hover {
       transform: scale(1.1);
       border-color: var(--login-border-focus);
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.6), 0 0 26px var(--login-glow);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25), 0 0 24px var(--login-glow);
     }
     .gemini-theme-btn:active {
       transform: scale(0.92);
     }
     .gemini-star-svg {
       width: 22px; height: 22px;
-      filter: drop-shadow(0 0 8px var(--login-primary));
+      filter: drop-shadow(0 0 6px var(--login-primary));
       transition: transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1), filter 0.4s ease;
     }
     .gemini-theme-btn:hover .gemini-star-svg {
       transform: rotate(45deg);
     }
 
-    /* ── ORGANIC WATER DROPLET SPREAD OVER DRESS (CAPILLARY ABSORPTION) ── */
+    /* ── ORGANIC CAPILLARY WATER DROPLET SPREAD OVER DRESS ── */
     #fabric-droplet-canvas {
       position: fixed; inset: 0; pointer-events: none; z-index: 85; overflow: hidden;
     }
@@ -163,34 +220,33 @@
       position: absolute; border-radius: 50%;
       transform: translate(-50%, -50%);
       pointer-events: none;
-      /* Soft feathered capillary diffusion edges mimicking liquid spreading into fabric fibers */
       background: radial-gradient(
         circle,
-        var(--droplet-color) 0%,
-        var(--droplet-tint) 35%,
+        var(--droplet-wash) 0%,
+        var(--droplet-accent) 40%,
         rgba(255, 255, 255, 0.08) 65%,
         transparent 85%
       );
-      filter: blur(28px);
-      opacity: 0.85;
+      filter: blur(32px);
+      opacity: 0.95;
       animation: fabricBleedExpand 1.5s cubic-bezier(0.12, 0.7, 0.29, 1) forwards;
     }
     .fabric-droplet-ring {
       position: absolute; border-radius: 50%;
       transform: translate(-50%, -50%);
       pointer-events: none;
-      border: 1.5px solid rgba(255, 255, 255, 0.4);
-      box-shadow: 0 0 45px var(--droplet-color);
-      filter: blur(6px);
+      border: 1.5px solid var(--droplet-accent);
+      box-shadow: 0 0 45px var(--droplet-accent);
+      filter: blur(8px);
       opacity: 0.9;
       animation: fabricBleedRing 1.5s cubic-bezier(0.12, 0.7, 0.29, 1) forwards;
     }
     @keyframes fabricBleedExpand {
       0% {
-        width: 12px; height: 12px; opacity: 1; transform: translate(-50%, -50%) scale(0.1);
+        width: 14px; height: 14px; opacity: 1; transform: translate(-50%, -50%) scale(0.1);
       }
       50% {
-        opacity: 0.7;
+        opacity: 0.8;
       }
       100% {
         width: 340vmax; height: 340vmax; opacity: 0; transform: translate(-50%, -50%) scale(1);
@@ -198,169 +254,87 @@
     }
     @keyframes fabricBleedRing {
       0% {
-        width: 12px; height: 12px; opacity: 0.95; transform: translate(-50%, -50%) scale(0.1);
+        width: 14px; height: 14px; opacity: 0.95; transform: translate(-50%, -50%) scale(0.1);
       }
       80% {
-        opacity: 0.4;
+        opacity: 0.45;
       }
       100% {
         width: 320vmax; height: 320vmax; opacity: 0; transform: translate(-50%, -50%) scale(1);
       }
     }
 
-    /* ── STAGE 1: TRANSITIONS.DEV DECK GALLERY LANDING PAGE ── */
+    /* ── STAGE 1: CLEAN MOTION HERO LANDING ── */
     #splash-stage {
-      position: relative; z-index: 10;
-      min-height: 100vh; width: 100%;
+      position: fixed; inset: 0; z-index: 10;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      padding: 60px 24px; text-align: center;
+      padding: 24px; text-align: center;
     }
-    .landing-hero-shell {
-      width: 100%; max-width: 1080px;
-      display: flex; flex-direction: column; align-items: center;
-    }
-
-    /* Brand Header Badge */
-    .hero-badge-pill {
-      display: inline-flex; align-items: center; gap: 8px;
-      padding: 6px 16px; border-radius: 9999px;
-      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--login-border);
-      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      font-size: 11.5px; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.75); margin-bottom: 24px;
-    }
-    .hero-badge-dot {
-      width: 7px; height: 7px; border-radius: 50%;
-      background: var(--login-primary); box-shadow: 0 0 10px var(--login-primary);
+    .motion-hero-interactive {
+      display: flex; flex-direction: column; align-items: center; max-width: 680px;
+      transform-style: preserve-3d;
+      transition: transform 0.15s ease-out;
+      will-change: transform;
     }
 
-    /* Hero Typography */
+    /* Brand Logo & Wordmark (Intact with Radiant Halo) */
+    .hero-brand-anchor {
+      display: flex; flex-direction: column; align-items: center; margin-bottom: 24px;
+    }
+    .hero-logo-box {
+      position: relative; margin-bottom: 16px; display: flex; align-items: center; justify-content: center;
+    }
+    .hero-logo-halo {
+      position: absolute; inset: -24px; border-radius: 50%;
+      background: radial-gradient(circle, var(--login-glow) 0%, transparent 72%);
+      filter: blur(28px); animation: logoPulse 4s ease-in-out infinite alternate;
+      transition: background 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes logoPulse {
+      0% { transform: scale(0.88); opacity: 0.55; }
+      100% { transform: scale(1.22); opacity: 0.95; }
+    }
+    .hero-logo-img {
+      position: relative; z-index: 1; width: 88px; height: 88px; object-fit: contain;
+      filter: drop-shadow(0 0 35px var(--login-glow));
+      transition: filter 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .hero-brand-name {
+      font-size: 13.5px; font-weight: 800; letter-spacing: 0.28em; text-transform: uppercase;
+      color: var(--login-text-secondary);
+      transition: color 0.5s ease;
+    }
+
+    /* Headline / Slogan */
     .hero-headline {
-      font-size: clamp(38px, 6vw, 68px); font-weight: 900; line-height: 1.05; letter-spacing: -0.04em;
-      background: linear-gradient(135deg, #ffffff 0%, rgba(255, 255, 255, 0.95) 40%, #cbd5e1 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-      margin-bottom: 18px; max-width: 820px;
-    }
-    .hero-subheadline {
-      font-size: clamp(15px, 2vw, 18px); color: #94a3b8; font-weight: 450; line-height: 1.55;
-      max-width: 620px; margin-bottom: 34px;
+      font-size: clamp(40px, 6.4vw, 72px); font-weight: 900; line-height: 1.05; letter-spacing: -0.04em;
+      color: var(--login-text-primary);
+      margin-bottom: 40px;
+      transition: color 0.5s ease;
     }
 
-    /* Primary Launch Button */
-    .hero-action-group {
-      display: flex; align-items: center; gap: 16px; margin-bottom: 54px;
-    }
-    .hero-primary-cta {
-      display: inline-flex; align-items: center; gap: 10px; padding: 16px 42px;
-      font-size: 15.5px; font-weight: 700; letter-spacing: 0.01em; color: #ffffff;
-      background: var(--login-cta-gradient); border: 1px solid rgba(255, 255, 255, 0.22);
+    /* Launch CTA Button */
+    .hero-cta-btn {
+      display: inline-flex; align-items: center; gap: 10px; padding: 16px 44px;
+      font-size: 16px; font-weight: 700; letter-spacing: 0.01em; color: var(--btn-text-color);
+      background: var(--login-cta-gradient); border: 1px solid rgba(255, 255, 255, 0.25);
       border-radius: 9999px; cursor: pointer;
-      box-shadow: 0 8px 36px var(--login-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      box-shadow: 0 8px 34px var(--login-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
       transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
-    .hero-primary-cta:hover {
-      transform: translateY(-2.5px); box-shadow: 0 14px 46px var(--login-glow);
+    .hero-cta-btn:hover {
+      transform: translateY(-2.5px); box-shadow: 0 14px 44px var(--login-glow);
       background: var(--login-cta-hover);
     }
-    .hero-primary-cta:active {
+    .hero-cta-btn:active {
       transform: translateY(0.5px) scale(0.98);
     }
-
-    /* ── 3D PERSPECTIVE DECK GALLERY (TRANSITIONS.DEV CAROUSEL / FAN STACK) ── */
-    .deck-gallery-container {
-      position: relative; width: 100%; max-width: 920px; height: 260px;
-      perspective: 1200px; margin-bottom: 42px;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .deck-stack-wrapper {
-      position: relative; width: 100%; height: 100%;
-      display: flex; align-items: center; justify-content: center;
-    }
-    .deck-card {
-      position: absolute; width: 300px; height: 210px;
-      background: var(--login-surface-card);
-      border: 1px solid var(--login-border);
-      border-radius: 20px; padding: 26px 24px;
-      backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
-      box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.7), 0 0 25px -5px var(--login-glow);
-      text-align: left; cursor: pointer;
-      display: flex; flex-direction: column; justify-content: space-between;
-      transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-      will-change: transform, box-shadow, border-color;
-    }
-    .deck-card:hover {
-      border-color: var(--login-border-focus);
-      box-shadow: 0 25px 60px -8px rgba(0, 0, 0, 0.85), 0 0 35px var(--login-glow);
-      z-index: 40 !important;
+    .hero-footnote {
+      margin-top: 48px; font-size: 12px; color: var(--login-text-secondary); opacity: 0.7; letter-spacing: 0.03em;
+      transition: color 0.5s ease;
     }
 
-    /* Fanned Deck Geometry */
-    .deck-card-left {
-      transform: translateX(-190px) rotate(-7deg) scale(0.92);
-      z-index: 10; opacity: 0.85;
-    }
-    .deck-card-center {
-      transform: translateX(0) rotate(0deg) scale(1);
-      z-index: 20; opacity: 1;
-      border-color: var(--login-border-focus);
-    }
-    .deck-card-right {
-      transform: translateX(190px) rotate(7deg) scale(0.92);
-      z-index: 10; opacity: 0.85;
-    }
-
-    .deck-gallery-container:hover .deck-card-left {
-      transform: translateX(-240px) rotate(-10deg) scale(0.94);
-      opacity: 0.95;
-    }
-    .deck-gallery-container:hover .deck-card-center {
-      transform: translateY(-8px) scale(1.04);
-    }
-    .deck-gallery-container:hover .deck-card-right {
-      transform: translateX(240px) rotate(10deg) scale(0.94);
-      opacity: 0.95;
-    }
-
-    .deck-card-header {
-      display: flex; align-items: center; justify-content: space-between;
-    }
-    .deck-card-icon-halo {
-      width: 44px; height: 44px; border-radius: 12px;
-      background: rgba(255, 255, 255, 0.06); border: 1px solid var(--login-border);
-      display: flex; align-items: center; justify-content: center;
-      color: var(--login-primary);
-    }
-    .deck-card-tag {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase;
-      color: rgba(255, 255, 255, 0.45);
-    }
-    .deck-card-body h3 {
-      font-size: 17px; font-weight: 750; color: #ffffff; margin-bottom: 6px; letter-spacing: -0.01em;
-    }
-    .deck-card-body p {
-      font-size: 12.5px; color: #94a3b8; line-height: 1.45;
-    }
-
-    /* Deck Indicator dots */
-    .deck-indicator-pills {
-      display: flex; align-items: center; gap: 8px; justify-content: center;
-    }
-    .deck-pill {
-      width: 24px; height: 3px; border-radius: 9999px;
-      background: rgba(255, 255, 255, 0.18);
-      transition: all 0.3s ease;
-    }
-    .deck-pill.active {
-      width: 40px; background: var(--login-primary);
-      box-shadow: 0 0 10px var(--login-primary);
-    }
-
-    /* Footer Trust Mark */
-    .landing-footnote {
-      font-size: 12px; color: rgba(255, 255, 255, 0.38); letter-spacing: 0.03em;
-    }
-
-    /* ── STAGE 2: CENTERED RADIANT AUTH PORTAL (HARD ISOLATED) ── */
+    /* ── STAGE 2: RADIANT AUTH PORTAL (MORPHS IN PLACE) ── */
     #auth-stage {
       position: fixed; inset: 0; z-index: 30;
       display: none; /* STRICT ISOLATION */
@@ -371,17 +345,17 @@
       background: var(--login-surface); border: 1px solid var(--login-border);
       border-radius: 26px; padding: 42px 36px 36px;
       backdrop-filter: blur(28px); -webkit-backdrop-filter: blur(28px);
-      box-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.85), 0 0 35px -5px var(--login-glow);
-      transition: border-color 0.4s ease, box-shadow 0.4s ease;
+      box-shadow: var(--card-shadow);
+      transition: background 0.5s ease, border-color 0.4s ease, box-shadow 0.4s ease;
     }
     .auth-back-nav {
       position: absolute; top: 18px; left: 18px; width: 36px; height: 36px; border-radius: 10px;
-      background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.12);
-      color: #cbd5e1; display: flex; align-items: center; justify-content: center;
+      background: var(--back-btn-bg); border: 1px solid var(--back-btn-border);
+      color: var(--back-btn-color); display: flex; align-items: center; justify-content: center;
       cursor: pointer; transition: all 0.15s ease;
     }
     .auth-back-nav:hover {
-      background: rgba(255, 255, 255, 0.14); color: #ffffff; transform: translateX(-1px);
+      background: rgba(0, 0, 0, 0.08); transform: translateX(-1px);
     }
     .auth-brand-block {
       text-align: center; margin-bottom: 22px;
@@ -393,13 +367,15 @@
       width: 52px; height: 52px; object-fit: contain; filter: drop-shadow(0 0 20px var(--login-glow));
     }
     .auth-title {
-      font-size: 22px; font-weight: 800; color: #ffffff; letter-spacing: -0.02em; margin-bottom: 4px;
+      font-size: 22px; font-weight: 800; color: var(--login-text-primary); letter-spacing: -0.02em; margin-bottom: 4px;
+      transition: color 0.5s ease;
     }
     .auth-subtitle {
-      font-size: 13px; color: #94a3b8;
+      font-size: 13px; color: var(--login-text-secondary);
+      transition: color 0.5s ease;
     }
 
-    /* Google SSO */
+    /* Google Workspace SSO */
     .sso-section {
       width: 100%; margin-bottom: 20px;
     }
@@ -408,15 +384,14 @@
     }
     .google-custom-btn {
       width: 100%; height: 44px; border-radius: 12px;
-      background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.14);
+      background: var(--google-btn-bg); border: 1px solid var(--google-btn-border);
       display: flex; align-items: center; justify-content: center; gap: 12px;
-      font-size: 14px; font-weight: 600; color: #f8fafc; cursor: pointer;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+      font-size: 14px; font-weight: 600; color: var(--google-btn-text); cursor: pointer;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, color 0.5s ease;
     }
     .google-custom-btn:hover {
-      background: rgba(255, 255, 255, 0.13); border-color: rgba(255, 255, 255, 0.26);
-      transform: translateY(-1px);
+      background: rgba(0, 0, 0, 0.08); transform: translateY(-1px);
     }
     .google-custom-btn:active {
       transform: translateY(0.5px);
@@ -425,43 +400,43 @@
       width: 19px; height: 19px; flex-shrink: 0;
     }
 
-    /* Auth Separator */
+    /* Auth Divider */
     .auth-divider {
       display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
     }
     .divider-line {
-      flex: 1; height: 1px; background: rgba(255, 255, 255, 0.1);
+      flex: 1; height: 1px; background: var(--login-border);
     }
     .divider-text {
-      font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: #64748b; text-transform: uppercase;
+      font-size: 10.5px; font-weight: 700; letter-spacing: 0.1em; color: var(--login-text-secondary); text-transform: uppercase;
     }
 
-    /* Form & Inputs */
+    /* Form Fields */
     .auth-field-group {
       margin-bottom: 18px;
     }
     .auth-label {
-      display: block; font-size: 12.5px; font-weight: 600; color: #cbd5e1; margin-bottom: 7px;
+      display: block; font-size: 12.5px; font-weight: 600; color: var(--login-text-primary); margin-bottom: 7px;
+      transition: color 0.5s ease;
     }
     .auth-input-wrapper {
       position: relative; display: flex; align-items: center;
     }
     .input-leading-icon {
-      position: absolute; left: 14px; width: 17px; height: 17px; color: #64748b; pointer-events: none;
+      position: absolute; left: 14px; width: 17px; height: 17px; color: var(--login-text-secondary); pointer-events: none;
       transition: color 0.2s ease;
     }
     .auth-text-input {
       width: 100%; height: 44px; padding: 0 42px 0 42px;
-      background: rgba(15, 23, 42, 0.65); border: 1.5px solid rgba(255, 255, 255, 0.12);
-      border-radius: 12px; font-size: 14px; color: #f8fafc; outline: none;
-      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+      background: var(--input-bg); border: 1.5px solid var(--input-border);
+      border-radius: 12px; font-size: 14px; color: var(--input-color); outline: none;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
     }
     .auth-text-input::placeholder {
-      color: #475569;
+      color: var(--input-placeholder);
     }
     .auth-text-input:focus {
       border-color: var(--login-border-focus);
-      background: rgba(15, 23, 42, 0.85);
       box-shadow: 0 0 0 3px var(--login-glow);
     }
     .auth-text-input:focus ~ .input-leading-icon {
@@ -469,18 +444,18 @@
     }
     .toggle-pass-visibility {
       position: absolute; right: 12px; background: none; border: none; padding: 4px;
-      color: #64748b; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      color: var(--login-text-secondary); cursor: pointer; display: flex; align-items: center; justify-content: center;
       transition: color 0.15s ease;
     }
     .toggle-pass-visibility:hover {
-      color: #cbd5e1;
+      color: var(--login-text-primary);
     }
 
     /* Error Banner */
     .auth-error-banner {
       display: none; padding: 10px 14px; border-radius: 10px; margin-bottom: 18px;
       background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.35);
-      font-size: 13px; color: #fca5a5;
+      font-size: 13px; color: #dc2626;
     }
     .auth-error-content {
       display: flex; align-items: center; gap: 8px;
@@ -489,8 +464,8 @@
     /* Submit Button */
     .auth-primary-btn {
       width: 100%; height: 46px; border-radius: 12px;
-      background: var(--login-cta-gradient); border: 1px solid rgba(255, 255, 255, 0.2);
-      font-size: 14.5px; font-weight: 700; color: #ffffff; cursor: pointer;
+      background: var(--login-cta-gradient); border: 1px solid rgba(255, 255, 255, 0.25);
+      font-size: 14.5px; font-weight: 700; color: var(--btn-text-color); cursor: pointer;
       display: flex; align-items: center; justify-content: center; gap: 8px;
       box-shadow: 0 4px 18px var(--login-glow);
       transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
@@ -505,22 +480,22 @@
     #twofa-section { display: none; }
     .twofa-header { text-align: center; margin-bottom: 22px; }
     .twofa-badge-icon {
-      width: 52px; height: 52px; border-radius: 14px; background: rgba(255, 255, 255, 0.06);
+      width: 52px; height: 52px; border-radius: 14px; background: var(--back-btn-bg);
       border: 1px solid var(--login-border); display: flex; align-items: center; justify-content: center;
       margin: 0 auto 14px; color: var(--login-primary);
     }
-    .twofa-title { font-size: 20px; font-weight: 800; color: #ffffff; margin-bottom: 6px; }
-    .twofa-subtitle { font-size: 13px; color: #94a3b8; }
+    .twofa-title { font-size: 20px; font-weight: 800; color: var(--login-text-primary); margin-bottom: 6px; }
+    .twofa-subtitle { font-size: 13px; color: var(--login-text-secondary); }
     .totp-code-field {
       width: 100%; padding: 13px 16px; font-size: 22px; font-weight: 800; letter-spacing: 0.35em;
-      text-align: center; font-family: 'JetBrains Mono', monospace; color: #67e8f9;
-      background: rgba(15, 23, 42, 0.85); border: 1.5px solid var(--login-border-focus);
+      text-align: center; font-family: 'JetBrains Mono', monospace; color: var(--login-primary);
+      background: var(--input-bg); border: 1.5px solid var(--login-border-focus);
       border-radius: 12px; outline: none; margin-bottom: 18px;
     }
 
     /* Loading Overlay */
     #auth-loading-overlay {
-      display: none; position: absolute; inset: 0; background: rgba(10, 14, 26, 0.94);
+      display: none; position: absolute; inset: 0; background: var(--login-surface);
       backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-radius: 26px;
       z-index: 100; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
     }
@@ -528,19 +503,13 @@
       position: relative; width: 52px; height: 52px; display: flex; align-items: center; justify-content: center;
     }
     .spinner-outer {
-      width: 100%; height: 100%; border: 3px solid rgba(255, 255, 255, 0.15);
+      width: 100%; height: 100%; border: 3px solid rgba(120, 113, 108, 0.2);
       border-top-color: var(--login-primary); border-right-color: var(--login-accent);
       border-radius: 50%; animation: spinSlow 1s linear infinite;
     }
     .spinner-inner-img { position: absolute; width: 24px; height: 24px; object-fit: contain; }
     @keyframes spinSlow { to { transform: rotate(360deg); } }
-    #auth-loading-text { font-size: 13.5px; font-weight: 700; color: #e2e8f0; }
-
-    @media (max-width: 768px) {
-      .deck-card-left { transform: translateX(-60px) rotate(-4deg) scale(0.85); }
-      .deck-card-right { transform: translateX(60px) rotate(4deg) scale(0.85); }
-      .deck-gallery-container { height: 220px; }
-    }
+    #auth-loading-text { font-size: 13.5px; font-weight: 700; color: var(--login-text-primary); }
   </style>
 
   <script src="https://accounts.google.com/gsi/client" onload="initGoogleSSO()" async defer></script>
@@ -549,7 +518,7 @@
 </head>
 <body>
   <!-- ── FLOATING GEMINI STARBURST TRIGGER (ZERO TEXT) ── -->
-  <button type="button" class="gemini-theme-btn" id="theme-toggle-btn" onclick="triggerDropletBleed(event)" aria-label="Switch Theme Palette" title="Switch Theme Palette (Gemini Living Ambiance)">
+  <button type="button" class="gemini-theme-btn" id="theme-toggle-btn" onclick="triggerDropletBleed(event)" aria-label="Switch Theme Palette" title="Switch Palette (Gemini Living Ambiance)">
     <svg class="gemini-star-svg" viewBox="0 0 24 24" fill="none">
       <defs>
         <linearGradient id="geminiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -566,91 +535,37 @@
   <!-- ── WATER DROPLET ABSORPTION SPREAD CANVAS ── -->
   <div id="fabric-droplet-canvas"></div>
 
-  <!-- ── GENERATIVE AMBIENT CANVAS & LIGHT BEAMS ── -->
-  <div id="ambient-canvas-wrapper">
-    <canvas id="ambient-canvas"></canvas>
-    <div class="ambient-aurora-glow"></div>
-    <div class="ambient-grid-overlay"></div>
+  <!-- ── MOTION-SENSING AMBIENT CANVAS & MAGNETIC SPOTLIGHT ── -->
+  <div id="ambient-sensing-wrapper">
+    <canvas id="sensing-canvas"></canvas>
+    <div id="interactive-spotlight"></div>
+    <div class="ambient-grid-mesh"></div>
   </div>
 
-  <!-- ── STAGE 1: TRANSITIONS.DEV DECK GALLERY LANDING PAGE ── -->
+  <!-- ── STAGE 1: CLEAN MOTION HERO LANDING ── -->
   <section id="splash-stage">
-    <div class="landing-hero-shell">
-      <!-- Wordmark Pill -->
-      <div class="hero-badge-pill">
-        <span class="hero-badge-dot"></span>
-        <span>Benevolate Integr8 · Platform v4</span>
+    <div class="motion-hero-interactive" id="hero-interactive-shell">
+      <!-- Intact Brand Logo & Wordmark with Radiant Halo -->
+      <div class="hero-brand-anchor">
+        <div class="hero-logo-box">
+          <div class="hero-logo-halo"></div>
+          <img src="/logo.png" alt="Benevolate" class="hero-logo-img">
+        </div>
+        <div class="hero-brand-name">Benevolate Integr8</div>
       </div>
 
-      <!-- Headline & Value Prop -->
-      <h1 class="hero-headline">Ship faster.<br>Stay in complete control.</h1>
-      <p class="hero-subheadline">
-        Enterprise release intelligence, automated canary safety, and synchronized microservice deployments engineered for high-velocity teams.
-      </p>
+      <!-- Slogan / Title Only -->
+      <h1 class="hero-headline">Ship faster.<br>Stay in control.</h1>
 
       <!-- Launch Action -->
-      <div class="hero-action-group">
-        <button type="button" class="hero-primary-cta" id="splash-continue-btn" onclick="showAuthStage()">
-          <span>Launch Workspace</span>
-          <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
-        </button>
-      </div>
+      <button type="button" class="hero-cta-btn" id="splash-continue-btn" onclick="showAuthStage()">
+        <span>Continue</span>
+        <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
+      </button>
 
-      <!-- ── 3D PERSPECTIVE DECK GALLERY (TRANSITIONS.DEV CAROUSEL / FAN STACK) ── -->
-      <div class="deck-gallery-container" id="deck-gallery" onmousemove="handleDeckPerspective(event)" onmouseleave="resetDeckPerspective()">
-        <div class="deck-stack-wrapper">
-          <!-- Card 1: Autonomous Pipelines -->
-          <div class="deck-card deck-card-left" id="deck-card-1" onclick="focusDeckCard(1)">
-            <div class="deck-card-header">
-              <div class="deck-card-icon-halo">
-                <i data-lucide="git-branch" style="width:20px;height:20px;"></i>
-              </div>
-              <span class="deck-card-tag">Orchestration</span>
-            </div>
-            <div class="deck-card-body">
-              <h3>Autonomous Pipelines</h3>
-              <p>Zero-friction multi-cluster continuous delivery with declarative build drift detection.</p>
-            </div>
-          </div>
-
-          <!-- Card 2: Zero Downtime Releases (Center Focal) -->
-          <div class="deck-card deck-card-center" id="deck-card-2" onclick="focusDeckCard(2)">
-            <div class="deck-card-header">
-              <div class="deck-card-icon-halo">
-                <i data-lucide="shield-check" style="width:20px;height:20px;"></i>
-              </div>
-              <span class="deck-card-tag">Reliability</span>
-            </div>
-            <div class="deck-card-body">
-              <h3>Automated Rollbacks</h3>
-              <p>Real-time canary anomaly detection instantly halts and reverts degraded releases.</p>
-            </div>
-          </div>
-
-          <!-- Card 3: Distributed Observability -->
-          <div class="deck-card deck-card-right" id="deck-card-3" onclick="focusDeckCard(3)">
-            <div class="deck-card-header">
-              <div class="deck-card-icon-halo">
-                <i data-lucide="activity" style="width:20px;height:20px;"></i>
-              </div>
-              <span class="deck-card-tag">Telemetry</span>
-            </div>
-            <div class="deck-card-body">
-              <h3>Unified Telemetry</h3>
-              <p>Sub-millisecond event streaming across global ingress pipelines and container clusters.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="deck-indicator-pills" style="margin-bottom: 34px;">
-        <span class="deck-pill" id="pill-1"></span>
-        <span class="deck-pill active" id="pill-2"></span>
-        <span class="deck-pill" id="pill-3"></span>
-      </div>
-
-      <div class="landing-footnote">
-        Enterprise Security &nbsp;·&nbsp; Single Sign-On Access &nbsp;·&nbsp; &copy; 2026 Benevolate
+      <!-- Minimal Footnote -->
+      <div class="hero-footnote">
+        Enterprise Platform &nbsp;·&nbsp; Secure SSO Access &nbsp;·&nbsp; &copy; 2026 Benevolate
       </div>
     </div>
   </section>
@@ -774,12 +689,12 @@
     var pending2FA = null;
     var GOOGLE_CLIENT_ID = '1018746602979-blog5afpgc9iv4ke0gllpam30v5fs8b7.apps.googleusercontent.com';
 
-    // ── 4 CURATED THEME PALETTES ──
+    // ── 4 CURATED PALETTES: SANDSTONE (WARM LIGHT) + INDIGO / EMERALD / AURORA (DARK COSMIC) ──
     var PALETTES = [
-      { id: 'sandstone', name: 'Sandstone' },
-      { id: 'indigo',    name: 'Electric Indigo' },
-      { id: 'emerald',   name: 'Cyber Emerald' },
-      { id: 'aurora',    name: 'Midnight Aurora' }
+      { id: 'sandstone', name: 'Sandstone (Warm Light)' },
+      { id: 'indigo',    name: 'Electric Indigo (Dark)' },
+      { id: 'emerald',   name: 'Cyber Emerald (Dark)' },
+      { id: 'aurora',    name: 'Midnight Aurora (Dark)' }
     ];
 
     function get30MinuteThemeIndex() {
@@ -806,7 +721,7 @@
       }
     }
 
-    // ── SLOW WATER DROPLET SPREAD OVER DRESS (CAPILLARY ABSORPTION) ──
+    // ── SLOW WATER DROPLET SPREAD OVER DRESS ──
     function triggerDropletBleed(event) {
       var btn = document.getElementById('theme-toggle-btn');
       var rect = btn.getBoundingClientRect();
@@ -819,17 +734,15 @@
       var nextIndex = (currentIndex + 1) % PALETTES.length;
       var nextPalette = PALETTES[nextIndex];
 
-      // Spawn droplet capillary absorption layers
+      // Spawn droplet capillary diffusion
       var canvasContainer = document.getElementById('fabric-droplet-canvas');
       if (canvasContainer) {
-        // 1. Soft bleeding diffusion layer
         var bleed = document.createElement('div');
         bleed.className = 'fabric-droplet-bleed';
         bleed.style.left = originX + 'px';
         bleed.style.top = originY + 'px';
         canvasContainer.appendChild(bleed);
 
-        // 2. Capillary absorption boundary ring
         var ring = document.createElement('div');
         ring.className = 'fabric-droplet-ring';
         ring.style.left = originX + 'px';
@@ -848,69 +761,131 @@
         Motion.animate(btn, { scale: [1, 0.88, 1.14, 1] }, { duration: 0.55, ease: 'easeOut' });
       }
 
-      // Smoothly apply new palette so it absorbs under the capillary spread
+      // Absorb new palette
       setTimeout(function() {
         setPalette(nextPalette.id, true);
       }, 150);
     }
 
-    // ── 3D PERSPECTIVE DECK GALLERY INTERACTIONS ──
-    function handleDeckPerspective(e) {
-      var container = document.getElementById('deck-gallery');
-      if (!container) return;
-      var rect = container.getBoundingClientRect();
-      var x = e.clientX - rect.left - rect.width / 2;
-      var y = e.clientY - rect.top - rect.height / 2;
+    // ── MOTION-SENSING MOUSE AMBIENCE & 3D PARALLAX ──
+    var mouseX = window.innerWidth / 2;
+    var mouseY = window.innerHeight / 2;
+    var currentSpotX = mouseX;
+    var currentSpotY = mouseY;
 
-      var rotY = (x / (rect.width / 2)) * 8;
-      var rotX = -(y / (rect.height / 2)) * 6;
+    window.addEventListener('mousemove', function(e) {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
 
-      var centerCard = document.getElementById('deck-card-2');
-      if (centerCard) {
-        centerCard.style.transform = 'translateY(-8px) rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) scale(1.04)';
+      // 3D Tilt perspective on Hero Shell
+      var heroShell = document.getElementById('hero-interactive-shell');
+      if (heroShell) {
+        var centerX = window.innerWidth / 2;
+        var centerY = window.innerHeight / 2;
+        var deltaX = (e.clientX - centerX) / centerX;
+        var deltaY = (e.clientY - centerY) / centerY;
+
+        var rotY = deltaX * 7;
+        var rotX = -deltaY * 6;
+        heroShell.style.transform = 'perspective(1000px) rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) translateZ(12px)';
       }
-    }
+    });
 
-    function resetDeckPerspective() {
-      var centerCard = document.getElementById('deck-card-2');
-      if (centerCard) {
-        centerCard.style.transform = 'translateX(0) rotate(0deg) scale(1)';
+    window.addEventListener('mouseleave', function() {
+      var heroShell = document.getElementById('hero-interactive-shell');
+      if (heroShell) {
+        heroShell.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0)';
       }
-    }
+    });
 
-    var currentActiveDeck = 2;
-    function focusDeckCard(cardNum) {
-      currentActiveDeck = cardNum;
-      var c1 = document.getElementById('deck-card-1');
-      var c2 = document.getElementById('deck-card-2');
-      var c3 = document.getElementById('deck-card-3');
-      var p1 = document.getElementById('pill-1');
-      var p2 = document.getElementById('pill-2');
-      var p3 = document.getElementById('pill-3');
+    // ── GENERATIVE AMBIENT CANVAS WITH MOTION SENSITIVITY ──
+    function initMotionCanvas() {
+      var canvas = document.getElementById('sensing-canvas');
+      var spotlight = document.getElementById('interactive-spotlight');
+      if (!canvas) return;
+      var ctx = canvas.getContext('2d');
+      var width, height;
+      var particles = [];
 
-      [c1, c2, c3].forEach(function(el) {
-        el.className = 'deck-card';
-      });
-      [p1, p2, p3].forEach(function(el) {
-        el.classList.remove('active');
-      });
-
-      if (cardNum === 1) {
-        c1.className = 'deck-card deck-card-center';
-        c2.className = 'deck-card deck-card-right';
-        c3.className = 'deck-card deck-card-left';
-        p1.classList.add('active');
-      } else if (cardNum === 2) {
-        c1.className = 'deck-card deck-card-left';
-        c2.className = 'deck-card deck-card-center';
-        c3.className = 'deck-card deck-card-right';
-        p2.classList.add('active');
-      } else {
-        c1.className = 'deck-card deck-card-right';
-        c2.className = 'deck-card deck-card-left';
-        c3.className = 'deck-card deck-card-center';
-        p3.classList.add('active');
+      function resize() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
       }
+      resize();
+      window.addEventListener('resize', resize);
+
+      for (var i = 0; i < 32; i++) {
+        particles.push({
+          x: Math.random() * window.innerWidth,
+          y: Math.random() * window.innerHeight,
+          radius: Math.random() * 2 + 0.8,
+          vx: (Math.random() - 0.5) * 0.35,
+          vy: (Math.random() - 0.5) * 0.35,
+          baseAlpha: Math.random() * 0.4 + 0.15
+        });
+      }
+
+      function renderFrame() {
+        // Lerp spotlight toward mouse coordinates
+        currentSpotX += (mouseX - currentSpotX) * 0.12;
+        currentSpotY += (mouseY - currentSpotY) * 0.12;
+        if (spotlight) {
+          spotlight.style.left = currentSpotX + 'px';
+          spotlight.style.top = currentSpotY + 'px';
+        }
+
+        ctx.clearRect(0, 0, width, height);
+
+        var currentPalette = document.documentElement.getAttribute('data-palette') || 'sandstone';
+        var isLight = currentPalette === 'sandstone';
+        var pColor = isLight ? 'rgba(120, 113, 108, ' : 'rgba(255, 255, 255, ';
+
+        for (var i = 0; i < particles.length; i++) {
+          var p = particles[i];
+
+          // Mouse gravitational / repulsion sensing
+          var distToMouse = Math.hypot(p.x - mouseX, p.y - mouseY);
+          if (distToMouse < 180) {
+            var angle = Math.atan2(p.y - mouseY, p.x - mouseX);
+            var force = (180 - distToMouse) / 180;
+            p.x += Math.cos(angle) * force * 1.5;
+            p.y += Math.sin(angle) * force * 1.5;
+          }
+
+          p.x += p.vx;
+          p.y += p.vy;
+
+          if (p.x < 0) p.x = width;
+          if (p.x > width) p.x = 0;
+          if (p.y < 0) p.y = height;
+          if (p.y > height) p.y = 0;
+
+          // Alpha brightens near cursor spotlight
+          var proximityGlow = Math.max(0, 1 - distToMouse / 240);
+          var finalAlpha = p.baseAlpha + proximityGlow * 0.45;
+
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.radius * (1 + proximityGlow * 0.4), 0, Math.PI * 2);
+          ctx.fillStyle = pColor + finalAlpha + ')';
+          ctx.fill();
+
+          // Connecting proximity strands
+          for (var j = i + 1; j < particles.length; j++) {
+            var p2 = particles[j];
+            var dist = Math.hypot(p.x - p2.x, p.y - p2.y);
+            if (dist < 130) {
+              ctx.beginPath();
+              ctx.moveTo(p.x, p.y);
+              ctx.lineTo(p2.x, p2.y);
+              ctx.strokeStyle = pColor + (0.06 * (1 - dist / 130)) + ')';
+              ctx.stroke();
+            }
+          }
+        }
+
+        requestAnimationFrame(renderFrame);
+      }
+      renderFrame();
     }
 
     // ── STAGE 1 -> STAGE 2 SPRING MOTION MORPHING ──
@@ -969,72 +944,10 @@
       }
     }
 
-    // ── LIVING GENERATIVE CANVAS PARTICLES & LIGHT BEAMS ──
-    function initAmbientCanvas() {
-      var canvas = document.getElementById('ambient-canvas');
-      if (!canvas) return;
-      var ctx = canvas.getContext('2d');
-      var width, height;
-      var particles = [];
-
-      function resize() {
-        width = canvas.width = window.innerWidth;
-        height = canvas.height = window.innerHeight;
-      }
-      resize();
-      window.addEventListener('resize', resize);
-
-      for (var i = 0; i < 28; i++) {
-        particles.push({
-          x: Math.random() * window.innerWidth,
-          y: Math.random() * window.innerHeight,
-          radius: Math.random() * 2 + 0.8,
-          vx: (Math.random() - 0.5) * 0.35,
-          vy: (Math.random() - 0.5) * 0.35,
-          alpha: Math.random() * 0.5 + 0.15
-        });
-      }
-
-      function draw() {
-        ctx.clearRect(0, 0, width, height);
-
-        for (var i = 0; i < particles.length; i++) {
-          var p = particles[i];
-          p.x += p.vx;
-          p.y += p.vy;
-
-          if (p.x < 0) p.x = width;
-          if (p.x > width) p.x = 0;
-          if (p.y < 0) p.y = height;
-          if (p.y > height) p.y = 0;
-
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 255, 255, ' + p.alpha + ')';
-          ctx.fill();
-
-          // Connecting light strands
-          for (var j = i + 1; j < particles.length; j++) {
-            var p2 = particles[j];
-            var dist = Math.hypot(p.x - p2.x, p.y - p2.y);
-            if (dist < 130) {
-              ctx.beginPath();
-              ctx.moveTo(p.x, p.y);
-              ctx.lineTo(p2.x, p2.y);
-              ctx.strokeStyle = 'rgba(255, 255, 255, ' + (0.05 * (1 - dist / 130)) + ')';
-              ctx.stroke();
-            }
-          }
-        }
-        requestAnimationFrame(draw);
-      }
-      draw();
-    }
-
     // ── FORM & AUTH PROTOCOLS ──
     document.addEventListener('DOMContentLoaded', function() {
       applyAutoTheme();
-      initAmbientCanvas();
+      initMotionCanvas();
 
       if (window.lucide) {
         lucide.createIcons();
@@ -1058,7 +971,7 @@
       }
 
       if (window.Motion) {
-        Motion.animate('.landing-hero-shell', { opacity: [0, 1], y: [24, 0] }, { duration: 0.6, ease: 'easeOut' });
+        Motion.animate('#hero-interactive-shell', { opacity: [0, 1], y: [24, 0] }, { duration: 0.6, ease: 'easeOut' });
       }
     });
 
@@ -1128,7 +1041,7 @@
         var btnContainer = document.getElementById('g_id_signin_btn');
         if (btnContainer) {
           google.accounts.id.renderButton(btnContainer, {
-            theme: 'filled_black',
+            theme: 'outline',
             size: 'large',
             width: '360',
             text: 'continue_with',
