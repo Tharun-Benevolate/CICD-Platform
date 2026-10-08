@@ -11,13 +11,13 @@
   <link rel="stylesheet" href="/css/variables.css">
 
   <style>
-    /* ── PALETTE TOKENS (LIGHT SANDSTONE + DARK COSMIC INDIGO/EMERALD/AURORA) ── */
+    /* ── PALETTE TOKENS: SANDSTONE (WARM LIGHT) | INDIGO | CRIMSON | MONOLITH ── */
     :root, [data-palette="sandstone"] {
       --palette-name: "Sandstone";
       --login-bg: #faf7f2;
       --login-text-primary: #1c1917;
       --login-text-secondary: #78716c;
-      --login-surface: rgba(255, 255, 255, 0.88);
+      --login-surface: rgba(255, 255, 255, 0.9);
       --login-border: rgba(217, 119, 6, 0.22);
       --login-border-focus: rgba(217, 119, 6, 0.9);
       --login-primary: #d97706;
@@ -32,7 +32,7 @@
       --droplet-accent: rgba(217, 119, 6, 0.55);
       --grid-line: rgba(120, 113, 108, 0.08);
       --card-shadow: 0 32px 70px -16px rgba(120, 113, 108, 0.22), 0 0 35px -5px rgba(217, 119, 6, 0.2);
-      --input-bg: rgba(255, 255, 255, 0.95);
+      --input-bg: rgba(255, 255, 255, 0.96);
       --input-color: #1c1917;
       --input-border: rgba(120, 113, 108, 0.22);
       --input-placeholder: #a8a29e;
@@ -78,70 +78,70 @@
       --back-btn-color: #cbd5e1;
     }
 
-    [data-palette="emerald"] {
-      --palette-name: "Cyber Emerald";
-      --login-bg: #050e09;
-      --login-text-primary: #f8fafc;
-      --login-text-secondary: #94a3b8;
-      --login-surface: rgba(10, 26, 18, 0.84);
-      --login-border: rgba(16, 185, 129, 0.2);
-      --login-border-focus: rgba(52, 211, 153, 0.85);
-      --login-primary: #10b981;
-      --login-primary-hover: #059669;
-      --login-accent: #34d399;
-      --login-glow: rgba(16, 185, 129, 0.36);
-      --login-cta-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
-      --login-cta-hover: linear-gradient(135deg, #059669 0%, #047857 100%);
-      --login-spotlight: rgba(16, 185, 129, 0.2);
-      --gemini-gradient: linear-gradient(135deg, #34d399 0%, #06b6d4 50%, #a7f3d0 100%);
-      --droplet-wash: #050e09;
-      --droplet-accent: rgba(16, 185, 129, 0.55);
+    [data-palette="crimson"] {
+      --palette-name: "Crimson Stealth";
+      --login-bg: #090406;
+      --login-text-primary: #fff1f2;
+      --login-text-secondary: #fda4af;
+      --login-surface: rgba(28, 12, 18, 0.86);
+      --login-border: rgba(244, 63, 94, 0.24);
+      --login-border-focus: rgba(251, 113, 133, 0.9);
+      --login-primary: #f43f5e;
+      --login-primary-hover: #e11d48;
+      --login-accent: #fb7185;
+      --login-glow: rgba(244, 63, 94, 0.38);
+      --login-cta-gradient: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+      --login-cta-hover: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+      --login-spotlight: rgba(244, 63, 94, 0.2);
+      --gemini-gradient: linear-gradient(135deg, #fb7185 0%, #f43f5e 50%, #ffe4e6 100%);
+      --droplet-wash: #090406;
+      --droplet-accent: rgba(244, 63, 94, 0.55);
       --grid-line: rgba(255, 255, 255, 0.035);
-      --card-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.85), 0 0 35px -5px rgba(16, 185, 129, 0.35);
-      --input-bg: rgba(10, 26, 18, 0.65);
-      --input-color: #f8fafc;
-      --input-border: rgba(255, 255, 255, 0.12);
-      --input-placeholder: #475569;
+      --card-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.9), 0 0 35px -5px rgba(244, 63, 94, 0.35);
+      --input-bg: rgba(24, 10, 16, 0.7);
+      --input-color: #fff1f2;
+      --input-border: rgba(244, 63, 94, 0.2);
+      --input-placeholder: #881337;
       --btn-text-color: #ffffff;
-      --google-btn-bg: rgba(255, 255, 255, 0.07);
-      --google-btn-border: rgba(255, 255, 255, 0.14);
-      --google-btn-text: #f8fafc;
+      --google-btn-bg: rgba(255, 255, 255, 0.06);
+      --google-btn-border: rgba(244, 63, 94, 0.2);
+      --google-btn-text: #fff1f2;
       --back-btn-bg: rgba(255, 255, 255, 0.06);
-      --back-btn-border: rgba(255, 255, 255, 0.12);
-      --back-btn-color: #cbd5e1;
+      --back-btn-border: rgba(244, 63, 94, 0.2);
+      --back-btn-color: #fda4af;
     }
 
-    [data-palette="aurora"] {
-      --palette-name: "Midnight Aurora";
-      --login-bg: #050d14;
-      --login-text-primary: #f8fafc;
-      --login-text-secondary: #94a3b8;
-      --login-surface: rgba(8, 26, 38, 0.84);
-      --login-border: rgba(6, 182, 212, 0.2);
-      --login-border-focus: rgba(34, 211, 238, 0.85);
-      --login-primary: #06b6d4;
-      --login-primary-hover: #0891b2;
-      --login-accent: #38bdf8;
-      --login-glow: rgba(6, 182, 212, 0.36);
-      --login-cta-gradient: linear-gradient(135deg, #06b6d4 0%, #0ea5e9 100%);
-      --login-cta-hover: linear-gradient(135deg, #0891b2 0%, #0284c7 100%);
-      --login-spotlight: rgba(6, 182, 212, 0.2);
-      --gemini-gradient: linear-gradient(135deg, #22d3ee 0%, #38bdf8 50%, #cffafe 100%);
-      --droplet-wash: #050d14;
-      --droplet-accent: rgba(6, 182, 212, 0.55);
+    [data-palette="monolith"] {
+      --palette-name: "Monolith Titanium";
+      --login-bg: #09090b;
+      --login-text-primary: #ffffff;
+      --login-text-secondary: #a1a1aa;
+      --login-surface: rgba(18, 18, 22, 0.88);
+      --login-border: rgba(255, 255, 255, 0.16);
+      --login-border-focus: rgba(255, 255, 255, 0.9);
+      --login-primary: #ffffff;
+      --login-primary-hover: #e4e4e7;
+      --login-accent: #71717a;
+      --login-glow: rgba(255, 255, 255, 0.22);
+      --login-cta-gradient: linear-gradient(135deg, #ffffff 0%, #e4e4e7 100%);
+      --login-cta-hover: linear-gradient(135deg, #e4e4e7 0%, #d4d4d8 100%);
+      --login-spotlight: rgba(255, 255, 255, 0.12);
+      --gemini-gradient: linear-gradient(135deg, #ffffff 0%, #a1a1aa 50%, #ffffff 100%);
+      --droplet-wash: #09090b;
+      --droplet-accent: rgba(255, 255, 255, 0.4);
       --grid-line: rgba(255, 255, 255, 0.035);
-      --card-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.85), 0 0 35px -5px rgba(6, 182, 212, 0.35);
-      --input-bg: rgba(8, 26, 38, 0.65);
-      --input-color: #f8fafc;
-      --input-border: rgba(255, 255, 255, 0.12);
-      --input-placeholder: #475569;
-      --btn-text-color: #ffffff;
-      --google-btn-bg: rgba(255, 255, 255, 0.07);
+      --card-shadow: 0 32px 80px -16px rgba(0, 0, 0, 0.95), 0 0 35px -5px rgba(255, 255, 255, 0.15);
+      --input-bg: rgba(24, 24, 27, 0.8);
+      --input-color: #ffffff;
+      --input-border: rgba(255, 255, 255, 0.15);
+      --input-placeholder: #52525b;
+      --btn-text-color: #09090b; /* High contrast black text on titanium button */
+      --google-btn-bg: rgba(255, 255, 255, 0.06);
       --google-btn-border: rgba(255, 255, 255, 0.14);
-      --google-btn-text: #f8fafc;
+      --google-btn-text: #ffffff;
       --back-btn-bg: rgba(255, 255, 255, 0.06);
-      --back-btn-border: rgba(255, 255, 255, 0.12);
-      --back-btn-color: #cbd5e1;
+      --back-btn-border: rgba(255, 255, 255, 0.14);
+      --back-btn-color: #d4d4d8;
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -156,14 +156,13 @@
       transition: background-color 0.8s cubic-bezier(0.16, 1, 0.3, 1), color 0.5s ease;
     }
 
-    /* ── MOTION-SENSING INTERACTIVE AMBIENT CANVAS & MAGNETIC SPOTLIGHT ── */
+    /* ── MOTION-SENSING AMBIENT CANVAS & MAGNETIC SPOTLIGHT ── */
     #ambient-sensing-wrapper {
       position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden;
     }
     #sensing-canvas {
       position: absolute; inset: 0; width: 100%; height: 100%;
     }
-    /* Cursor-following radiant spotlight */
     #interactive-spotlight {
       position: absolute; width: 700px; height: 700px; border-radius: 50%;
       transform: translate(-50%, -50%);
@@ -193,10 +192,10 @@
       box-shadow: 0 4px 22px rgba(0, 0, 0, 0.15), 0 0 16px var(--login-glow);
       display: flex; align-items: center; justify-content: center;
       cursor: pointer; outline: none; padding: 0;
-      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, box-shadow 0.3s ease;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease, box-shadow 0.3s ease;
     }
     .gemini-theme-btn:hover {
-      transform: scale(1.1);
+      transform: scale(1.08);
       border-color: var(--login-border-focus);
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.25), 0 0 24px var(--login-glow);
     }
@@ -273,11 +272,11 @@
     .motion-hero-interactive {
       display: flex; flex-direction: column; align-items: center; max-width: 680px;
       transform-style: preserve-3d;
-      transition: transform 0.15s ease-out;
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
       will-change: transform;
     }
 
-    /* Brand Logo & Wordmark (Intact with Radiant Halo) */
+    /* Brand Logo & Wordmark (Intact with Halo) */
     .hero-brand-anchor {
       display: flex; flex-direction: column; align-items: center; margin-bottom: 24px;
     }
@@ -313,28 +312,36 @@
       transition: color 0.5s ease;
     }
 
-    /* Launch CTA Button */
+    /* ── STABLE ZERO-SHIVER CTA BUTTON ── */
     .hero-cta-btn {
+      position: relative;
       display: inline-flex; align-items: center; gap: 10px; padding: 16px 44px;
       font-size: 16px; font-weight: 700; letter-spacing: 0.01em; color: var(--btn-text-color);
       background: var(--login-cta-gradient); border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 9999px; cursor: pointer;
-      box-shadow: 0 8px 34px var(--login-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      border-radius: 9999px; cursor: pointer; outline: none;
+      box-shadow: 0 8px 30px var(--login-glow), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+      /* Zero translateY to eliminate edge-shiver loops */
+      transition: box-shadow 0.25s ease, background 0.25s ease, filter 0.2s ease;
+      will-change: box-shadow, filter;
+    }
+    /* Invisible hit-area buffer prevents pointer edge flicker */
+    .hero-cta-btn::before {
+      content: ''; position: absolute; inset: -8px; border-radius: inherit; pointer-events: auto;
     }
     .hero-cta-btn:hover {
-      transform: translateY(-2.5px); box-shadow: 0 14px 44px var(--login-glow);
+      box-shadow: 0 14px 40px var(--login-glow), 0 0 20px var(--login-glow);
       background: var(--login-cta-hover);
+      filter: brightness(1.05);
     }
     .hero-cta-btn:active {
-      transform: translateY(0.5px) scale(0.98);
+      transform: scale(0.97);
     }
     .hero-footnote {
       margin-top: 48px; font-size: 12px; color: var(--login-text-secondary); opacity: 0.7; letter-spacing: 0.03em;
       transition: color 0.5s ease;
     }
 
-    /* ── STAGE 2: RADIANT AUTH PORTAL (MORPHS IN PLACE) ── */
+    /* ── STAGE 2: RADIANT AUTH PORTAL ── */
     #auth-stage {
       position: fixed; inset: 0; z-index: 30;
       display: none; /* STRICT ISOLATION */
@@ -388,10 +395,10 @@
       display: flex; align-items: center; justify-content: center; gap: 12px;
       font-size: 14px; font-weight: 600; color: var(--google-btn-text); cursor: pointer;
       box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
-      transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease, color 0.5s ease;
+      transition: background 0.15s ease, border-color 0.15s ease, color 0.5s ease;
     }
     .google-custom-btn:hover {
-      background: rgba(0, 0, 0, 0.08); transform: translateY(-1px);
+      background: rgba(0, 0, 0, 0.08);
     }
     .google-custom-btn:active {
       transform: translateY(0.5px);
@@ -461,18 +468,23 @@
       display: flex; align-items: center; gap: 8px;
     }
 
-    /* Submit Button */
+    /* ── STABLE ZERO-SHIVER SUBMIT BUTTON ── */
     .auth-primary-btn {
+      position: relative;
       width: 100%; height: 46px; border-radius: 12px;
       background: var(--login-cta-gradient); border: 1px solid rgba(255, 255, 255, 0.25);
-      font-size: 14.5px; font-weight: 700; color: var(--btn-text-color); cursor: pointer;
+      font-size: 14.5px; font-weight: 700; color: var(--btn-text-color); cursor: pointer; outline: none;
       display: flex; align-items: center; justify-content: center; gap: 8px;
       box-shadow: 0 4px 18px var(--login-glow);
-      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: box-shadow 0.25s ease, background 0.25s ease, filter 0.2s ease;
+    }
+    .auth-primary-btn::before {
+      content: ''; position: absolute; inset: -6px; border-radius: inherit; pointer-events: auto;
     }
     .auth-primary-btn:hover:not(:disabled) {
-      transform: translateY(-1.5px); box-shadow: 0 8px 24px var(--login-glow);
+      box-shadow: 0 8px 26px var(--login-glow);
       background: var(--login-cta-hover);
+      filter: brightness(1.05);
     }
     .auth-primary-btn:disabled { opacity: 0.65; cursor: not-allowed; }
 
@@ -570,7 +582,7 @@
     </div>
   </section>
 
-  <!-- ── STAGE 2: RADIANT AUTH PORTAL (MORPHS IN PLACE) ── -->
+  <!-- ── STAGE 2: RADIANT AUTH PORTAL ── -->
   <section id="auth-stage" style="display:none;" aria-hidden="true">
     <div class="auth-panel-card" id="auth-panel-card">
       <button type="button" class="auth-back-nav" id="auth-back-btn" onclick="handleAuthBack()" title="Back to Overview">
@@ -689,12 +701,12 @@
     var pending2FA = null;
     var GOOGLE_CLIENT_ID = '1018746602979-blog5afpgc9iv4ke0gllpam30v5fs8b7.apps.googleusercontent.com';
 
-    // ── 4 CURATED PALETTES: SANDSTONE (WARM LIGHT) + INDIGO / EMERALD / AURORA (DARK COSMIC) ──
+    // ── 4 CURATED DISTINCT PALETTES: SANDSTONE | INDIGO | CRIMSON | MONOLITH ──
     var PALETTES = [
       { id: 'sandstone', name: 'Sandstone (Warm Light)' },
-      { id: 'indigo',    name: 'Electric Indigo (Dark)' },
-      { id: 'emerald',   name: 'Cyber Emerald (Dark)' },
-      { id: 'aurora',    name: 'Midnight Aurora (Dark)' }
+      { id: 'indigo',    name: 'Electric Indigo (Cosmic Dark)' },
+      { id: 'crimson',   name: 'Crimson Stealth (Noir Dark)' },
+      { id: 'monolith',  name: 'Monolith (Titanium Dark)' }
     ];
 
     function get30MinuteThemeIndex() {
@@ -767,27 +779,30 @@
       }, 150);
     }
 
-    // ── MOTION-SENSING MOUSE AMBIENCE & 3D PARALLAX ──
+    // ── MOTION-SENSING MOUSE AMBIENCE & 3D PARALLAX (DAMPENED TO PREVENT SHIVER) ──
     var mouseX = window.innerWidth / 2;
     var mouseY = window.innerHeight / 2;
     var currentSpotX = mouseX;
     var currentSpotY = mouseY;
+    var isHoveringCTA = false;
 
     window.addEventListener('mousemove', function(e) {
       mouseX = e.clientX;
       mouseY = e.clientY;
 
-      // 3D Tilt perspective on Hero Shell
-      var heroShell = document.getElementById('hero-interactive-shell');
-      if (heroShell) {
-        var centerX = window.innerWidth / 2;
-        var centerY = window.innerHeight / 2;
-        var deltaX = (e.clientX - centerX) / centerX;
-        var deltaY = (e.clientY - centerY) / centerY;
+      // Only tilt when not interacting directly with buttons to prevent jitter
+      if (!isHoveringCTA) {
+        var heroShell = document.getElementById('hero-interactive-shell');
+        if (heroShell) {
+          var centerX = window.innerWidth / 2;
+          var centerY = window.innerHeight / 2;
+          var deltaX = (e.clientX - centerX) / centerX;
+          var deltaY = (e.clientY - centerY) / centerY;
 
-        var rotY = deltaX * 7;
-        var rotX = -deltaY * 6;
-        heroShell.style.transform = 'perspective(1000px) rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) translateZ(12px)';
+          var rotY = deltaX * 5.5;
+          var rotX = -deltaY * 4.5;
+          heroShell.style.transform = 'perspective(1000px) rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) translateZ(10px)';
+        }
       }
     });
 
@@ -796,6 +811,17 @@
       if (heroShell) {
         heroShell.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0)';
       }
+    });
+
+    // Hover stabilizers for buttons
+    document.addEventListener('DOMContentLoaded', function() {
+      var ctaBtn = document.getElementById('splash-continue-btn');
+      var loginBtn = document.getElementById('login-submit-btn');
+      [ctaBtn, loginBtn].forEach(function(el) {
+        if (!el) return;
+        el.addEventListener('mouseenter', function() { isHoveringCTA = true; });
+        el.addEventListener('mouseleave', function() { isHoveringCTA = false; });
+      });
     });
 
     // ── GENERATIVE AMBIENT CANVAS WITH MOTION SENSITIVITY ──
@@ -814,7 +840,7 @@
       resize();
       window.addEventListener('resize', resize);
 
-      for (var i = 0; i < 32; i++) {
+      for (var i = 0; i < 30; i++) {
         particles.push({
           x: Math.random() * window.innerWidth,
           y: Math.random() * window.innerHeight,
@@ -826,7 +852,6 @@
       }
 
       function renderFrame() {
-        // Lerp spotlight toward mouse coordinates
         currentSpotX += (mouseX - currentSpotX) * 0.12;
         currentSpotY += (mouseY - currentSpotY) * 0.12;
         if (spotlight) {
@@ -843,7 +868,6 @@
         for (var i = 0; i < particles.length; i++) {
           var p = particles[i];
 
-          // Mouse gravitational / repulsion sensing
           var distToMouse = Math.hypot(p.x - mouseX, p.y - mouseY);
           if (distToMouse < 180) {
             var angle = Math.atan2(p.y - mouseY, p.x - mouseX);
@@ -860,7 +884,6 @@
           if (p.y < 0) p.y = height;
           if (p.y > height) p.y = 0;
 
-          // Alpha brightens near cursor spotlight
           var proximityGlow = Math.max(0, 1 - distToMouse / 240);
           var finalAlpha = p.baseAlpha + proximityGlow * 0.45;
 
@@ -869,7 +892,6 @@
           ctx.fillStyle = pColor + finalAlpha + ')';
           ctx.fill();
 
-          // Connecting proximity strands
           for (var j = i + 1; j < particles.length; j++) {
             var p2 = particles[j];
             var dist = Math.hypot(p.x - p2.x, p.y - p2.y);
@@ -895,11 +917,11 @@
       var card = document.getElementById('auth-panel-card');
 
       if (window.Motion) {
-        Motion.animate(splash, { opacity: [1, 0], scale: [1, 0.95] }, { duration: 0.35 }).finished.then(function() {
+        Motion.animate(splash, { opacity: [1, 0], scale: [1, 0.96] }, { duration: 0.3 }).finished.then(function() {
           splash.style.display = 'none';
           authStage.style.display = 'flex';
           authStage.setAttribute('aria-hidden', 'false');
-          Motion.animate(card, { opacity: [0, 1], y: [30, 0], scale: [0.96, 1] }, { duration: 0.45, type: 'spring', stiffness: 300, damping: 25 });
+          Motion.animate(card, { opacity: [0, 1], y: [26, 0], scale: [0.97, 1] }, { duration: 0.4, type: 'spring', stiffness: 300, damping: 25 });
           initGoogleSSO();
           document.getElementById('login-username').focus();
         });
@@ -930,11 +952,11 @@
         var card = document.getElementById('auth-panel-card');
 
         if (window.Motion) {
-          Motion.animate(card, { opacity: [1, 0], y: [0, 24], scale: [1, 0.96] }, { duration: 0.25 }).finished.then(function() {
+          Motion.animate(card, { opacity: [1, 0], y: [0, 20], scale: [1, 0.97] }, { duration: 0.25 }).finished.then(function() {
             authStage.style.display = 'none';
             authStage.setAttribute('aria-hidden', 'true');
             splash.style.display = 'flex';
-            Motion.animate(splash, { opacity: [0, 1], scale: [0.95, 1] }, { duration: 0.35 });
+            Motion.animate(splash, { opacity: [0, 1], scale: [0.96, 1] }, { duration: 0.35 });
           });
         } else {
           authStage.style.display = 'none';
@@ -944,7 +966,7 @@
       }
     }
 
-    // ── FORM & AUTH PROTOCOLS ──
+    // ── FORM & AUTH PROTOCOLS (FIXED INFINITE LOADER BUG) ──
     document.addEventListener('DOMContentLoaded', function() {
       applyAutoTheme();
       initMotionCanvas();
@@ -971,7 +993,7 @@
       }
 
       if (window.Motion) {
-        Motion.animate('#hero-interactive-shell', { opacity: [0, 1], y: [24, 0] }, { duration: 0.6, ease: 'easeOut' });
+        Motion.animate('#hero-interactive-shell', { opacity: [0, 1], y: [20, 0] }, { duration: 0.5, ease: 'easeOut' });
       }
     });
 
@@ -1074,12 +1096,17 @@
           body: JSON.stringify({ credential: response.credential })
         });
         var data = await res.json();
-        if (res.ok && data.token) {
-          if (window.AuthService && AuthService.setSession) {
-            AuthService.setSession(data.token, data.user);
-          } else {
-            localStorage.setItem('auth_token', data.token);
-            if (data.user) localStorage.setItem('auth_user', JSON.stringify(data.user));
+        if (res.ok && data.ok) {
+          if (data.require2FA) {
+            hideLoading();
+            pending2FA = { tempToken: data.tempToken, username: data.username };
+            var loginSection = document.getElementById('login-form-section');
+            var twofaSection = document.getElementById('twofa-section');
+            if (loginSection) loginSection.style.display = 'none';
+            if (twofaSection) twofaSection.style.display = 'block';
+            var totpField = document.getElementById('totp-code');
+            if (totpField) totpField.focus();
+            return;
           }
           window.location.href = data.redirect || '/dashboard';
         } else {
@@ -1092,7 +1119,7 @@
       }
     }
 
-    // Credentials Submit
+    // ── FIXED CREDENTIALS SUBMIT (NO MORE HANGING LOADER) ──
     async function handleCredentialsSubmit(event) {
       event.preventDefault();
       var username = document.getElementById('login-username').value.trim();
@@ -1114,28 +1141,21 @@
         });
         var data = await res.json();
 
-        if (res.ok) {
-          if (data.requires2FA) {
+        if (res.ok && data.ok) {
+          if (data.require2FA) {
             hideLoading();
-            pending2FA = { tempToken: data.tempToken, userId: data.userId };
+            pending2FA = { tempToken: data.tempToken, username: data.username };
             var loginSection = document.getElementById('login-form-section');
             var twofaSection = document.getElementById('twofa-section');
-            loginSection.style.display = 'none';
-            twofaSection.style.display = 'block';
+            if (loginSection) loginSection.style.display = 'none';
+            if (twofaSection) twofaSection.style.display = 'block';
             var totpField = document.getElementById('totp-code');
             if (totpField) totpField.focus();
             return;
           }
 
-          if (data.token) {
-            if (window.AuthService && AuthService.setSession) {
-              AuthService.setSession(data.token, data.user);
-            } else {
-              localStorage.setItem('auth_token', data.token);
-              if (data.user) localStorage.setItem('auth_user', JSON.stringify(data.user));
-            }
-            window.location.href = data.redirect || '/dashboard';
-          }
+          // Successful session established via httpOnly cookies -> navigate immediately
+          window.location.href = data.redirect || '/dashboard';
         } else {
           hideLoading();
           showError(data.error || 'Invalid username or password.');
@@ -1146,7 +1166,7 @@
       }
     }
 
-    // 2FA Submit
+    // ── FIXED 2FA SUBMIT ──
     async function handle2FASubmit(event) {
       event.preventDefault();
       var code = document.getElementById('totp-code').value.trim();
@@ -1170,19 +1190,12 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             code: code,
-            tempToken: pending2FA ? pending2FA.tempToken : null,
-            userId: pending2FA ? pending2FA.userId : null
+            tempToken: pending2FA ? pending2FA.tempToken : null
           })
         });
         var data = await res.json();
 
-        if (res.ok && data.token) {
-          if (window.AuthService && AuthService.setSession) {
-            AuthService.setSession(data.token, data.user);
-          } else {
-            localStorage.setItem('auth_token', data.token);
-            if (data.user) localStorage.setItem('auth_user', JSON.stringify(data.user));
-          }
+        if (res.ok && data.ok) {
           window.location.href = data.redirect || '/dashboard';
         } else {
           hideLoading();
