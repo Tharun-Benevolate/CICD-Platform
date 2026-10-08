@@ -170,14 +170,19 @@ app.use("/", require("./routes/pages"));
 async function start() {
   try {
     // Connect to database (with Aurora fallback)
-    await db.verifyConnection();
-
-    // Run schema migrations (self-healing — safe to re-run on every start)
-    await userStore.ensureSchema?.();
-    await store.ensureSchema?.();
-    await auditStore.ensureSchema?.();
-    await betaOrgStore.ensureSchema?.();
-    await releaseStore.ensureSchema?.();
+    try {
+      await db.verifyConnection();
+      await userStore.ensureSchema?.();
+      await store.ensureSchema?.();
+      await auditStore.ensureSchema?.();
+      await betaOrgStore.ensureSchema?.();
+      await releaseStore.ensureSchema?.();
+    } catch (dbErr) {
+      if (process.env.NODE_ENV === "production") {
+        throw dbErr;
+      }
+      console.warn("⚠  Database connection offline in development mode. Proceeding in standalone UI mode:", dbErr.message);
+    }
 
     app.listen(PORT, () => {
       console.log(`\n🚀 Benevolate server running → http://localhost:${PORT}`);

@@ -3,249 +3,597 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Benevolate Integr8 — Sign In</title>
+  <title>Benevolate Integr8 — Enterprise CI/CD Access Portal</title>
   <link rel="icon" type="image/png" href="/favicon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/variables.css">
-  <link rel="stylesheet" href="/css/global.css">
+  <link rel="stylesheet" href="/css/pages/login.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/js/vendor/motion.js"></script>
 </head>
-<body>
-  <div class="login-overlay-v2">
-
-    <!-- STAGE 1: Brand Splash -->
-    <div class="splash-stage" id="splash-stage">
-      <div class="splash-bg"></div>
-      <div class="splash-content">
-        <div class="splash-logo">
-          <img src="/favicon.png" width="76" height="76" alt="Benevolate Integr8"
-               style="object-fit:contain;filter:drop-shadow(0 0 32px rgba(99,102,241,0.7));">
-        </div>
-        <div class="splash-wordmark">BENEVOLATE INTEGR8</div>
-        <h1 class="splash-tagline">Ship faster.<br>Stay in control.</h1>
-        
-        <div style="margin-top:40px;">
-          <button class="splash-cta" onclick="showAuthStage()">
-            Continue <i data-lucide="arrow-right" style="width:18px;height:18px;"></i>
-          </button>
-        </div>
-        <div class="splash-footnote">Enterprise Platform &nbsp;·&nbsp; Secure SSO Access &nbsp;·&nbsp; © 2026 Benevolate</div>
-      </div>
-    </div>
-
-    <!-- STAGE 2: Auth Form -->
-    <div class="auth-stage" id="auth-stage">
-      <div class="auth-panel" style="position:relative;">
-        <!-- SSO / Auth Loading Overlay -->
-        <div id="auth-loading-overlay" style="display:none;position:absolute;inset:0;background:rgba(15,23,42,0.92);backdrop-filter:blur(10px);border-radius:20px;z-index:100;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
-          <div style="position:relative;display:flex;align-items:center;justify-content:center;">
-            <div class="animate-spin" style="width:48px;height:48px;border:3px solid rgba(99,102,241,0.2);border-top-color:#6366f1;border-radius:50%;"></div>
-            <img src="/favicon.png" width="24" height="24" style="position:absolute;object-fit:contain;">
-          </div>
-          <div id="auth-loading-text" style="font-size:13px;font-weight:700;color:#e2e8f0;letter-spacing:0.02em;">
-            Authenticating SSO Workspace...
-          </div>
-        </div>
-
-        <button class="auth-back" onclick="handleAuthBack()" title="Back">
-          <i data-lucide="arrow-left" style="width:16px;height:16px;"></i>
-        </button>
-
-        <!-- Normal Login Form -->
-        <div id="login-form-section">
-          <div class="auth-logo" style="text-align:center;">
-            <img src="/favicon.png" width="52" height="52" alt="Benevolate Integr8" style="object-fit:contain;margin-bottom:12px;filter:drop-shadow(0 0 20px rgba(99,102,241,0.5));">
-          </div>
-          <h2 style="font-size:22px;font-weight:800;color:#fff;text-align:center;margin-bottom:4px;letter-spacing:-0.5px;">
-            Benevolate Integr8
-          </h2>
-          <p style="font-size:13px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:24px;">
-            Sign in to access your organization workspace
-          </p>
-
-          <!-- Google SSO Container -->
-          <div style="display:flex;justify-content:center;margin-bottom:22px;width:100%;">
-            <div id="g_id_signin_btn" style="min-height:44px;width:100%;display:flex;justify-content:center;"></div>
-          </div>
-
-          <div style="display:flex;align-items:center;gap:12px;margin-bottom:22px;color:rgba(255,255,255,0.4);font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;">
-            <div style="flex:1;height:1px;background:rgba(255,255,255,0.12);"></div>
-            <span>or sign in with credentials</span>
-            <div style="flex:1;height:1px;background:rgba(255,255,255,0.12);"></div>
-          </div>
-
-          <form id="login-form" onsubmit="handleLoginSubmit(event)">
-            <div style="margin-bottom:16px;">
-              <label style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.8);margin-bottom:6px;">
-                Username
-              </label>
-              <div style="position:relative;">
-                <i data-lucide="user" style="width:16px;height:16px;position:absolute;left:14px;top:12px;color:rgba(255,255,255,0.4);"></i>
-                <input type="text" id="login-username" placeholder="Enter username..." autocomplete="username"
-                  style="width:100%;padding:11px 14px 11px 40px;font-size:13px;border:1px solid rgba(255,255,255,0.14);border-radius:10px;background:rgba(15,23,42,0.6);color:#fff;outline:none;font-family:var(--font-family);transition:all 0.15s ease;">
-              </div>
-            </div>
-
-            <div style="margin-bottom:20px;">
-              <label style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.8);margin-bottom:6px;">
-                Password
-              </label>
-              <div style="position:relative;">
-                <i data-lucide="lock" style="width:16px;height:16px;position:absolute;left:14px;top:12px;color:rgba(255,255,255,0.4);"></i>
-                <input type="password" id="login-password" placeholder="Enter password..." autocomplete="current-password"
-                  style="width:100%;padding:11px 14px 11px 40px;font-size:13px;border:1px solid rgba(255,255,255,0.14);border-radius:10px;background:rgba(15,23,42,0.6);color:#fff;outline:none;font-family:var(--font-family);transition:all 0.15s ease;">
-              </div>
-            </div>
-
-            <div id="login-error" style="display:none;padding:10px 12px;margin-bottom:16px;font-size:13px;color:#f87171;background:rgba(239,68,68,0.15);border-radius:8px;border:1px solid rgba(239,68,68,0.3);text-align:center;"></div>
-
-            <button type="submit" id="login-submit-btn"
-              style="width:100%;padding:12px;font-size:14px;font-weight:700;background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);color:#fff;border:none;border-radius:10px;cursor:pointer;box-shadow:0 4px 20px rgba(99,102,241,0.4);font-family:var(--font-family);transition:all 0.15s ease;">
-              Sign In
-            </button>
-          </form>
-        </div>
-
-        <!-- 2FA Challenge -->
-        <div id="twofa-section" style="display:none;">
-          <div style="background:rgba(99,102,241,0.2);padding:14px;border-radius:16px;width:fit-content;margin:0 auto 16px;">
-            <i data-lucide="shield-check" style="width:36px;height:36px;color:#818cf8;"></i>
-          </div>
-          <h2 style="font-size:20px;font-weight:700;color:#fff;text-align:center;margin-bottom:6px;">
-            Two-Factor Authentication
-          </h2>
-          <p style="font-size:13px;color:rgba(255,255,255,0.6);text-align:center;margin-bottom:24px;line-height:1.5;">
-            Enter the 6-digit verification code generated by your Authenticator app on your phone.
-          </p>
-
-          <form id="twofa-form" onsubmit="handle2FASubmit(event)">
-            <div style="margin-bottom:20px;">
-              <label style="display:block;font-size:12px;font-weight:600;color:rgba(255,255,255,0.8);margin-bottom:8px;text-align:center;">
-                6-Digit Authenticator Code
-              </label>
-              <div style="position:relative;">
-                <i data-lucide="key-round" style="width:18px;height:18px;position:absolute;left:14px;top:13px;color:rgba(255,255,255,0.4);"></i>
-                <input type="text" id="totp-code" maxlength="6" placeholder="000 000" autofocus
-                  oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-                  style="width:100%;padding:12px 12px 12px 42px;font-size:20px;font-weight:700;letter-spacing:0.3em;text-align:center;border:1.5px solid rgba(99,102,241,0.4);border-radius:10px;background:rgba(0,0,0,0.3);color:#60a5fa;outline:none;font-family:var(--font-family);">
-              </div>
-            </div>
-
-            <div id="twofa-error" style="display:none;padding:10px 12px;margin-bottom:16px;font-size:13px;color:#f87171;background:rgba(239,68,68,0.15);border-radius:8px;border:1px solid rgba(239,68,68,0.3);text-align:center;"></div>
-
-            <button type="submit" id="twofa-submit-btn"
-              style="width:100%;padding:12px;font-size:15px;font-weight:700;background:rgba(255,255,255,0.1);color:#fff;border:none;border-radius:10px;cursor:not-allowed;font-family:var(--font-family);">
-              Verify Authenticator Code
-            </button>
-          </form>
-        </div>
-
-      </div>
-    </div>
-
+<body class="login-body">
+  <!-- Ambient Spotlight & Grid Backdrop -->
+  <div class="login-ambient-canvas" aria-hidden="true">
+    <div class="ambient-grid"></div>
+    <div class="ambient-blob-1"></div>
+    <div class="ambient-blob-2"></div>
+    <div class="ambient-spotlight" id="ambient-spotlight"></div>
   </div>
+
+  <main class="login-shell">
+    <!-- ── LEFT PANE: Feature Showcase Deck & Gallery ── -->
+    <aside class="showcase-deck" id="showcase-deck" aria-label="Platform Highlights">
+      <div class="deck-header">
+        <div class="deck-badge">
+          <span class="deck-badge-dot"></span>
+          <span>Benevolate Integr8 v2.4</span>
+        </div>
+        <div class="deck-live-metrics">
+          <div class="metric-item">
+            <i data-lucide="activity" style="width:14px;height:14px;color:#10b981;"></i>
+            <span>Fleet Status:</span>
+            <span class="metric-value">Operational</span>
+          </div>
+          <div class="metric-item">
+            <i data-lucide="shield" style="width:14px;height:14px;color:#6366f1;"></i>
+            <span>SOC2 Type II</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slides Container -->
+      <div class="deck-viewport">
+        <!-- Slide 0: Autonomous Pipelines -->
+        <article class="deck-slide active" data-slide-index="0" id="slide-0">
+          <div class="slide-tag">Deployment Engine</div>
+          <h2 class="slide-title">Autonomous Multi-Cloud Pipelines with Instant Feedback</h2>
+          <p class="slide-desc">
+            Orchestrate containerized microservices across AWS ECS and Aurora clusters with automated linting, security scans, and sub-second pipeline state synchronization.
+          </p>
+
+          <div class="deck-visual-card">
+            <div class="visual-topbar">
+              <div class="visual-title">
+                <i data-lucide="git-branch" style="width:16px;height:16px;color:#6366f1;"></i>
+                <span>Pipeline Execution: #build-8921 (main)</span>
+              </div>
+              <span class="visual-status-pill">Active Deployment</span>
+            </div>
+
+            <div class="pipeline-diagram">
+              <div class="pipeline-node">
+                <div class="node-icon-box"><i data-lucide="code-2" style="width:15px;height:15px;"></i></div>
+                <span class="node-label">Commit</span>
+                <span class="node-sub">SHA-4e92a</span>
+              </div>
+              <div class="pipeline-connector"></div>
+              <div class="pipeline-node">
+                <div class="node-icon-box"><i data-lucide="cpu" style="width:15px;height:15px;"></i></div>
+                <span class="node-label">CodeBuild</span>
+                <span class="node-sub">Arm64 / 1.4m</span>
+              </div>
+              <div class="pipeline-connector"></div>
+              <div class="pipeline-node">
+                <div class="node-icon-box"><i data-lucide="box" style="width:15px;height:15px;"></i></div>
+                <span class="node-label">ECR Push</span>
+                <span class="node-sub">Trivy: 0 Vuln</span>
+              </div>
+              <div class="pipeline-connector"></div>
+              <div class="pipeline-node">
+                <div class="node-icon-box"><i data-lucide="server" style="width:15px;height:15px;"></i></div>
+                <span class="node-label">ECS Rollout</span>
+                <span class="node-sub">Healthy (8/8)</span>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Slide 1: Blue/Green Canary Traffic -->
+        <article class="deck-slide" data-slide-index="1" id="slide-1">
+          <div class="slide-tag">Zero-Downtime Governance</div>
+          <h2 class="slide-title">Blue/Green Release Promotion with Instant Failover</h2>
+          <p class="slide-desc">
+            Execute weighted traffic shifting with continuous health checks. Route beta organizations to staging environments with automatic rollback on elevated 5xx error rates.
+          </p>
+
+          <div class="deck-visual-card">
+            <div class="visual-topbar">
+              <div class="visual-title">
+                <i data-lucide="shuffle" style="width:16px;height:16px;color:#06b6d4;"></i>
+                <span>ALB Weighted Routing & Health Probes</span>
+              </div>
+              <span class="visual-status-pill">Zero Downtime</span>
+            </div>
+
+            <div class="traffic-gauge-box">
+              <div class="gauge-card">
+                <div class="gauge-header">
+                  <span style="color:#60a5fa;">Production Fleet (Blue)</span>
+                  <span style="color:#e2e8f0;">80%</span>
+                </div>
+                <div class="gauge-bar-track">
+                  <div class="gauge-bar-fill" style="width:80%;background:#3b82f6;"></div>
+                </div>
+                <div style="font-size:11px;color:#64748b;margin-top:8px;">Running Tasks: 16 | Latency: 18ms</div>
+              </div>
+
+              <div class="gauge-card">
+                <div class="gauge-header">
+                  <span style="color:#34d399;">Canary Fleet (Green)</span>
+                  <span style="color:#e2e8f0;">20%</span>
+                </div>
+                <div class="gauge-bar-track">
+                  <div class="gauge-bar-fill" style="width:20%;background:#10b981;"></div>
+                </div>
+                <div style="font-size:11px;color:#64748b;margin-top:8px;">Running Tasks: 4 | Latency: 15ms</div>
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <!-- Slide 2: Security & IAM -->
+        <article class="deck-slide" data-slide-index="2" id="slide-2">
+          <div class="slide-tag">Zero-Trust Infrastructure</div>
+          <h2 class="slide-title">Enterprise RBAC & Ephemeral Cloud Secrets</h2>
+          <p class="slide-desc">
+            Enforce short-lived IAM credentials, KMS envelope encryption, and comprehensive audit logs that guarantee tamper-proof compliance across all developer branches.
+          </p>
+
+          <div class="deck-visual-card">
+            <div class="visual-topbar">
+              <div class="visual-title">
+                <i data-lucide="lock" style="width:16px;height:16px;color:#8b5cf6;"></i>
+                <span>Real-Time Security & Telemetry Stream</span>
+              </div>
+              <span class="visual-status-pill" style="color:#a78bfa;border-color:rgba(139,92,246,0.3);background:rgba(139,92,246,0.15);">KMS Guarded</span>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:8px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(15,23,42,0.6);border-radius:8px;font-size:12px;">
+                <span style="color:#cbd5e1;display:flex;align-items:center;gap:6px;">
+                  <i data-lucide="key" style="width:13px;height:13px;color:#f59e0b;"></i>
+                  AWS STS Session Tokens
+                </span>
+                <span style="color:#34d399;font-weight:700;">Rotated (15m TTL)</span>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:rgba(15,23,42,0.6);border-radius:8px;font-size:12px;">
+                <span style="color:#cbd5e1;display:flex;align-items:center;gap:6px;">
+                  <i data-lucide="file-check" style="width:13px;height:13px;color:#06b6d4;"></i>
+                  Audit Trail Ledger
+                </span>
+                <span style="color:#94a3b8;font-weight:600;">100% Immutable</span>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- Deck Tab Controls & Auto-advancing Timeline -->
+      <nav class="deck-controls" aria-label="Deck Slides">
+        <button type="button" class="deck-tab-btn active" data-target-slide="0" onclick="switchDeckSlide(0)">
+          <div class="deck-tab-progress"><div class="deck-tab-fill" id="tab-fill-0"></div></div>
+          <span class="deck-tab-title">Pipelines</span>
+        </button>
+        <button type="button" class="deck-tab-btn" data-target-slide="1" onclick="switchDeckSlide(1)">
+          <div class="deck-tab-progress"><div class="deck-tab-fill" id="tab-fill-1"></div></div>
+          <span class="deck-tab-title">Blue / Green</span>
+        </button>
+        <button type="button" class="deck-tab-btn" data-target-slide="2" onclick="switchDeckSlide(2)">
+          <div class="deck-tab-progress"><div class="deck-tab-fill" id="tab-fill-2"></div></div>
+          <span class="deck-tab-title">Governance</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- ── RIGHT PANE: Radiant Glassmorphism Auth Portal ── -->
+    <section class="auth-portal-card" id="auth-portal-card">
+      <div class="radiant-border-beam" aria-hidden="true"></div>
+
+      <!-- Loading Overlay -->
+      <div id="auth-loading-overlay" aria-live="assertive">
+        <div class="dual-ring-spinner">
+          <div class="spinner-outer"></div>
+          <img src="/favicon.png" class="spinner-inner-img" alt="Benevolate Integr8">
+        </div>
+        <div id="auth-loading-text">Authenticating SSO Workspace...</div>
+      </div>
+
+      <!-- STAGE: Login Form Section -->
+      <div id="login-form-section">
+        <div class="auth-brand-block">
+          <div class="brand-icon-wrapper">
+            <div class="brand-icon-halo"></div>
+            <img src="/favicon.png" class="brand-logo-img" alt="Benevolate Integr8 Logo">
+          </div>
+          <h1 class="brand-title">Benevolate Integr8</h1>
+          <p class="brand-subtitle">Sign in to access your organization workspace</p>
+        </div>
+
+        <!-- Google Workspace SSO Container -->
+        <div class="sso-section">
+          <div id="g_id_signin_btn"></div>
+        </div>
+
+        <div class="auth-divider">
+          <div class="auth-divider-line"></div>
+          <span>or sign in with credentials</span>
+          <div class="auth-divider-line"></div>
+        </div>
+
+        <!-- Credentials Form -->
+        <form id="login-form" onsubmit="handleLoginSubmit(event)" novalidate>
+          <div class="form-group">
+            <div class="form-label-row">
+              <label for="login-username" class="form-label">Username</label>
+            </div>
+            <div class="input-container">
+              <input 
+                type="text" 
+                id="login-username" 
+                name="username"
+                class="input-field" 
+                placeholder="Enter username..." 
+                autocomplete="username" 
+                required
+                autofocus>
+              <i data-lucide="user" class="input-icon-left"></i>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <div class="form-label-row">
+              <label for="login-password" class="form-label">Password</label>
+            </div>
+            <div class="input-container">
+              <input 
+                type="password" 
+                id="login-password" 
+                name="password"
+                class="input-field" 
+                placeholder="Enter password..." 
+                autocomplete="current-password" 
+                required>
+              <i data-lucide="lock" class="input-icon-left"></i>
+              <button 
+                type="button" 
+                id="toggle-pwd-btn" 
+                class="input-btn-right" 
+                onclick="togglePasswordVisibility()" 
+                title="Toggle password visibility" 
+                aria-label="Toggle password visibility">
+                <i data-lucide="eye" id="toggle-pwd-icon" style="width:16px;height:16px;"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Error Alert Banner -->
+          <div id="login-error" class="auth-error-alert" role="alert" aria-live="polite"></div>
+
+          <button type="submit" id="login-submit-btn" class="auth-primary-btn">
+            <span>Sign In</span>
+            <i data-lucide="arrow-right" style="width:16px;height:16px;"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- STAGE: Two-Factor Authentication Challenge -->
+      <div id="twofa-section">
+        <div class="twofa-header">
+          <div class="twofa-badge-icon">
+            <i data-lucide="shield-check" style="width:30px;height:30px;"></i>
+          </div>
+          <h2 class="twofa-title">Two-Factor Verification</h2>
+          <p class="twofa-subtitle">
+            Enter the 6-digit security code generated by your Authenticator app.
+          </p>
+        </div>
+
+        <form id="twofa-form" onsubmit="handle2FASubmit(event)" novalidate>
+          <div class="totp-input-wrapper">
+            <input 
+              type="text" 
+              id="totp-code" 
+              name="totp"
+              class="totp-code-field" 
+              maxlength="6" 
+              placeholder="000 000" 
+              inputmode="numeric" 
+              autocomplete="one-time-code"
+              oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+          </div>
+
+          <div id="twofa-error" class="auth-error-alert" role="alert" aria-live="polite"></div>
+
+          <button type="submit" id="twofa-submit-btn" class="auth-primary-btn" disabled>
+            <span>Verify Security Code</span>
+            <i data-lucide="check" style="width:16px;height:16px;"></i>
+          </button>
+
+          <div style="text-align:center;">
+            <button type="button" class="auth-back-link" onclick="handleAuthBack()">
+              <i data-lucide="arrow-left" style="width:14px;height:14px;"></i>
+              <span>Back to Credentials</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Footer Notes -->
+      <footer class="auth-footer">
+        <div>Enterprise Cloud Orchestration Platform</div>
+        <div class="auth-footer-links">
+          <span class="auth-footer-link">AWS Verified</span>
+          <span>&middot;</span>
+          <span class="auth-footer-link">KMS Encrypted</span>
+          <span>&middot;</span>
+          <span class="auth-footer-link">&copy; 2026 Benevolate</span>
+        </div>
+      </footer>
+    </section>
+  </main>
 
   <script src="/js/api.js"></script>
   <script src="/js/auth.js"></script>
   <script>
     var pending2FA = null;
     var GOOGLE_CLIENT_ID = '1018746602979-blog5afpgc9iv4ke0gllpam30v5fs8b7.apps.googleusercontent.com';
+    var activeSlideIndex = 0;
+    var slideDuration = 6000; // 6 seconds per showcase slide
+    var slideStartTime = Date.now();
+    var slideTimer = null;
+    var animFrameId = null;
 
     document.addEventListener('DOMContentLoaded', function() {
-      if (window.lucide) lucide.createIcons();
+      // Initialize Lucide vector icons
+      if (window.lucide) {
+        lucide.createIcons();
+      }
 
-      // Watch TOTP input to enable/disable verify button
+      // Initialize Google SSO immediately
+      initGoogleSSO();
+
+      // Launch Deck Gallery auto-advancing choreography
+      startDeckGallery();
+
+      // Setup Mouse Spotlight Effect
+      setupSpotlightTracking();
+
+      // Setup 2FA Code Input Listener
       var totpInput = document.getElementById('totp-code');
       if (totpInput) {
         totpInput.addEventListener('input', function() {
           var btn = document.getElementById('twofa-submit-btn');
           if (this.value.length === 6) {
-            btn.style.background = 'linear-gradient(135deg, #6366f1, #8b5cf6)';
-            btn.style.cursor = 'pointer';
-            btn.style.boxShadow = '0 4px 20px rgba(99,102,241,0.4)';
+            btn.disabled = false;
+            if (window.Motion) {
+              Motion.animate(btn, { scale: [0.97, 1] }, { duration: 0.2, type: 'spring' });
+            }
           } else {
-            btn.style.background = 'rgba(255,255,255,0.1)';
-            btn.style.cursor = 'not-allowed';
-            btn.style.boxShadow = 'none';
+            btn.disabled = true;
           }
         });
       }
+
+      // Entrance motion for login portal
+      if (window.Motion) {
+        Motion.animate('.auth-portal-card', { opacity: [0, 1], y: [16, 0] }, { duration: 0.45, ease: 'easeOut' });
+        Motion.animate('.showcase-deck', { opacity: [0, 1], x: [-16, 0] }, { duration: 0.5, ease: 'easeOut' });
+      }
     });
 
-    function showAuthStage() {
-      document.getElementById('splash-stage').classList.add('hidden');
-      document.getElementById('auth-stage').classList.add('visible');
-      initGoogleSSO();
+    // ── Spotlight Tracking Choreography ──
+    function setupSpotlightTracking() {
+      var spotlight = document.getElementById('ambient-spotlight');
+      var card = document.getElementById('auth-portal-card');
+
+      window.addEventListener('mousemove', function(e) {
+        if (spotlight) {
+          spotlight.style.opacity = '1';
+          spotlight.style.left = e.clientX + 'px';
+          spotlight.style.top = e.clientY + 'px';
+        }
+
+        if (card) {
+          var rect = card.getBoundingClientRect();
+          var x = e.clientX - rect.left;
+          var y = e.clientY - rect.top;
+          card.style.setProperty('--mouse-x', x + 'px');
+          card.style.setProperty('--mouse-y', y + 'px');
+        }
+      });
+    }
+
+    // ── Deck Gallery Slide Switching & Spring Motion ──
+    function switchDeckSlide(index) {
+      if (index === activeSlideIndex) return;
+
+      var slides = document.querySelectorAll('.deck-slide');
+      var tabBtns = document.querySelectorAll('.deck-tab-btn');
+      
+      slides.forEach(function(s, idx) {
+        if (idx === index) {
+          s.classList.add('active');
+          if (window.Motion) {
+            Motion.animate(s, { opacity: [0, 1], y: [10, 0] }, { duration: 0.35, ease: 'easeOut' });
+          }
+        } else {
+          s.classList.remove('active');
+        }
+      });
+
+      tabBtns.forEach(function(btn, idx) {
+        btn.classList.toggle('active', idx === index);
+      });
+
+      // Reset progress bars
+      for (var i = 0; i < 3; i++) {
+        var fill = document.getElementById('tab-fill-' + i);
+        if (fill) {
+          fill.style.width = i < index ? '100%' : '0%';
+        }
+      }
+
+      activeSlideIndex = index;
+      slideStartTime = Date.now();
+    }
+
+    function startDeckGallery() {
+      slideStartTime = Date.now();
+
+      function updateProgress() {
+        var elapsed = Date.now() - slideStartTime;
+        var progress = Math.min((elapsed / slideDuration) * 100, 100);
+
+        var fill = document.getElementById('tab-fill-' + activeSlideIndex);
+        if (fill) {
+          fill.style.width = progress + '%';
+        }
+
+        if (elapsed >= slideDuration) {
+          var nextIndex = (activeSlideIndex + 1) % 3;
+          switchDeckSlide(nextIndex);
+        }
+
+        animFrameId = requestAnimationFrame(updateProgress);
+      }
+
+      animFrameId = requestAnimationFrame(updateProgress);
+    }
+
+    // ── Form Visibility & 2FA State Transitions ──
+    function togglePasswordVisibility() {
+      var pwdInput = document.getElementById('login-password');
+      var icon = document.getElementById('toggle-pwd-icon');
+      if (!pwdInput) return;
+
+      if (pwdInput.type === 'password') {
+        pwdInput.type = 'text';
+        if (icon) icon.setAttribute('data-lucide', 'eye-off');
+      } else {
+        pwdInput.type = 'password';
+        if (icon) icon.setAttribute('data-lucide', 'eye');
+      }
+      if (window.lucide) lucide.createIcons();
     }
 
     function handleAuthBack() {
-      if (pending2FA) {
-        pending2FA = null;
-        document.getElementById('totp-code').value = '';
-        document.getElementById('twofa-error').style.display = 'none';
-        document.getElementById('twofa-section').style.display = 'none';
-        document.getElementById('login-form-section').style.display = 'block';
-        initGoogleSSO();
+      pending2FA = null;
+      var totp = document.getElementById('totp-code');
+      if (totp) totp.value = '';
+      
+      var err = document.getElementById('twofa-error');
+      if (err) err.style.display = 'none';
+
+      var twofaSection = document.getElementById('twofa-section');
+      var loginSection = document.getElementById('login-form-section');
+
+      if (window.Motion) {
+        Motion.animate(twofaSection, { opacity: [1, 0], x: [0, 20] }, { duration: 0.25 }).finished.then(function() {
+          twofaSection.style.display = 'none';
+          loginSection.style.display = 'block';
+          Motion.animate(loginSection, { opacity: [0, 1], x: [-20, 0] }, { duration: 0.3, type: 'spring' });
+          initGoogleSSO();
+        });
       } else {
-        document.getElementById('auth-stage').classList.remove('visible');
-        document.getElementById('splash-stage').classList.remove('hidden');
+        twofaSection.style.display = 'none';
+        loginSection.style.display = 'block';
+        initGoogleSSO();
       }
     }
 
     function showError(elId, msg) {
       var el = document.getElementById(elId);
+      if (!el) return;
       el.textContent = msg;
       el.style.display = 'block';
+
+      if (window.Motion) {
+        Motion.animate(el, { x: [-8, 8, -4, 4, 0] }, { duration: 0.35 });
+      }
     }
 
+    // ── Authentication Submission Handlers (100% Backward Compatible) ──
     async function handleLoginSubmit(e) {
       e.preventDefault();
-      var username = document.getElementById('login-username').value;
+      var username = document.getElementById('login-username').value.trim();
       var password = document.getElementById('login-password').value;
-      if (!username || !password) return showError('login-error', 'Username and password required');
+      if (!username || !password) {
+        return showError('login-error', 'Please provide both username and password');
+      }
 
       var btn = document.getElementById('login-submit-btn');
-      btn.textContent = 'Signing in...';
+      var originalBtnContent = btn.innerHTML;
+      btn.innerHTML = '<span class="animate-spin" style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;"></span><span>Signing In...</span>';
       btn.disabled = true;
       document.getElementById('login-error').style.display = 'none';
 
-      var res = await auth.login(username, password);
-      if (res.ok) {
-        if (res.require2FA) {
-          pending2FA = { tempToken: res.tempToken, username: res.username };
-          document.getElementById('login-form-section').style.display = 'none';
-          document.getElementById('twofa-section').style.display = 'block';
-          if (window.lucide) lucide.createIcons();
+      try {
+        var res = await auth.login(username, password);
+        if (res.ok) {
+          if (res.require2FA) {
+            pending2FA = { tempToken: res.tempToken, username: res.username };
+            var loginSection = document.getElementById('login-form-section');
+            var twofaSection = document.getElementById('twofa-section');
+
+            if (window.Motion) {
+              Motion.animate(loginSection, { opacity: [1, 0], x: [0, -20] }, { duration: 0.25 }).finished.then(function() {
+                loginSection.style.display = 'none';
+                twofaSection.style.display = 'block';
+                Motion.animate(twofaSection, { opacity: [0, 1], x: [20, 0] }, { duration: 0.3, type: 'spring' });
+                if (window.lucide) lucide.createIcons();
+                document.getElementById('totp-code').focus();
+              });
+            } else {
+              loginSection.style.display = 'none';
+              twofaSection.style.display = 'block';
+              if (window.lucide) lucide.createIcons();
+              document.getElementById('totp-code').focus();
+            }
+          } else {
+            window.location.href = res.isProfileCompleted === false ? '/settings' : '/';
+          }
         } else {
-          window.location.href = res.isProfileCompleted === false ? '/settings' : '/';
+          showError('login-error', res.error || 'Authentication credentials rejected');
         }
-      } else {
-        showError('login-error', res.error || 'Login failed');
+      } catch (err) {
+        showError('login-error', 'Connection error occurred during sign-in');
+      } finally {
+        btn.innerHTML = originalBtnContent;
+        btn.disabled = false;
+        if (window.lucide) lucide.createIcons();
       }
-      btn.textContent = 'Sign In';
-      btn.disabled = false;
     }
 
     async function handle2FASubmit(e) {
       e.preventDefault();
-      var code = document.getElementById('totp-code').value;
-      if (!code || code.length !== 6) return showError('twofa-error', 'Please enter a valid 6-digit code');
+      var code = document.getElementById('totp-code').value.trim();
+      if (!code || code.length !== 6) {
+        return showError('twofa-error', 'Enter a valid 6-digit verification code');
+      }
 
       var btn = document.getElementById('twofa-submit-btn');
-      btn.textContent = 'Verifying...';
+      var originalBtnContent = btn.innerHTML;
+      btn.innerHTML = '<span class="animate-spin" style="display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;"></span><span>Verifying...</span>';
       btn.disabled = true;
       document.getElementById('twofa-error').style.display = 'none';
 
-      var res = await auth.verify2FA(pending2FA.tempToken, code);
-      if (res.ok) {
-        window.location.href = res.isProfileCompleted === false ? '/settings' : '/';
-      } else {
-        showError('twofa-error', res.error || 'Verification failed');
+      try {
+        var res = await auth.verify2FA(pending2FA.tempToken, code);
+        if (res.ok) {
+          window.location.href = res.isProfileCompleted === false ? '/settings' : '/';
+        } else {
+          showError('twofa-error', res.error || 'Verification code invalid or expired');
+        }
+      } catch (err) {
+        showError('twofa-error', 'Network error during code verification');
+      } finally {
+        btn.innerHTML = originalBtnContent;
+        btn.disabled = false;
+        if (window.lucide) lucide.createIcons();
       }
-      btn.textContent = 'Verify Authenticator Code';
-      btn.disabled = false;
     }
 
     function initGoogleSSO() {
@@ -263,9 +611,12 @@
                   if (res.require2FA) {
                     if (overlay) overlay.style.display = 'none';
                     pending2FA = { tempToken: res.tempToken, username: res.username };
-                    document.getElementById('login-form-section').style.display = 'none';
-                    document.getElementById('twofa-section').style.display = 'block';
+                    var loginSection = document.getElementById('login-form-section');
+                    var twofaSection = document.getElementById('twofa-section');
+                    loginSection.style.display = 'none';
+                    twofaSection.style.display = 'block';
                     if (window.lucide) lucide.createIcons();
+                    document.getElementById('totp-code').focus();
                   } else {
                     var txt = document.getElementById('auth-loading-text');
                     if (txt) txt.textContent = 'Workspace Verified. Redirecting...';
@@ -273,21 +624,27 @@
                   }
                 } else {
                   if (overlay) overlay.style.display = 'none';
-                  showError('login-error', res.error || 'Google Sign-In failed');
+                  showError('login-error', res.error || 'Google Workspace sign-in failed');
                 }
               } catch (err) {
                 if (overlay) overlay.style.display = 'none';
-                showError('login-error', 'Authentication error occurred');
+                showError('login-error', 'SSO network error occurred');
               }
             }
           }
         });
+        
         var btnContainer = document.getElementById('g_id_signin_btn');
         if (btnContainer) {
           btnContainer.innerHTML = '';
           window.google.accounts.id.renderButton(btnContainer, {
-            type: 'standard', shape: 'pill', theme: 'filled_black',
-            text: 'continue_with', size: 'large', logo_alignment: 'left', width: 348
+            type: 'standard',
+            shape: 'pill',
+            theme: 'filled_black',
+            text: 'continue_with',
+            size: 'large',
+            logo_alignment: 'left',
+            width: 380
           });
         }
       } catch(err) {
