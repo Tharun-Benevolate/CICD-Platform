@@ -78,6 +78,43 @@
       --shadow-xl:0 10px 15px rgba(0,0,0,0.4),0 4px 6px rgba(0,0,0,0.2);
     }
 
+    /* ── Instant Pre-paint Critical Palette Rules (Zero Cache Lag) ── */
+    html[data-palette="classic"] {
+      --color-bg:#f8fafc;--color-bg-elevated:#fff;--color-surface:#fff;--color-surface-hover:#f1f5f9;
+      --color-border:#e2e8f0;--color-border-subtle:#f1f5f9;
+      --color-text-primary:#0f172a;--color-text-secondary:#475569;--color-text-tertiary:#94a3b8;
+      --color-primary:#2563eb;--color-primary-hover:#1d4ed8;--color-primary-ghost:rgba(37,99,235,0.06);
+      --sidebar-bg:#fff;--sidebar-border:#e2e8f0;--topbar-bg:#fff;--topbar-border:#e2e8f0;
+    }
+    html[data-palette="sandstone"] {
+      --color-bg:#faf7f2;--color-bg-elevated:#f5ede2;--color-surface:#fff;--color-surface-hover:#fbf9f5;
+      --color-border:rgba(217,119,6,0.22);--color-border-subtle:rgba(120,113,108,0.15);
+      --color-text-primary:#1c1917;--color-text-secondary:#78716c;--color-text-tertiary:#a8a29e;
+      --color-primary:#d97706;--color-primary-hover:#b45309;--color-primary-ghost:rgba(217,119,6,0.06);
+      --sidebar-bg:#f5ede2;--sidebar-border:rgba(217,119,6,0.2);--topbar-bg:#f5ede2;--topbar-border:rgba(217,119,6,0.2);
+    }
+    html[data-palette="indigo"] {
+      --color-bg:#07090e;--color-bg-elevated:#0d111a;--color-surface:#111624;--color-surface-hover:#171f33;
+      --color-border:rgba(99,102,241,0.2);--color-border-subtle:rgba(255,255,255,0.08);
+      --color-text-primary:#f8fafc;--color-text-secondary:#94a3b8;--color-text-tertiary:#64748b;
+      --color-primary:#6366f1;--color-primary-hover:#818cf8;--color-primary-ghost:rgba(99,102,241,0.08);
+      --sidebar-bg:#0a0d14;--sidebar-border:rgba(99,102,241,0.18);--topbar-bg:#0a0d14;--topbar-border:rgba(99,102,241,0.18);
+    }
+    html[data-palette="oceanic"] {
+      --color-bg:#070d18;--color-bg-elevated:#0c1524;--color-surface:#0f1c30;--color-surface-hover:#16263f;
+      --color-border:rgba(56,189,248,0.2);--color-border-subtle:rgba(56,189,248,0.08);
+      --color-text-primary:#f0f9ff;--color-text-secondary:#7dd3fc;--color-text-tertiary:#38bdf8;
+      --color-primary:#0ea5e9;--color-primary-hover:#38bdf8;--color-primary-ghost:rgba(14,165,233,0.08);
+      --sidebar-bg:#070f1e;--sidebar-border:rgba(56,189,248,0.18);--topbar-bg:#070f1e;--topbar-border:rgba(56,189,248,0.18);
+    }
+    html[data-palette="emerald"] {
+      --color-bg:#030d09;--color-bg-elevated:#081711;--color-surface:#0b2118;--color-surface-hover:#102c21;
+      --color-border:rgba(16,185,129,0.22);--color-border-subtle:rgba(16,185,129,0.1);
+      --color-text-primary:#ecfdf5;--color-text-secondary:#a7f3d0;--color-text-tertiary:#6ee7b7;
+      --color-primary:#10b981;--color-primary-hover:#34d399;--color-primary-ghost:rgba(16,185,129,0.08);
+      --sidebar-bg:#05120c;--sidebar-border:rgba(16,185,129,0.18);--topbar-bg:#05120c;--topbar-border:rgba(16,185,129,0.18);
+    }
+
     /* Critical Reset & Shell */
     *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
     html,body{height:100%;font-family:var(--font-family);font-size:var(--font-size-base);
@@ -142,10 +179,10 @@
     }
   </style>
 
-  <%# External CSS — loads after critical inline paint (handles hover states, components, etc.) %>
-  <link rel="stylesheet" href="/css/variables.css">
-  <link rel="stylesheet" href="/css/global.css">
-  <link rel="stylesheet" href="/css/layout.css">
+  <%# External CSS — loads after critical inline paint with cache-busting %>
+  <link rel="stylesheet" href="/css/variables.css?v=<%= Date.now() %>">
+  <link rel="stylesheet" href="/css/global.css?v=<%= Date.now() %>">
+  <link rel="stylesheet" href="/css/layout.css?v=<%= Date.now() %>">
   <% if (locals.pageCSS) { %>
   <link rel="stylesheet" href="/css/pages/<%= pageCSS %>.css?v=<%= Date.now() %>">
   <% } %>

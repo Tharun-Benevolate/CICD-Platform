@@ -3,15 +3,9 @@
   <!-- Developer Workspace Banner -->
   <div class="dash-hero-card">
     <div class="dash-hero-content">
-      <div class="dash-hero-badge">
-        <i data-lucide="code-2" style="width:13px;height:13px;"></i> Developer Workspace
-      </div>
       <h1 class="dash-hero-title">
         Welcome back, <%= user.username %>
       </h1>
-      <p class="dash-hero-subtitle">
-        Overview of your assigned projects, repositories, and build pipelines.
-      </p>
     </div>
     <div class="dash-hero-actions">
       <a href="/file-browser" class="dash-btn-primary">
@@ -125,15 +119,9 @@
   <!-- Admin / DevOps Clean Header Card -->
   <div class="dash-hero-card">
     <div class="dash-hero-content">
-      <div class="dash-hero-badge">
-        <i data-lucide="shield-check" style="width:13px;height:13px;"></i> DevOps Control Plane
-      </div>
       <h1 class="dash-hero-title">
         Welcome back, <span id="dash-username"><%= user.username %></span>
       </h1>
-      <p class="dash-hero-subtitle">
-        Continuous delivery pipelines, container orchestrations, and live infrastructure telemetry.
-      </p>
     </div>
     <div class="dash-hero-actions">
       <a href="/new-project" class="dash-btn-primary">

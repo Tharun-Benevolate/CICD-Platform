@@ -108,8 +108,8 @@
   --z-toast:     500;
 }
 
-/* ── Dark Theme (Default) ── */
-[data-theme="dark"], [data-palette="indigo"] {
+/* ── Dark Theme (Default) / Indigo ── */
+[data-theme="dark"]:not([data-palette]), html[data-palette="indigo"], [data-palette="indigo"] {
   --color-bg:           #07090e;
   --color-bg-elevated:  #0d111a;
   --color-surface:      #111624;
@@ -156,7 +156,7 @@
 }
 
 /* ── Sandstone Palette (Warm Claude Light Aesthetic) ── */
-[data-palette="sandstone"] {
+html[data-palette="sandstone"], [data-palette="sandstone"] {
   --color-bg:           #faf7f2;
   --color-bg-elevated:  #f5ede2;
   --color-surface:      #ffffff;
@@ -203,7 +203,7 @@
 }
 
 /* ── Classic Enterprise Palette (White & Blue Aesthetic) ── */
-[data-palette="classic"] {
+html[data-palette="classic"], [data-palette="classic"] {
   --color-bg:           #f8fafc;
   --color-bg-elevated:  #ffffff;
   --color-surface:      #ffffff;
@@ -250,7 +250,7 @@
 }
 
 /* ── Cyber Emerald Palette (Terminal Matrix Mint Aesthetic) ── */
-[data-palette="emerald"] {
+html[data-palette="emerald"], [data-palette="emerald"] {
   --color-bg:           #030d09;
   --color-bg-elevated:  #081711;
   --color-surface:      #0b2118;
@@ -297,7 +297,7 @@
 }
 
 /* ── Oceanic Cyan Palette (Deep Midnight Navy & Ice Cyan) ── */
-[data-palette="oceanic"] {
+html[data-palette="oceanic"], [data-palette="oceanic"] {
   --color-bg:           #070d18;
   --color-bg-elevated:  #0c1524;
   --color-surface:      #0f1c30;
